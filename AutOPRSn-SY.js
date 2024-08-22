@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.0.2
+// @version      3.0.3
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -9,7 +9,6 @@
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
-// @require      https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // ==/UserScript==
@@ -35,7 +34,7 @@ var private4=[41.755547, 123.288777,940,1140];
 var private5=[41.81979911, 123.25708028,910,920];
 //var private1=[27.084545,119.585624,940,1140];
 var bdisplaychsaddr = 1; //中文地址，0:取;1:不取
-var skey="InputYourKeyHere";  //You need input your own key at the showcase page!
+var skey="";  //You need input your own key at the showcase page!
 
 // xhrPromise1 getAddr1 UserSubmit
 //XMLHttpRequest.prototype.open
@@ -458,7 +457,7 @@ function formatDate(date, fmt)
 }
 
 //截获发送的请求
-const originOpen = XMLHttpRequest.prototype.open;
+const originOpen1 = XMLHttpRequest.prototype.open;
 XMLHttpRequest.prototype.open = function (_, url) {
 //    console.log(url);
 //    alert(url);
@@ -659,7 +658,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
   }
 
 
-  originOpen.apply(this, arguments);
+  originOpen1.apply(this, arguments);
 };
 
 //节点更新监听：用于页面有刷新时的处理； 但是会处理多次
@@ -673,14 +672,14 @@ document.addEventListener('DOMNodeInserted', function() {
     if (document.URL == "https://wayfarer.nianticlabs.com/new/showcase") {
 //    if (url === "/api/v1/vault/home") {
 //       console.log(autoPR.username);
-       var sskey="";
        try{
-         sskey = localStorage["txskey"];
-         console.log("getItem sskey : "+sskey);
+         if(skey.length>0){} else {
+           skey = localStorage["txskey"];
+           console.log("getItem sskey : "+skey);}
        } catch(e){console.log(e);}
        $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+autoPR.username+"</font></div>"+
           "<div><font size=5>skey:"+
-          "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+sskey+"></input>"+
+          "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
           "<button class='wf-button' onclick=autoPR.saveKey()>保存</button></font></div>");
        $(".showcase-gallery").replaceWith("<div><font size=5>池中已审</font></div><div id='privatePortal1'></div><br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>");
 
@@ -744,10 +743,10 @@ document.addEventListener('DOMNodeInserted', function() {
     }   //判断是否首页面
 
 
-    if($('.wf-page-header__description.ng-star-inserted').length > 0){
-        stmp = document.body.getInnerHTML();
-          autoPR.pagepass = stmp.substring(stmp.indexOf('host-')+5,stmp.indexOf('c121')-1);
-    }
+//    if($('.wf-page-header__description.ng-star-inserted').length > 0){
+//        stmp = document.body.getInnerHTML();
+//          autoPR.pagepass = stmp.substring(stmp.indexOf('host-')+5,stmp.indexOf('c121')-1);
+//    }
 
 }, false);
 
