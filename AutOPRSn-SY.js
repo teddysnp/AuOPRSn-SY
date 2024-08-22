@@ -4,8 +4,8 @@
 // @version      3.0
 // @description  审po专用
 // @author       snpsl
-// @updateURL    file:///Users/Tong/MySNPSL/AuOPRSn-timer-only.user.js
-// @downloadURL  file:///Users/Tong/MySNPSL/AuOPRSn-timer-only.user.js
+// @updateURL    https://github.com/teddysnp/AuOPRSn-SY/blob/main/AutOPRSn-SY.js
+// @downloadURL  https://github.com/teddysnp/AuOPRSn-SY/blob/main/AutOPRSn-SY.js
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
