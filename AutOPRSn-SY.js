@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.0
+// @version      3.0.1
 // @description  审po专用
 // @author       snpsl
-// @updateURL    https://github.com/teddysnp/AuOPRSn-SY/blob/main/AutOPRSn-SY.js
-// @downloadURL  https://github.com/teddysnp/AuOPRSn-SY/blob/main/AutOPRSn-SY.js
+// @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
+// @downloadURL  https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
