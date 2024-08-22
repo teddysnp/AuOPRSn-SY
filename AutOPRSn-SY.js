@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.0.4
+// @version      3.0.6
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -673,7 +673,7 @@ document.addEventListener('DOMNodeInserted', function() {
 //    if (url === "/api/v1/vault/home") {
 //       console.log(autoPR.username);
        try{
-         if(skey.length>0 && skey!="undefined"){} else {
+         if(skey.length>0 & skey!="undefined"){} else {
            skey = localStorage["txskey"];
            console.log("getItem sskey : "+skey);}
        } catch(e){console.log(e);}
