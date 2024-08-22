@@ -34,7 +34,7 @@ var private4=[41.755547, 123.288777,940,1140];
 var private5=[41.81979911, 123.25708028,910,920];
 //var private1=[27.084545,119.585624,940,1140];
 var bdisplaychsaddr = 1; //中文地址，0:取;1:不取
-var skey="InputYourKeyHere";
+var skey="InputYourKeyHere";  //You need input your own key!
 
 // xhrPromise1 getAddr1 UserSubmit
 //XMLHttpRequest.prototype.open
