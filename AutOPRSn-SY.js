@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.0.1
+// @version      3.0.2
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -34,7 +34,7 @@ var private4=[41.755547, 123.288777,940,1140];
 var private5=[41.81979911, 123.25708028,910,920];
 //var private1=[27.084545,119.585624,940,1140];
 var bdisplaychsaddr = 1; //中文地址，0:取;1:不取
-var skey="InputYourKeyHere";  //You need input your own key!
+var skey="InputYourKeyHere";  //You need input your own key at the showcase page!
 
 // xhrPromise1 getAddr1 UserSubmit
 //XMLHttpRequest.prototype.open
@@ -99,6 +99,12 @@ autoPR = {
           localStorage.setItem("portalID", pageData.id);
           localStorage.setItem("portalTime", new Date().valueOf());
         }
+    },
+    saveKey:function (){
+        var stmp="";
+        console.log(document.querySelector("input[id='sskey']"));
+        stmp=document.querySelector("input[id='sskey']").value;
+        localStorage.setItem("txskey", stmp);
     },
     startstopAuto: function  ()
     {
@@ -666,7 +672,15 @@ document.addEventListener('DOMNodeInserted', function() {
     if (document.URL == "https://wayfarer.nianticlabs.com/new/showcase") {
 //    if (url === "/api/v1/vault/home") {
 //       console.log(autoPR.username);
-       $(".wf-page-header__title.ng-star-inserted").replaceWith("<div><font size=5>"+autoPR.username+"</font></div>");
+       var sskey="";
+       try{
+         sskey = localStorage["txskey"];
+         console.log("getItem sskey : "+sskey);
+       } catch(e){console.log(e);}
+       $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+autoPR.username+"</font></div>"+
+          "<div><font size=5>skey:"+
+          "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+sskey+"></input>"+
+          "<button class='wf-button' onclick=autoPR.saveKey()>保存</button></font></div>");
        $(".showcase-gallery").replaceWith("<div><font size=5>池中已审</font></div><div id='privatePortal1'></div><br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>");
 
        var strarr ="";
@@ -778,7 +792,18 @@ window.onload = function () {
     setTimeout(function () {
     ~(async function () {
 
-
+    //判断在展示页面
+    if (document.URL == "https://wayfarer.nianticlabs.com/new/showcase") {
+//    if (url === "/api/v1/vault/home") {
+//       console.log(autoPR.username);
+//       var sskey="";
+//       sskey = JSON.parse(localstorage.getItem("txskey"));
+//       $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+autoPR.username+"</font></div>"+
+//          "<div><font size=5>skey:"+
+//          "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='30' value="+sskey+"></input>"+
+//          "<button class='wf-button' onclick=autoPR.saveKey()>保存</button></font></div>");
+//       $(".showcase-gallery").replaceWith("<div><font size=5>池中已审</font></div><div id='privatePortal1'></div><br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>");
+    }
     //判断在审核页面
     if(document.URL == "https://wayfarer.nianticlabs.com/new/review"){
        if(document.getElementById("useradd002")){
