@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.0.5
+// @version      3.0.6
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -673,22 +673,26 @@ document.addEventListener('DOMNodeInserted', function() {
 //    if (url === "/api/v1/vault/home") {
 //       console.log(autoPR.username);
        try{
+         var strarr ="";
+         var stmparr=[];
+         //在首页显示池内已审po的表格
+         var prpo = [];
          skey = localStorage["txskey"];
          if(typeof(skey)!="undefined"){
 //           if(skey.length>0){} else {
 //           console.log("getItem sskey : "+skey);}
          } else {skey="";}
-       } catch(e){skey="";console.log(e);}
-       $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+autoPR.username+"</font></div>"+
-          "<div><font size=5>skey:"+
-          "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
-          "<button class='wf-button' onclick=autoPR.saveKey()>保存</button></font></div>");
+       if(!autoPR.username)
+       {
+           autoPR.username=localStorage["currentUser"];
+       }
+       if(autoPR.username){
+         $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+autoPR.username+"</font></div>"+
+            "<div><font size=5>skey:"+
+            "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
+            "<button class='wf-button' onclick=autoPR.saveKey()>保存</button></font></div>");
        $(".showcase-gallery").replaceWith("<div><font size=5>池中已审</font></div><div id='privatePortal1'></div><br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>");
 
-       var strarr ="";
-       var stmparr=[];
-       //在首页显示池内已审po的表格
-       var prpo = [];
        prpo = JSON.parse(localStorage.getItem(autoPR.username + '1'));
 //       console.log(prpo);
        var stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>名称</th><th style='width:10%'>类型</th><th style='width:15%'>纬度</th><th style='width:15%'>经度</th><th style='width:20%'>打分</th><th style='width:20%'>时间</th></tr></thead>";
@@ -709,9 +713,11 @@ document.addEventListener('DOMNodeInserted', function() {
                    console.log(e);
                }
            }
-       stmp+="</tbody></table>";
-       $("#privatePortal1").replaceWith(stmp);
-     }
+         stmp+="</tbody></table>";
+         $("#privatePortal1").replaceWith(stmp);
+       }
+       }
+       } catch(e){skey="";console.log(e);}
 
        //在首页显示池外已审po的表格
        prpo = JSON.parse(localStorage.getItem(autoPR.username + '2'));
