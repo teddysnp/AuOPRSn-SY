@@ -673,10 +673,12 @@ document.addEventListener('DOMNodeInserted', function() {
 //    if (url === "/api/v1/vault/home") {
 //       console.log(autoPR.username);
        try{
-         if(skey.length>0 & skey!="undefined"){} else {
-           skey = localStorage["txskey"];
-           console.log("getItem sskey : "+skey);}
-       } catch(e){console.log(e);}
+         skey = localStorage["txskey"];
+         if(typeof(skey)!="undefined"){
+//           if(skey.length>0){} else {
+//           console.log("getItem sskey : "+skey);}
+         } else {skey="";}
+       } catch(e){skey="";console.log(e);}
        $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+autoPR.username+"</font></div>"+
           "<div><font size=5>skey:"+
           "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
