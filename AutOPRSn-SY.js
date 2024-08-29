@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.0.6
+// @version      3.1
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -33,13 +33,46 @@ var private3=[42.2828685,125.738134,3408,5517];
 var private4=[41.755547, 123.288777,940,1140];
 var private5=[41.81979911, 123.25708028,910,920];
 //var private1=[27.084545,119.585624,940,1140];
-var bdisplaychsaddr = 1; //中文地址，0:取;1:不取
+//
+var prt = 5;
+//测试池中用 var private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,20000,20220],[42.2828685,125.738134,3408,5517],[41.755547, 123.288777,940,1140],[41.81979911, 123.25708028,910,920]];
+var private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[42.2828685,125.738134,3408,5517],[41.755547,123.288777,940,1140],[41.81979911, 123.25708028,910,920],[41.810820,123.376373,547,1036]];
+var bdisplaychsaddr = 0; //中文地址，0:取;1:不取
 var skey="";  //You need input your own key at the showcase page!
+var doctitle;
 
 // xhrPromise1 getAddr1 UserSubmit
 //XMLHttpRequest.prototype.open
 //document.addEventListener('DOMNodeInserted', function()
 //window.onload
+
+class MessageNotice {
+  timer = undefined;
+  title = document.title;
+  count = 0;
+
+  show() {
+    this.timer = setInterval(() => {
+      if (this.count % 2 ==0 ) {
+        document.title="【提示】" + this.title;
+      } else {
+        document.title=this.title;
+      }
+      this.count++;
+    },500)
+  }
+
+  stop() {
+    if ( this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+      this.count = 0;
+      document.title = this.title;
+    }
+  }
+}
+
+const messageNotice = new MessageNotice();
 
 autoPR = {
     initSettings: {
@@ -154,11 +187,12 @@ autoPR = {
                 headers: headers,
                 onload: function(res){
                         let a=res.responseText.replace('QQmap&&QQmap(','');
-                        a = a.slice(0,a.length-1);
-                        console.log(JSON.parse(a));
+                        a = a.slice(0,a.length-2);
+//                        console.log(a);
+//                        console.log(JSON.parse(a));
                         chsaddr=JSON.parse(a).result.address;
                         autoPR.addrgoing = 0;
-                        console.log(chsaddr);
+//                        console.log(chsaddr);
                 },
                 onerror: function(err){
                     console.log('err:'+err);
@@ -177,8 +211,8 @@ autoPR = {
                 "&output=jsonp&poi_options=address_format=short&key="+skey,
             ""
         );
-        console.log(lat+','+lng);
-        console.log('resp:'+resp);
+//        console.log(lat+','+lng);
+//        console.log('resp:'+resp);
         return resp;
     },
     // 根据latlng从腾讯API获取地址信息
@@ -192,6 +226,8 @@ autoPR = {
                 "&output=jsonp&poi_options=address_format=short&key="+skey,
             ""
         );
+//        console.log("getAddr1:"+"https://apis.map.qq.com/ws/geocoder/v1/?location=" +lat +"," +lng +"&output=jsonp&poi_options=address_format=short&key="+skey);
+//        console.log(resp);
         return resp;
     },
     //经纬度转化为中文地址方法,出错jsonp找不到，需增加引用
@@ -205,7 +241,7 @@ autoPR = {
           this.$jsonp("https://apis.map.qq.com/ws/geocoder/v1/",
                       //https://apis.map.qq.com/tools/locpicker?search=1&type=1&referer=myapp",
                       params).then(res => {
-                        console.log(res);
+//                        console.log(res);
                         chsaddr = res.result.address;
                     });
     },
@@ -214,11 +250,11 @@ autoPR = {
     jiexiaddress:function(lat,lng){
         var url3 = encodeURI("https://apis.map.qq.com/ws/geocoder/v1/?location=" + lat + "," + lng + "&key="+skey+"&output=jsonp&&callback=?");
         $.getJSON(url3, function (result) {
-                    console.log(result);
+//                    console.log(result);
                 if(result.result!=undefined){
-                    console.log(result);
+//                    console.log(result);
 //                    console.log(JSON.stringify(result.result));
-//                    chsaddr=result.result.address;
+                    chsaddr=result.result.address;
                 }
         })
     },
@@ -240,8 +276,8 @@ autoPR = {
                 if (data.status == 0) {
 //                    var address = data.result.formatted_addresses.recommend;
                     //$("#address").html(address);
-                    console.log(data);
-                    console.log(data.result.address + address);
+//                    console.log(data);
+//                    console.log(data.result.address + address);
                     chsaddr = data.result.address;
                 } else {
                     console.log("位置获取错误，请联系管理员！")
@@ -286,17 +322,24 @@ autoPR = {
             spos="外地:";
         }
 
-            if((pageData.lat>private1[0]-private1[2]/100000 & pageData.lat<private1[0]+private1[2]/100000 & pageData.lng>private1[1]-private1[3]/100000 & pageData.lng<private1[1]+private1[3]/100000) ||
-               (pageData.lat>private2[0]-private2[2]/100000 & pageData.lat<private2[0]+private2[2]/100000 & pageData.lng>private2[1]-private2[3]/100000 & pageData.lng<private2[1]+private2[3]/100000) ||
-               (pageData.lat>private3[0]-private3[2]/100000 & pageData.lat<private3[0]+private3[2]/100000 & pageData.lng>private3[1]-private3[3]/100000 & pageData.lng<private3[1]+private3[3]/100000) ||
-               (pageData.lat>private4[0]-private4[2]/100000 & pageData.lat<private4[0]+private4[2]/100000 & pageData.lng>private4[1]-private4[3]/100000 & pageData.lng<private4[1]+private4[3]/100000) ||
-               (pageData.lat>private5[0]-private5[2]/100000 & pageData.lat<private5[0]+private5[2]/100000 & pageData.lng>private5[1]-private5[3]/100000 & pageData.lng<private5[1]+private5[3]/100000)
-               )
-            {
-                ibaserate=4; //池中
-                spos="池中:";
-            }
+//            if((pageData.lat>private1[0]-private1[2]/100000 & pageData.lat<private1[0]+private1[2]/100000 & pageData.lng>private1[1]-private1[3]/100000 & pageData.lng<private1[1]+private1[3]/100000) ||
+//              (pageData.lat>private2[0]-private2[2]/100000 & pageData.lat<private2[0]+private2[2]/100000 & pageData.lng>private2[1]-private2[3]/100000 & pageData.lng<private2[1]+private2[3]/100000) ||
+//               (pageData.lat>private3[0]-private3[2]/100000 & pageData.lat<private3[0]+private3[2]/100000 & pageData.lng>private3[1]-private3[3]/100000 & pageData.lng<private3[1]+private3[3]/100000) ||
+//               (pageData.lat>private4[0]-private4[2]/100000 & pageData.lat<private4[0]+private4[2]/100000 & pageData.lng>private4[1]-private4[3]/100000 & pageData.lng<private4[1]+private4[3]/100000) ||
+//               (pageData.lat>private5[0]-private5[2]/100000 & pageData.lat<private5[0]+private5[2]/100000 & pageData.lng>private5[1]-private5[3]/100000 & pageData.lng<private5[1]+private5[3]/100000)
+//               )
+//            {
+//                ibaserate=4; //池中
+//                spos="池中:";
+//            }
 
+            var i;
+            for (i=0;i<=prt;i++){
+                if(pageData.lat>private[i][0]-private[i][2]/100000 & pageData.lat<private[i][0]+private[i][2]/100000 & pageData.lng>private[i][1]-private[i][3]/100000 & pageData.lng<private[i][1]+private[i][3]/100000)
+                {ibaserate=4;  spos="池中:";
+                 console.log("池中啦" + i);
+                }
+            }
         }
 
 //        console.log("pageData.streetAddress:"+pageData.streetAddress);
@@ -305,63 +348,162 @@ autoPR = {
         if(pageData.type=="NEW"){
             // Star rating
             const ratingElementParts = document.getElementsByClassName("wf-review-card");
+//            console.log(ratingElementParts);
 //            console.log(document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]'));
-            if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]'))
-               { //适当
-               document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]').click();
-               }
-            if(document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]'))
-               {  //安全
-               document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]').click();
-               }
-            if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]'))
-               {  //准确
-               document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]').click();
-               }
-            if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]'))
-               {  //永久
-               document.querySelector('#permanent-location-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]').click();
-               }
-            if(document.querySelector('#socialize-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]'))
-               {  //社交
-               document.querySelector('#socialize-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]').click();
-               }
-            if(document.querySelector('#exercise-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]'))
-               {  //运动
-               document.querySelector('#exercise-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]').click();
-               }
-            if(document.querySelector('#explore-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]'))
-               {  //探索
-               document.querySelector('#explore-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]').click();
-               }
-            for(let k = 0; k < ratingElementParts.length; k++){
-                radscore=ibaserate;
-                const starButtons = ratingElementParts[k].getElementsByClassName("wf-rate__star");
-                if (starButtons.length ) {
-                //随机改一个值
-                //池中,改一个为4-5
-                if(ibaserate==4 & ibran1<1 & Math.random()>0.5 &k>0){   //k>0，第一个分不改，改后面的
-                    radscore=Math.floor(3.0 + Math.random());
-                    ibran1=2;
-                }else
-                //本地,改二个为4-5
-//                console.log("radscore:"+radscore+" ; ibran2:"+ibran2);
-                if(ibaserate==3 & ibran2<3 & Math.random()>0.4){
-                    radscore=Math.round(2.0 + Math.random()*2);
-                    ibran2++;
-                }else
-                //外地,改三个为3-5
-                if(ibaserate==2 & ibran2<4 & Math.random()>0.4){
-                    radscore=Math.floor(2+ Math.random() * 2);
-                    ibran2++;
+            var iram1,iram2;
+            if (ibaserate==4){iram1=0;iram2=0;}
+            if (ibaserate==3){iram2=Math.floor(Math.random()*100);iram1=0;}     //本地，随机数1-100 5/6/7必选一个，选中10%no/90%dont know
+            //外地 随机0-100 10%选中，选中no
+            //外地 随机201-300 5/6/7必选一个，选中10%no/90%dont know; 30%选中和二个，选中10%no/90%dont know
+            if (ibaserate==2){iram2=Math.floor(100+Math.random()*100);iram1=Math.floor(Math.random()*100);}
+            console.log("ibaserate : "+ibaserate+" iram1 : "+iram1 + " iram2 : "+iram2);
+//            try{
+                console.log("try start");
+//            iram1=3;
+            //适当1
+            if (iram1>0 & iram1<4){
+                if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+                {
+                    document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
                 }
-
-                starButtons[radscore].click();
-                spos+=radscore+1;
+                if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                    document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
                 }
-//                console.log("spos:"+spos);
-                sspos=spos;
+            } else {
+                if(document.querySelector('#appropriate-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+                { //
+                  document.querySelector('#appropriate-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+                }
+                if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                  document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+                }
+            } //适当
+            //安全2
+            if(iram1>3 & iram1<7){
+                if(document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+                {
+                    document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+                }
+                if(document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                    document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
+                }
+            } else {
+                if(document.querySelector('#safe-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+                { //
+                  document.querySelector('#safe-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+                }
+                if(document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                  document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+                }
+            }//安全
+            //准确3
+            if(iram1>6 & iram1<10){
+                if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+                {
+                    document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+                }
+                if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                    document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
+                }
+            } else {
+                if(document.querySelector('#accurate-and-high-quality-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+                { //
+                  document.querySelector('#accurate-and-high-quality-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+                }
+                if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                  document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+                }
+            }//准确
+            //永久4
+            if(iram1>9 & iram1<13){
+                if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+                {
+                    document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+                }
+                if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                    document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
+                }
+            } else {
+                if(document.querySelector('#permanent-location-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+                { //
+                  document.querySelector('#permanent-location-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+                }
+                if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                  document.querySelector('#permanent-location-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+                }
+            }//永久
+            //社交5  5-no    1-3 34-37  5-不知道  4-33 38-67
+            if((iram2>0 & iram2<7) || (iram2>100 & iram2<104) || (iram2>133 & iram2<138)){
+                if(document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
+                {
+                  document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
+                }
+            } else if ((iram2>18 & iram2<46) || (iram2>103 & iram2<134)  || (iram2>137 & iram2<168) ) {
+                if(document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+                {
+                  document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+                }
+            } else{
+                if(document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+                {
+                  document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+                }
+                if(document.querySelector('#socialize-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                  document.querySelector('#socialize-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+                }
+            }//社交
+            //运动6 6-no  34-36 68-70  6-不知道 37-67 71-99
+            if( (iram2>6 & iram2<13)  || (iram2>133 & iram2<137) || (iram2>167 & iram2<171)) {
+                if(document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
+                {
+                  document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
+                }
+            } else if ( (iram2>45 & iram2<73) || (iram2>136 & iram2<168)  || (iram2>170 & iram2<200) )  {
+                if(document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+                {
+                  document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+                }
+            } else{
+                if(document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+                {
+                  document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+                }
+                if(document.querySelector('#exercise-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                  document.querySelector('#exercise-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+                }
             }
+            //探索7 7-no  68-70 1-3    7-不知道 71-99 4-33
+            if( (iram2>12 & iram2<19)  || (iram2>167 & iram2<171) || (iram2>100 & iram2<104)) {
+                if(document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
+                {
+                  document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
+                }
+            } else if ( (iram2>72 & iram2<100) || (iram2>170 & iram2<200)  || (iram2>103 & iram2<134) ) {
+                if(document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+                {
+                  document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+                }
+            } else{
+                if(document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+                {
+                  document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+                }
+                if(document.querySelector('#explore-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+                { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+                  document.querySelector('#explore-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+                }
+            }
+//            } catch(err) { console.log(err);};
 
             //分类
             const opts = document.querySelectorAll('mat-button-toggle');
@@ -399,7 +541,7 @@ autoPR = {
         //图片
         if(pageData.type=="PHOTO"){
             const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card')[0];
-            console.log(photo);
+//            console.log(photo);
             if (photo) photo.click();
         }
 
@@ -467,7 +609,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
 
   //登录后，得到登录的邮箱和用户名
   if (url === "/api/v1/vault/properties") {
-//      console.log(url);
+      console.log("XMLHttpRequest:"+url);
     if (arg0 == 'GET') {     //刷新页面
     const xhr = this;
     const getter = Object.getOwnPropertyDescriptor(
@@ -484,15 +626,29 @@ XMLHttpRequest.prototype.open = function (_, url) {
           if(res){
               autoPR.useremail = res.socialProfile.email;
               autoPR.username = res.socialProfile.name;
-//          console.log(autoPR.useremail);
-          console.log(autoPR.username);
+          console.log("username:"+autoPR.username);
+              var userlist="";
+              console.log(autoPR.username != null );
+              console.log(autoPR.useremail != null );
               if(autoPR.username != null ){
                   localStorage.setItem("currentUser", JSON.stringify(autoPR.username));
-                  var userlist = JSON.parse(localStorage.getItem("userList"));
+                  userlist = JSON.parse(localStorage.getItem("userList"));
 //              console.log(userlist);
                   if(userlist === null) {userlist = [];};
                   if(userlist.indexOf(autoPR.username)<0){
                   userlist.push(autoPR.username);
+//                  console.log(userlist);
+                  localStorage.setItem("userList", JSON.stringify(userlist));
+                  }
+              } else if (autoPR.username == null & autoPR.useremail != null) {
+                  console.log("useremail:"+autoPR.useremail);
+                  localStorage.setItem("currentUser", autoPR.useremail);
+                  console.log("local currentUser:"+localStorage["currentUser"]);
+                  userlist = JSON.parse(localStorage.getItem("userList"));
+//              console.log(userlist);
+                  if(userlist === null) {userlist = [];};
+                  if(userlist.indexOf(autoPR.useremail)<0){
+                  userlist.push(autoPR.useremail);
 //                  console.log(userlist);
                   localStorage.setItem("userList", JSON.stringify(userlist));
                   }
@@ -512,7 +668,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
 
 
   if (url === "/api/v1/vault/review") {
-//      console.log(url);
+      console.log("XMLHttpRequest:"+url);
     if (arg0 == 'GET') {     //刷新页面
     const xhr = this;
     const getter = Object.getOwnPropertyDescriptor(
@@ -609,18 +765,19 @@ XMLHttpRequest.prototype.open = function (_, url) {
          var localreview = [];
          var tmpstorage = null ;
          var sdt = formatDate(new Date(),"yyyy-MM-dd HH:mm:ss");
-         if (autoPR.privatePortal.indexOf(pageData.title)>=0 ||
-            (pageData.lat>private1[0]-private1[2]/100000 & pageData.lat<private1[0]+private1[2]/100000 & pageData.lng>private1[1]-private1[3]/100000 & pageData.lng<private1[1]+private1[3]/100000) ||
-               (pageData.lat>private2[0]-private2[2]/100000 & pageData.lat<private2[0]+private2[2]/100000 & pageData.lng>private2[1]-private2[3]/100000 & pageData.lng<private2[1]+private2[3]/100000) ||
-               (pageData.lat>private3[0]-private3[2]/100000 & pageData.lat<private3[0]+private3[2]/100000 & pageData.lng>private3[1]-private3[3]/100000 & pageData.lng<private3[1]+private3[3]/100000) ||
-               (pageData.lat>private4[0]-private4[2]/100000 & pageData.lat<private4[0]+private4[2]/100000 & pageData.lng>private4[1]-private4[3]/100000 & pageData.lng<private4[1]+private4[3]/100000) ||
-               (pageData.lat>private5[0]-private5[2]/100000 & pageData.lat<private5[0]+private5[2]/100000 & pageData.lng>private5[1]-private5[3]/100000 & pageData.lng<private5[1]+private5[3]/100000)
-            ){
-           localreview = JSON.parse(localStorage.getItem(autoPR.username + '1'));
+         var i;  var sloc=0;
+         for (i=0;i<=prt;i++){
+            if(pageData.lat>private[i][0]-private[i][2]/100000 & pageData.lat<private[i][0]+private[i][2]/100000 & pageData.lng>private[i][1]-private[i][3]/100000 & pageData.lng<private[i][1]+private[i][3]/100000)
+                {sloc=1;}
+         }
+             console.log("Updating local review storage..");
+         if (autoPR.privatePortal.indexOf(pageData.title)>=0 || sloc==1 ){
+             console.log("Updating local review storage Reviewed1..");
+           localreview = JSON.parse(localStorage.getItem('Reviewed1'));
 //           console.log(localreview);
            if(localreview === null) {localreview = [];};
 //           console.log(localreview);
-           tmpstorage='{\"title\":\"'+pageData.title+'\",\"type\":\"'+JSON.parse(data).type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
+           tmpstorage='{\"user\":\"'+localStorage['currentUser']+'\",\"title\":\"'+pageData.title+'\",\"type\":\"'+JSON.parse(data).type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
                ',\"score\":\"'+JSON.parse(data).quality+'/'+JSON.parse(data).description+'/'+JSON.parse(data).location+'/'+JSON.parse(data).cultural+'/'+JSON.parse(data).uniqueness+'/'+JSON.parse(data).safety
                +'\",\"dt\":\"'+sdt+'\"}';
 //           tmpstorage='{"title":"'+pageData.title+'","type":"'+JSON.parse(data).type+'","lat":'+pageData.lat+',"lng":'+pageData.lng+
@@ -630,20 +787,21 @@ XMLHttpRequest.prototype.open = function (_, url) {
 //               ',"score":"'+JSON.parse(data).quality+'/'+JSON.parse(data).description+'/'+JSON.parse(data).cultural+'/'+JSON.parse(data).uniqueness+'/'+JSON.parse(data).safety+'/'+JSON.parse(data).location+'"}';
            localreview.push(tmpstorage);
            console.log(localreview);
-           localStorage.setItem(autoPR.username + '1', JSON.stringify(localreview));
+           localStorage.setItem('Reviewed1', JSON.stringify(localreview));
          } else {
-           localreview = JSON.parse(localStorage.getItem(autoPR.username + '2'));
+             console.log("Updating local review storage Reviewed2..");
+           localreview = JSON.parse(localStorage.getItem('Reviewed2'));
 //           console.log(localreview);
            if(localreview === null) {localreview = [];};
 //           console.log(localreview);
-           tmpstorage='{\"title\":\"'+pageData.title+'\",\"type\":\"'+JSON.parse(data).type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
+           tmpstorage='{\"user\":\"'+localStorage['currentUser']+'\",\"title\":\"'+pageData.title+'\",\"type\":\"'+JSON.parse(data).type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
                ',\"score\":\"'+JSON.parse(data).quality+'/'+JSON.parse(data).description+'/'+JSON.parse(data).location+'/'+JSON.parse(data).cultural+'/'+JSON.parse(data).uniqueness+'/'+JSON.parse(data).safety
                +'\",\"dt\":\"'+sdt+'\"}';
 //           var tmpstorage='{"title":"'+JSON.parse(data).title+'","type":"'+JSON.parse(data).type+'","lat":'+JSON.parse(data).lat+',"lng":'+JSON.parse(data).lng+
 //               ',"score":"'+JSON.parse(data).quality+'/'+JSON.parse(data).description+'/'+JSON.parse(data).cultural+'/'+JSON.parse(data).uniqueness+'/'+JSON.parse(data).safety+'/'+JSON.parse(data).location+'"}';
            localreview.push(tmpstorage);
-//           console.log(localreview);
-           localStorage.setItem(autoPR.username + '2', JSON.stringify(localreview));
+           console.log(localreview);
+           localStorage.setItem('Reviewed2', JSON.stringify(localreview));
          }
 
 //         autoPR.saveLocalUserReview();
@@ -665,6 +823,12 @@ XMLHttpRequest.prototype.open = function (_, url) {
 document.addEventListener('DOMNodeInserted', function() {
 
     if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
+      try{
+          if(skey==""){
+//            console.log(localStorage["txskey"]);
+            if (typeof localStorage["txskey"] != "undefined")
+              skey = JSON.parse(localstorage.getItem("txskey"));
+            console.log(skey);} } catch(e){}
     }//判断是否审核页面
 
     //showcase-gallery
@@ -677,25 +841,26 @@ document.addEventListener('DOMNodeInserted', function() {
          var stmparr=[];
          //在首页显示池内已审po的表格
          var prpo = [];
-         skey = localStorage["txskey"];
-         if(typeof(skey)!="undefined"){
+//         skey = localStorage["txskey"];
+//         if(typeof(skey)!="undefined"){
 //           if(skey.length>0){} else {
 //           console.log("getItem sskey : "+skey);}
-         } else {skey="";}
+//         } else {skey="";}
        if(!autoPR.username)
        {
            autoPR.username=localStorage["currentUser"];
        }
-       if(autoPR.username){
+//       if(autoPR.username){
          $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+autoPR.username+"</font></div>"+
             "<div><font size=5>skey:"+
             "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
-            "<button class='wf-button' onclick=autoPR.saveKey()>保存</button></font></div>");
+            "<button class='wf-button' onclick=autoPR.saveKey()>保存</button></font></div>"+
+            "<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>");
        $(".showcase-gallery").replaceWith("<div><font size=5>池中已审</font></div><div id='privatePortal1'></div><br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>");
 
-       prpo = JSON.parse(localStorage.getItem(autoPR.username + '1'));
+       prpo = JSON.parse(localStorage.getItem('Reviewed1'));
 //       console.log(prpo);
-       var stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>名称</th><th style='width:10%'>类型</th><th style='width:15%'>纬度</th><th style='width:15%'>经度</th><th style='width:20%'>打分</th><th style='width:20%'>时间</th></tr></thead>";
+       var stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th><th style='width:40%'>时间</th></tr></thead>";
        if (prpo!=null){
            stmp+="<tbody>";
            for(var i=prpo.length-1;i>=0;i--){
@@ -708,22 +873,22 @@ document.addEventListener('DOMNodeInserted', function() {
 //               console.log(strarr);
                stmparr = eval("(" + strarr + ")");
 //               console.log(JSON.parse(prpo[i]));
-               stmp+="<tr><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
-               } catch(e) {
-                   console.log(e);
+               stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
+               } catch(err) {
+                   console.log(err);
                }
            }
          stmp+="</tbody></table>";
          $("#privatePortal1").replaceWith(stmp);
        }
-       }
+//       }
        } catch(e){skey="";console.log(e);}
 
        //在首页显示池外已审po的表格
-       prpo = JSON.parse(localStorage.getItem(autoPR.username + '2'));
-//       console.log(prpo);
+       prpo = JSON.parse(localStorage.getItem('Reviewed2'));
+       console.log(prpo);
 //       console.log(prpo[0]);
-       stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>名称</th><th style='width:10%'>类型</th><th style='width:15%'>纬度</th><th style='width:15%'>经度</th><th style='width:20%'>打分</th><th style='width:20%'>时间</th></tr></thead>";
+       stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th><th style='width:40%'>时间</th></tr></thead>";
        if (prpo!=null){
            stmp+="<tbody>";
 //           console.log(prpo.length);
@@ -736,12 +901,12 @@ document.addEventListener('DOMNodeInserted', function() {
 //               console.log(strarr);
                stmparr = eval("(" + strarr + ")");
 //               console.log(JSON.parse(prpo[i]));
-               stmp+="<tr><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
+               stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
                if (prpo.length-1 - i > autoPR.privatePortalDisplay2 ) {
                    break;
                }
-               } catch (e) {
-                   console.log(e);
+               } catch (err) {
+                   console.log(err);
                }
            }
        stmp+="</tbody></table>";
@@ -780,13 +945,25 @@ window.nextRun = function (callback) {
 };
 
 
-window.onload = function () {
+(function () {
     //
 //    window.localStorage.clear()
     // 读取参数
+//    console.log(private[4][3]);
     autoPR.settings = autoPR.initSettings;
     console.log(autoPR.settings);
 //    localStorage.removeItem("Tong Teddy");
+    try{
+//    console.log(localStorage["txskey"]);
+//              console.log(skey);
+      if (typeof localStorage["txskey"] != "undefined")
+//              console.log(skey);
+//              console.log(localStorage["txskey"]);
+          if(skey==null || skey==""){
+             skey = localStorage["txskey"];
+//              console.log(skey);
+          }
+      console.log(skey);} catch(e){}
 
     if (typeof localStorage["autoCloud-settings"] != "undefined")
         autoPR.settings = JSON.parse(localStorage["autoCloud-settings"]);
@@ -820,7 +997,7 @@ window.onload = function () {
            $(".wf-page-header__title.ng-star-inserted").after(
                '<button type="button" id="userbtn" style="background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:40px" onclick = "autoPR.startstopAuto()">' +
                 ' 切换 </button><font size = "3"><span style="color:red" id = "autoRev" > </span></font>'+
-               '<span id="useradd001"></span><span id="useradd002">  ||    '+autoPR.username+' </span><span id="userscore"></span><span id="useradd004"></span><div id="useradd003">地址</div>');
+               '<span id="useradd001"></span><span id="useradd002">  ||    '+localStorage['currentUser']+' </span><span id="userscore"></span><span id="useradd004"></span><div id="useradd003">地址</div>');
        }
        if(autoPR.settings.autoReview==="true"){
            $("#autoRev").replaceWith('<span id="autoRev">自动</span>');
@@ -857,6 +1034,7 @@ window.onload = function () {
     }
     // 判断是否在settings页面
     if (document.URL == "https://https://wayfarer.nianticlabs.com/new/captcha") {
+      messageNotice.show();
         const chk = document.querySelectorAll('recaptcha-checkbox-checkmark div[role="presentation"]')[0];
             if (chk) {
                 chk.click();
@@ -884,6 +1062,7 @@ window.onload = function () {
 
 
         // 计时器
+         var iLatLon=0;
        var reviewTimer = setInterval(function () {
 //           console.log("timer");
          // 保存审当前po的起始时间
@@ -895,14 +1074,21 @@ window.onload = function () {
            {
                scrollToBottom();
                scrollToTop();
-               if (autoPR.privatePortal.indexOf(pageData.title)>=0 ||
-                   (pageData.lat>private1[0]-private1[2]/100000 & pageData.lat<private1[0]+private1[2]/100000 & pageData.lng>private1[1]-private1[3]/100000 & pageData.lng<private1[1]+private1[3]/100000) ||
-                   (pageData.lat>private2[0]-private2[2]/100000 & pageData.lat<private2[0]+private2[2]/100000 & pageData.lng>private2[1]-private2[3]/100000 & pageData.lng<private2[1]+private2[3]/100000) ||
-                   (pageData.lat>private3[0]-private3[2]/100000 & pageData.lat<private3[0]+private3[2]/100000 & pageData.lng>private3[1]-private3[3]/100000 & pageData.lng<private3[1]+private3[3]/100000) ||
-                   (pageData.lat>private4[0]-private4[2]/100000 & pageData.lat<private4[0]+private4[2]/100000 & pageData.lng>private4[1]-private4[3]/100000 & pageData.lng<private4[1]+private4[3]/100000) ||
-                   (pageData.lat>private5[0]-private5[2]/100000 & pageData.lat<private5[0]+private5[2]/100000 & pageData.lng>private5[1]-private5[3]/100000 & pageData.lng<private5[1]+private5[3]/100000)
-            ){
+               var i;var iloc=0;
+               if(iLatLon==0){
+               for (i=0;i<=prt;i++){
+//                   console.log(i);
+                   if(pageData.lat>private[i][0]-private[i][2]/100000 & pageData.lat<private[i][0]+private[i][2]/100000 & pageData.lng>private[i][1]-private[i][3]/100000 & pageData.lng<private[i][1]+private[i][3]/100000)
+                   {
+                       iloc=1;
+                       console.log("池中");
+                   }
+               }}
+               console.log(iloc);
+               iLatLon=1;
+               if (autoPR.privatePortal.indexOf(pageData.title)>=0 || iloc==1){
                autoPR.settings.autoReview="false";
+               messageNotice.show();
                }
            }
          //图片编辑，时间范围减半
@@ -928,26 +1114,31 @@ window.onload = function () {
        let retitle = document.getElementById("latestpo");
        if( !retitle){
            $(".wf-page-header__title.ng-star-inserted").replaceWith("<font size=3><div class='wf-page-header__title ng-star-inserted' id='latestpo'>最近审的po</div></font>");
-           let prpo1 = JSON.parse(localStorage.getItem(autoPR.username + '1'));
-           console.log(prpo1);
+           let prpo1 = JSON.parse(localStorage.getItem('Reviewed1'));
+//           console.log(prpo1);
            //       console.log(prpo[0]);
            if (prpo1!=null){
                let stmp =" ";
                //           console.log(prpo.length);
-               for(let i=prpo1.length-1;i>=prpo1.length-6;i--){
-                   let strarr = prpo1[i];
+               var icnt=0;
+               for(let i=prpo1.length-1;i>=0;i--){
+                 let strarr = prpo1[i];
                    try {
                        while(strarr.indexOf("undefined")>0){
                            strarr = strarr.replace("undefined","0");
                        }
                        //               console.log(strarr);
                        let stmparr = eval("(" + strarr + ")");
-                       stmp += stmparr.title+"/";
+                       if(stmparr.user==localStorage["currentUser"]){
+                         stmp += stmparr.title+"/";
+                         icnt++;
+                         if (icnt>=5) break;
+                       }
                    } catch(e) {
                        console.log(e);
                    }
                }
-               console.log(stmp);
+//               console.log(stmp);
                $("#latestpo").replaceWith("<font size=3><div class='wf-page-header__title ng-star-inserted' id='latestpo'>最近审的po："+stmp+"</div></font>");
            }
        }
@@ -975,7 +1166,7 @@ window.onload = function () {
          $(".wf-page-header__title.ng-star-inserted").after(
                '<button type="button" id="userbtn" style="background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:40px" onclick = "autoPR.startstopAuto()">' +
                 ' 切换 </button><font size = "3"> <span style="color:red" id = "autoRev" > </span></font>'+
-             '<span id="useradd001"></span><font size=3 style="color:black"><span id="useradd002">   ||    '+autoPR.username+' </span><span id="userscore">'+sspos+'</span><span id="useradd004"></span></font><font size=3 style="color:black"><div id="useradd003"></div></font>');
+             '<span id="useradd001"></span><font size=3 style="color:black"><span id="useradd002">   ||    '+localStorage['currentUser']+' </span><span id="userscore">'+sspos+'</span><span id="useradd004"></span></font><font size=3 style="color:black"><div id="useradd003"></div></font>');
        }
        if(autoPR.settings.autoReview==="true"){
            $("#autoRev").replaceWith('<span id="autoRev">自动</span>');
@@ -987,12 +1178,18 @@ window.onload = function () {
                      (    Array(2).join("0") +  Math.floor(autoPR.initSettings.portalTime / 120) ).slice(-2) + ":" +
                      (    Array(2).join("0") + (Math.floor(autoPR.initSettings.portalTime / 2) % 60) ).slice(-2)  + "</font> </span>");
        };
-       if(typeof(autoPR.username)!="undefined") {  $("#useradd002").innerText= "   ||   " + autoPR.username ;  }
+       if(typeof(autoPR.username)!="undefined" || typeof(autoPR.useremail)!="undefined") {  $("#useradd002").innerText= "   ||   " + localStorage['currentUser'] ;  }
 
        if(typeof(pageData)!="undefined"){
             if(chsaddr == null)
             {
 //                console.log("lastchsaddr : "+lastchsaddr);
+//                console.log(skey);
+                if(skey!="" & skey!=null ){
+//                    console.log(skey);
+                    autoPR.getAddr1(pageData.lat,pageData.lng);
+                }
+//                 console.log("chsaddr : "+autoPR.chsaddr);
             }
            if(chsaddr!=null){
 //               console.log("chsaddr : "+autoPR.chsaddr);
@@ -1016,7 +1213,7 @@ window.onload = function () {
                if(engaddr!=null){
                if(engaddr!=lastengaddr)
                {
-                   if(bdisplaychsaddr==0){
+                   if(bdisplaychsaddr==0 & skey!="" & skey!=null ){
                        autoPR.getAddr1(pageData.lat,pageData.lng);
                    }
 //                   console.log(engaddr);
@@ -1034,5 +1231,5 @@ window.onload = function () {
       })();
     },
     autoPR.initSettings.scriptTimeout * 1000) ;
-};
+})();
 //window.onload
