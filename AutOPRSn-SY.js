@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.1
+// @version      3.1.1
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -952,6 +952,7 @@ window.nextRun = function (callback) {
 //    console.log(private[4][3]);
     autoPR.settings = autoPR.initSettings;
     console.log(autoPR.settings);
+    messageNotice.stop();
 //    localStorage.removeItem("Tong Teddy");
     try{
 //    console.log(localStorage["txskey"]);
