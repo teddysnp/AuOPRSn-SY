@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.1.3
+// @version      3.1.4
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -836,6 +836,13 @@ document.addEventListener('DOMNodeInserted', function() {
     if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
         if(!messageNotice.timer){
           console.log("listener:"+document.URL);
+          messageNotice.show();
+        }
+    }
+    //停住了，提示一下：可能edit的地图未到位，或者有未选上的
+    if (document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary wf-button--disabled"]')){
+        if(!messageNotice.timer){
+          console.log("not selected:"+document.URL);
           messageNotice.show();
         }
     }
