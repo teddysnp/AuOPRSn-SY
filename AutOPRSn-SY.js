@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.1.2
+// @version      3.1.3
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -49,24 +49,31 @@ var doctitle;
 class MessageNotice {
   timer = undefined;
   title = document.title;
+  timelist = [];
   count = 0;
 
   show() {
-    this.timer = setInterval(() => {
-      if (this.count % 2 ==0 ) {
-        document.title="【提示】" + this.title;
-      } else {
-        document.title=this.title;
-      }
-      this.count++;
-    },500)
+    if(!this.timer){
+      this.timer = setInterval(() => {
+        if (this.count % 2 ==0 ) {
+          document.title="【提示】" + this.title;
+        } else {
+          document.title="【.......】" + this.title;
+        }
+        this.count++;
+      },400)
+      this.timelist.push(this.timer);
+    }
   }
 
   stop() {
     if ( this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
+      this.timelist.forEach((item,index)=>{
+        clearInterval(this.timer);
+      })
+      this.timer = undefined;
       this.count = 0;
+      this.timelist = [];
       document.title = this.title;
     }
   }
@@ -351,13 +358,12 @@ autoPR = {
             const ratingElementParts = document.getElementsByClassName("wf-review-card");
 //            console.log(ratingElementParts);
 //            console.log(document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon"]'));
-            var iram1,iram2;
+            var iram1,iram2,iram3;
             if (ibaserate==4){iram1=0;iram2=0;}
-            if (ibaserate==3){iram2=Math.floor(Math.random()*100);iram1=0;}     //本地，随机数1-100 5/6/7必选一个，选中10%no/90%dont know
-            //外地 随机0-100 10%选中，选中no
-            //外地 随机201-300 5/6/7必选一个，选中10%no/90%dont know; 30%选中和二个，选中10%no/90%dont know
-            if (ibaserate==2){iram2=Math.floor(100+Math.random()*100);iram1=Math.floor(Math.random()*100);}
-            console.log("ibaserate : "+ibaserate+" iram1 : "+iram1 + " iram2 : "+iram2);
+            if (ibaserate==3){iram2=Math.floor(Math.random()*100);iram1=0;}     //本地，随机数1-100 90% 5/6/7必选一个，选中10%no/90%dont know
+            //外地 随机1-100 90% 5/6/7必选一个，选中10%no/90%dont know; 30%选中第二个，选中10%no/90%dont know
+            if (ibaserate==2){iram3=Math.floor(Math.random()*100);iram2=Math.floor(Math.random()*100);iram1=Math.floor(Math.random()*100);}
+            console.log("ibaserate : "+ibaserate+" iram1 : "+iram1 + " iram2 : "+iram2 + " iram3 : "+iram3);
 //            try{
 //                console.log("try start");
 //            iram1=3;
@@ -442,12 +448,12 @@ autoPR = {
                 }
             }//永久
             //社交5  5-no    1-3 34-37  5-不知道  4-33 38-67
-            if((iram2>0 & iram2<7) || (iram2>100 & iram2<104) || (iram2>133 & iram2<138)){
+            if((iram2>0 & iram2<7) || (iram3>0 & iram3<3)){
                 if(document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
                 {
                   document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
                 }
-            } else if ((iram2>18 & iram2<46) || (iram2>103 & iram2<134)  || (iram2>137 & iram2<168) ) {
+            } else if ((iram2>18 & iram2<43) || (iram3>3 & iram3<14)) {
                 if(document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
                 {
                   document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
@@ -463,12 +469,12 @@ autoPR = {
                 }
             }//社交
             //运动6 6-no  34-36 68-70  6-不知道 37-67 71-99
-            if( (iram2>6 & iram2<13)  || (iram2>133 & iram2<137) || (iram2>167 & iram2<171)) {
+            if( (iram2>6 & iram2<13)  || (iram3>33 & iram3<36)) {
                 if(document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
                 {
                   document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
                 }
-            } else if ( (iram2>45 & iram2<73) || (iram2>136 & iram2<168)  || (iram2>170 & iram2<200) )  {
+            } else if ( (iram2>45 & iram2<69) || (iram3>36 & iram3<48))  {
                 if(document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
                 {
                   document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
@@ -484,12 +490,12 @@ autoPR = {
                 }
             }
             //探索7 7-no  68-70 1-3    7-不知道 71-99 4-33
-            if( (iram2>12 & iram2<19)  || (iram2>167 & iram2<171) || (iram2>100 & iram2<104)) {
+            if( (iram2>12 & iram2<19)  || (iram3>67 & iram3<70) ) {
                 if(document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
                 {
                   document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
                 }
-            } else if ( (iram2>72 & iram2<100) || (iram2>170 & iram2<200)  || (iram2>103 & iram2<134) ) {
+            } else if ( (iram2>72 & iram2<97) || (iram3>70 & iram3<82) ) {
                 if(document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
                 {
                   document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
