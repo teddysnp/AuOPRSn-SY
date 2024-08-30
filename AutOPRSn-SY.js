@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.1.4
+// @version      3.1.5
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -557,7 +557,7 @@ autoPR = {
         $("#userscore").replaceWith("<span id='userscore'>"+spos+"</span>");
         iHaveRate="true";
     },
-    UserEditBugTemp : function(){
+    UserEditBugTemp : function(){  //未选中提交按钮改为窗口提示，此函数应该不再使用
         //修改
         if(pageData.type=="EDIT"){
             const opt = document.querySelectorAll('mat-radio-button label')[0];
@@ -836,13 +836,6 @@ document.addEventListener('DOMNodeInserted', function() {
     if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
         if(!messageNotice.timer){
           console.log("listener:"+document.URL);
-          messageNotice.show();
-        }
-    }
-    //停住了，提示一下：可能edit的地图未到位，或者有未选上的
-    if (document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary wf-button--disabled"]')){
-        if(!messageNotice.timer){
-          console.log("not selected:"+document.URL);
           messageNotice.show();
         }
     }
@@ -1125,11 +1118,15 @@ window.nextRun = function (callback) {
             autoPR.UserSubmit();    //自动打分，此处未提交
          }
          let apperr = document.querySelector('app-review-error');
-         //如果超过5秒，提交按钮未选中，则出现地图点无法选中的bug，此处再次点击地图
+         //如果超过5秒，提交按钮未选中，则出现地图点无法选中的bug，闪烁提示
          if(autoPR.initSettings.portalTime>5){
-             let btn1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
-//             console.log(btn1);
-             if (btn1==null) autoPR.UserEditBugTemp();
+             if (document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary wf-button--disabled"]')){
+               if(!messageNotice.timer){
+                   console.log("not selected:"+document.URL);
+                   messageNotice.show();
+               }
+             }
+//             if (btn1==null) autoPR.UserEditBugTemp();
          }
          if((autoPR.initSettings.portalTime>=autoPR.initSettings.itimeout & autoPR.settings.autoReview=="true" & pageData.captcha=="false"
                    & pageData.code!="EXHAUSTED" ) || apperr){  //超时了
