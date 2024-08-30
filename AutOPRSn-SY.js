@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.1.1
+// @version      3.1.2
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -346,6 +346,7 @@ autoPR = {
 //        console.log("ibaserate:"+ibaserate+" ; spos:"+spos);
         //新
         if(pageData.type=="NEW"){
+            messageNotice.stop();
             // Star rating
             const ratingElementParts = document.getElementsByClassName("wf-review-card");
 //            console.log(ratingElementParts);
@@ -358,7 +359,7 @@ autoPR = {
             if (ibaserate==2){iram2=Math.floor(100+Math.random()*100);iram1=Math.floor(Math.random()*100);}
             console.log("ibaserate : "+ibaserate+" iram1 : "+iram1 + " iram2 : "+iram2);
 //            try{
-                console.log("try start");
+//                console.log("try start");
 //            iram1=3;
             //适当1
             if (iram1>0 & iram1<4){
@@ -523,6 +524,7 @@ autoPR = {
 
         //修改
         if(pageData.type=="EDIT"){
+            scrollToBottom();
             const opt = document.querySelectorAll('mat-radio-button label')[0];
             const opt1 = document.querySelectorAll('agm-map div[role="button"]')[0];
             if (opt1) {
@@ -536,6 +538,7 @@ autoPR = {
             }
 //            console.log("opt1:");
 //            console.log(opt1);
+            scrollToTop();
         }
 
         //图片
@@ -607,6 +610,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
   let arg0 = arguments[0];
 //    console.log(arguments);
 
+
   //登录后，得到登录的邮箱和用户名
   if (url === "/api/v1/vault/properties") {
       console.log("XMLHttpRequest:"+url);
@@ -622,14 +626,14 @@ XMLHttpRequest.prototype.open = function (_, url) {
         try {
           const res = JSON.parse(result).result;
 //          console.log(result);
-          console.log(res);
+//          console.log(res);
           if(res){
               autoPR.useremail = res.socialProfile.email;
               autoPR.username = res.socialProfile.name;
-          console.log("username:"+autoPR.username);
+//          console.log("username:"+autoPR.username);
               var userlist="";
-              console.log(autoPR.username != null );
-              console.log(autoPR.useremail != null );
+//              console.log(autoPR.username != null );
+//              console.log(autoPR.useremail != null );
               if(autoPR.username != null ){
                   localStorage.setItem("currentUser", JSON.stringify(autoPR.username));
                   userlist = JSON.parse(localStorage.getItem("userList"));
@@ -641,9 +645,9 @@ XMLHttpRequest.prototype.open = function (_, url) {
                   localStorage.setItem("userList", JSON.stringify(userlist));
                   }
               } else if (autoPR.username == null & autoPR.useremail != null) {
-                  console.log("useremail:"+autoPR.useremail);
+//                  console.log("useremail:"+autoPR.useremail);
                   localStorage.setItem("currentUser", autoPR.useremail);
-                  console.log("local currentUser:"+localStorage["currentUser"]);
+//                  console.log("local currentUser:"+localStorage["currentUser"]);
                   userlist = JSON.parse(localStorage.getItem("userList"));
 //              console.log(userlist);
                   if(userlist === null) {userlist = [];};
@@ -668,6 +672,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
 
 
   if (url === "/api/v1/vault/review") {
+      messageNotice.stop();
       console.log("XMLHttpRequest:"+url);
     if (arg0 == 'GET') {     //刷新页面
     const xhr = this;
@@ -770,9 +775,9 @@ XMLHttpRequest.prototype.open = function (_, url) {
             if(pageData.lat>private[i][0]-private[i][2]/100000 & pageData.lat<private[i][0]+private[i][2]/100000 & pageData.lng>private[i][1]-private[i][3]/100000 & pageData.lng<private[i][1]+private[i][3]/100000)
                 {sloc=1;}
          }
-             console.log("Updating local review storage..");
+//             console.log("Updating local review storage..");
          if (autoPR.privatePortal.indexOf(pageData.title)>=0 || sloc==1 ){
-             console.log("Updating local review storage Reviewed1..");
+//             console.log("Updating local review storage Reviewed1..");
            localreview = JSON.parse(localStorage.getItem('Reviewed1'));
 //           console.log(localreview);
            if(localreview === null) {localreview = [];};
@@ -786,10 +791,10 @@ XMLHttpRequest.prototype.open = function (_, url) {
 //           var tmpstorage='{"title":"'+JSON.parse(data).title+'","type":"'+JSON.parse(data).type+'","lat":'+JSON.parse(data).lat+',"lng":'+JSON.parse(data).lng+
 //               ',"score":"'+JSON.parse(data).quality+'/'+JSON.parse(data).description+'/'+JSON.parse(data).cultural+'/'+JSON.parse(data).uniqueness+'/'+JSON.parse(data).safety+'/'+JSON.parse(data).location+'"}';
            localreview.push(tmpstorage);
-           console.log(localreview);
+//           console.log(localreview);
            localStorage.setItem('Reviewed1', JSON.stringify(localreview));
          } else {
-             console.log("Updating local review storage Reviewed2..");
+//             console.log("Updating local review storage Reviewed2..");
            localreview = JSON.parse(localStorage.getItem('Reviewed2'));
 //           console.log(localreview);
            if(localreview === null) {localreview = [];};
@@ -800,7 +805,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
 //           var tmpstorage='{"title":"'+JSON.parse(data).title+'","type":"'+JSON.parse(data).type+'","lat":'+JSON.parse(data).lat+',"lng":'+JSON.parse(data).lng+
 //               ',"score":"'+JSON.parse(data).quality+'/'+JSON.parse(data).description+'/'+JSON.parse(data).cultural+'/'+JSON.parse(data).uniqueness+'/'+JSON.parse(data).safety+'/'+JSON.parse(data).location+'"}';
            localreview.push(tmpstorage);
-           console.log(localreview);
+//           console.log(localreview);
            localStorage.setItem('Reviewed2', JSON.stringify(localreview));
          }
 
@@ -822,6 +827,12 @@ XMLHttpRequest.prototype.open = function (_, url) {
 //节点更新监听：用于页面有刷新时的处理； 但是会处理多次
 document.addEventListener('DOMNodeInserted', function() {
 
+    if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
+        if(!messageNotice.timer){
+          console.log("listener:"+document.URL);
+          messageNotice.show();
+        }
+    }
     if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
       try{
           if(skey==""){
@@ -886,7 +897,7 @@ document.addEventListener('DOMNodeInserted', function() {
 
        //在首页显示池外已审po的表格
        prpo = JSON.parse(localStorage.getItem('Reviewed2'));
-       console.log(prpo);
+//       console.log(prpo);
 //       console.log(prpo[0]);
        stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th><th style='width:40%'>时间</th></tr></thead>";
        if (prpo!=null){
@@ -1034,12 +1045,13 @@ window.nextRun = function (callback) {
 
     }
     // 判断是否在settings页面
-    if (document.URL == "https://https://wayfarer.nianticlabs.com/new/captcha") {
+    if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
+        console.log("load:"+document.URL);
       messageNotice.show();
-        const chk = document.querySelectorAll('recaptcha-checkbox-checkmark div[role="presentation"]')[0];
-            if (chk) {
-                chk.click();
-    }
+//        const chk = document.querySelectorAll('recaptcha-checkbox-checkmark div[role="presentation"]')[0];
+//            if (chk) {
+//                chk.click();
+//    }
     }
     // 判断是否在settings页面
     if (document.URL == "https://wayfarer.nianticlabs.com/new/settings") {
