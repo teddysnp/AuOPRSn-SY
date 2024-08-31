@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.1.5
+// @version      3.1.6
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -81,6 +81,7 @@ class MessageNotice {
 
 const messageNotice = new MessageNotice();
 
+
 autoPR = {
     initSettings: {
         scriptTimeout: 3, //脚本延时（秒）
@@ -106,6 +107,21 @@ autoPR = {
     pausePortal: [],
     privatePortalDisplay1: 30,
     privatePortalDisplay2: 20,
+
+    usrtest:function() {
+    },
+    scrollBottomTop:function() {
+        //mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100
+        //mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100
+        var conpan = document.querySelector('mat-sidenav-content[class="mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100"]');
+        if(conpan)
+        {
+            conpan.scrollTo({top:conpan.scrollHeight,left:0,behavior:'smooth'});
+//            console.log("scroll to bottom");
+//            conpan.scrollTo({top:0,left:0,behavior:'smooth'});
+//            console.log("scroll to top");
+        }
+    },
 
     saveLocalUserReview:function () {
 //        localuserreviewdata.push(JSON.parse(localStorage.getItem(useremail)));
@@ -296,8 +312,9 @@ autoPR = {
         });
     },
 
+    //模拟用户点击打分
+    //并不提交，提交在定时器中，到时点击提交按钮实现
     UserSubmit : function(){
-
 //        if(!pageData) return;
 
         let ibaserate=0;
@@ -308,7 +325,7 @@ autoPR = {
         if (autoPR.privatePortal.indexOf(pageData.title)>0){
             ibaserate=4; //池中
             spos="池中:";
-        } else if(pageData.type=="NEW" ){
+        } else if(pageData.type=="NEW"){
 //            console.log('streetAddress : '+pageData.streetAddress);
 //            console.log("本地判断："+pageData.streetAddress.indexOf("Shen Yang")>0 || pageData.streetAddress.indexOf("Liao Ning")>0
 //               || pageData.streetAddress.indexOf("Ji Lin")>0 || pageData.streetAddress.indexOf("Shenyang")>0
@@ -340,6 +357,7 @@ autoPR = {
 //                spos="池中:";
 //            }
 
+        }
             var i;
             for (i=0;i<=prt;i++){
                 if(pageData.lat>private[i][0]-private[i][2]/100000 & pageData.lat<private[i][0]+private[i][2]/100000 & pageData.lng>private[i][1]-private[i][3]/100000 & pageData.lng<private[i][1]+private[i][3]/100000)
@@ -347,7 +365,6 @@ autoPR = {
                  console.log("池中啦" + i);
                 }
             }
-        }
 
 //        console.log("pageData.streetAddress:"+pageData.streetAddress);
 //        console.log("ibaserate:"+ibaserate+" ; spos:"+spos);
@@ -522,29 +539,78 @@ autoPR = {
 //                break;
                }
             }
-//        document.querySelector('flex justify-center mt-8 ng-star-inserted').scrollIntoView({ block: 'start' });
-//        document.querySelector('app-review').scrollIntoView({ block: 'start' });
 
-//            document.querySelector('mat-button-toggle:nth-child(2) button').click();
+          iHaveRate="true";
         }
 
         //修改
         if(pageData.type=="EDIT"){
-            scrollToBottom();
-            const opt = document.querySelectorAll('mat-radio-button label')[0];
-            const opt1 = document.querySelectorAll('agm-map div[role="button"]')[0];
-            if (opt1) {
-                opt1.scrollIntoView(true);   //地图不在视野内的时候，元素不加载，所以滚动到此，使其加载
+            //??? 问题 ， 有时候地图上不选点，奇怪
+            //地图存在，则滚动至地图(因为有时候地图不在视野时，内容不加载)
+//            if( optp) {optp.scrollTo({top:optp.scrollHeight,left:0,behavior:'smooth'}); }
+
+
+            //点地图中的第一个点
+            const icnt1 = 0;
+            const optp = document.querySelector('agm-map');
+            if (optp) {
+              optp.scrollIntoView(true);
+              var opt1 = optp.querySelector('div[role="button"]');
+              console.log(opt1);
+              while(!opt1) {
+                setTimeout(function(){
+                  opt1 = optp.querySelector('div[role="button"]');
+//                  if (opt1) { break;}
+                  console.log(opt1);
+                },1000);
+                  icnt1++;
+                  if (icnt1>10) { break;}
+              }
+              console.log(opt1);
+              if (opt1) {
                 opt1.click();
-//                console.log("map click!");
+                console.log("map click!");
+              }
             }
-            if (opt) {
-                opt.scrollIntoView(true);   //地图不在视野内的时候，元素不加载，所以滚动到此，使其加载
-                opt.click();
+
+            //点集合中的第一个选项
+            const icnt2 = 0;
+            const optp2 = document.querySelector('mat-radio-button');
+            if (optp2) {
+              optp2.scrollIntoView(true);
+              var opt2 = optp2.querySelector('mat-radio-button label')[0];
+              console.log(opt2);
+              while(!opt2) {
+                  setTimeout(function(){
+                  opt2 = optp2.querySelector('mat-radio-button label')[0];
+                  console.log(opt2);
+                },1000);
+                icnt2++;
+                if (icnt2>10) { break;}
+              }
+              console.log(opt2);
+              if (opt2) {
+                opt2.click();
+                console.log("options click!");
+              }
+            }
+
+
+            iHaveRate="true";    //已经打分
+            //本地，如果是自动，则切换为手动
+            if (autoPR.settings.autoReview=='true' & ibaserate==4) {
+                autoPR.settings.autoReview = 'false';
+                $("#autoRev").replaceWith('<span style="color:red" id = "autoRev" > 手动 </span>')
+            }
+            //滚回顶部
+            var conpan = document.querySelector('mat-sidenav-content[class="mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100"]');
+            if(conpan)
+            {
+              conpan.scrollTo({top:0,left:0,behavior:'smooth'});
+//              console.log("scroll to top");
             }
 //            console.log("opt1:");
 //            console.log(opt1);
-            scrollToTop();
         }
 
         //图片
@@ -552,10 +618,10 @@ autoPR = {
             const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card')[0];
 //            console.log(photo);
             if (photo) photo.click();
+          iHaveRate="true";
         }
 
         $("#userscore").replaceWith("<span id='userscore'>"+spos+"</span>");
-        iHaveRate="true";
     },
     UserEditBugTemp : function(){  //未选中提交按钮改为窗口提示，此函数应该不再使用
         //修改
@@ -1091,8 +1157,6 @@ window.nextRun = function (callback) {
          //判断为池中Edit，则暂停
            if (pageData.type == "EDIT")
            {
-               scrollToBottom();
-               scrollToTop();
                var i;var iloc=0;
                if(iLatLon==0){
                for (i=0;i<=prt;i++){
@@ -1103,11 +1167,11 @@ window.nextRun = function (callback) {
                        console.log("池中");
                    }
                }}
-               console.log(iloc);
+//               console.log(iloc);
                iLatLon=1;
                if (autoPR.privatePortal.indexOf(pageData.title)>=0 || iloc==1){
-               autoPR.settings.autoReview="false";
-               messageNotice.show();
+                 autoPR.settings.autoReview="false";
+                 messageNotice.show();
                }
            }
          //图片编辑，时间范围减半
@@ -1162,7 +1226,7 @@ window.nextRun = function (callback) {
                    }
                }
 //               console.log(stmp);
-               $("#latestpo").replaceWith("<font size=3><div class='wf-page-header__title ng-star-inserted' id='latestpo'>最近审的po："+stmp+"</div></font>");
+               $("#latestpo").replaceWith("<button class='wf_button' onclick='autoPR.usrtest()'>测试</button><font size=3><div class='wf-page-header__title ng-star-inserted' id='latestpo'>最近审的po："+stmp+"</div></font>");
            }
        }
 
