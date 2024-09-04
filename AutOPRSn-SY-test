@@ -36,6 +36,7 @@ var skey="";  //You need input your own key at the showcase page!
 var doctitle;
 var gpausePortal=[];
 var gpausePortalString=[];
+var igetpos=null;
 
 // xhrPromise1 getAddr1 UserSubmit
 //XMLHttpRequest.prototype.open
@@ -51,6 +52,7 @@ class MessageNotice {
 
   alertShow(){
     this.alertwindow="Displayed";
+    this.show();
   }
   show() {
     if(!this.timer){
@@ -107,8 +109,8 @@ autoPR = {
     latlon:[],
     settings: null,
     privatePortal: ["占位po"],
-    pausePortal: ["鑫丰中心里正门","数字花朵","丛林里的梅花鹿"],
-    pausePortalString: ["↑向上↑","↓向下↓","向右→"],  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
+    pausePortal: ["鑫丰中心里正门","数字花朵","丛林里的梅花鹿","镂空拱"],
+    pausePortalString: ["↑向上↑","↓向下↓","向右→","xjbz"],  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
     privatePortalDisplay1: 30,
     privatePortalDisplay2: 20,
 
@@ -363,7 +365,7 @@ autoPR = {
 //        console.log("ibaserate:"+ibaserate+" ; spos:"+spos);
         //新
         if(pageData.type=="NEW"){
-            messageNotice.stop();
+//            messageNotice.stop();
             // Star rating
             const ratingElementParts = document.getElementsByClassName("wf-review-card");
 //            console.log(ratingElementParts);
@@ -737,7 +739,6 @@ XMLHttpRequest.prototype.open = function (_, url) {
 
 
   if (url === "/api/v1/vault/review") {
-      messageNotice.stop();
       console.log("XMLHttpRequest:"+url);
     if (arg0 == 'GET') {     //刷新页面
     const xhr = this;
@@ -750,6 +751,10 @@ XMLHttpRequest.prototype.open = function (_, url) {
         let result = getter.call(xhr);
         try {
             const res = JSON.parse(result).result;
+            if(res =="api.review.post.accepted") {
+            } else{
+            messageNotice.stop();
+            igetpos ="get";
 //          console.log(result);
 //          console.log(res);
             pageData = res ;
@@ -789,6 +794,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
        iHaveRate="false";
 
        return result;
+            }
         } catch (e) {
           return result;
         }
@@ -800,6 +806,8 @@ XMLHttpRequest.prototype.open = function (_, url) {
     //截获提交请求，用于更新本地审po记录
     if (arg0 == 'POST'){    //提交数据
 //        console.log(arguments[0]);
+      igetpos ="post";
+//      messageNotice.stop();
          let send = this.send;
          let _this = this;
          let post_data = [];
@@ -896,10 +904,12 @@ document.addEventListener('DOMNodeInserted', function() {
 //        console.log(messageNotice.alertwindow);
         if(!messageNotice.alertwindow){
           console.log("listener:"+document.URL);
-          setTimeout("alert('需要验证！')", 1000); //alert("需要验证！");
-          messageNotice.alertwindow="Displayed";
-          messageNotice.alertShow();
-//          messageNotice.alertwindow=undefined;
+//          setTimeout(function (){
+//          setTimeout(function (){
+//            messageNotice.alertWindow="Displayed";
+//            setTimeout(function(){alert("需要验证!");},0);
+//          },0);
+//          },0);
         }
     }
     if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
@@ -1029,7 +1039,7 @@ window.nextRun = function (callback) {
     //
 //    window.localStorage.clear()
     // 读取参数
-//    console.log(private[4][3]);
+    console.log("init:"+document.URL);
     autoPR.settings = autoPR.initSettings;
     console.log(autoPR.settings);
     messageNotice.stop();
@@ -1114,21 +1124,6 @@ window.nextRun = function (callback) {
 
     }
     // 判断是否在settings页面
-    if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
-//        console.log("load:"+document.URL);
-      console.log(messageNotice.alertwindow);
-      if(!messageNotice.alertwindow){
-        setTimeout("alert('需要验证！')", 1000); //alert("需要验证！");
-        messageNotice.alertwindow="Displayed";
-        messageNotice.alertShow();
-//        messageNotice.alertwindow=undefined;
-      }
-//        const chk = document.querySelectorAll('recaptcha-checkbox-checkmark div[role="presentation"]')[0];
-//            if (chk) {
-//                chk.click();
-//    }
-    }
-    // 判断是否在settings页面
     if (document.URL == "https://wayfarer.nianticlabs.com/new/settings") {
         $(".max-w-md.ng-star-inserted").prepend(
             '<div class="settings__item settings-item"><div class="settings-item__header"><div>autoPR设置</div> ' +
@@ -1154,35 +1149,53 @@ window.nextRun = function (callback) {
        var reviewTimer = setInterval(function () {
 //           console.log("timer");
          // 保存审当前po的起始时间
+        const acap = document.querySelector("iframe[title='reCAPTCHA']");
+//      console.log("reCAPTCHA:"+acap);
+        if ((document.URL == "https://wayfarer.nianticlabs.com/new/captcha") || acap ){
+          console.log("load:"+document.URL);
+          console.log(messageNotice.alertwindow);
+          if(messageNotice.alertwindow==undefined){
+            setTimeout(function (){
+              messageNotice.alertShow();
+//              console.log("load:setTimeout:alertWindow:"+messageNotice.alertWindow);
+              setTimeout(function(){alert("需要验证!");},0);
+//              console.log("load:setTimeout:alertWindow:"+messageNotice.alertWindow);
+            },0);
+        }
+      }
        if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
          autoPR.saveStartTime();
-
          //判断为池中Edit，则暂停
-           if (pageData.type == "NEW")  //指定po，不管位置，一律暂停
+         if(typeof(pageData)!="undefined"){
+//           console.log("mainTimer:NEW:alertwindow:"+messageNotice.alertwindow);
+//           console.log("mainTimer:NEW:iSubmit:"+iSubmit);
+//           console.log("mainTimer:NEW:alertwindow:"+messageNotice.alertwindow);
+//           console.log("mainTimer:NEW:igetpos:"+igetpos);
+           if (pageData.type == "NEW" & igetpos=="get")  //指定po，不管位置，一律暂停
            {
-//             console.log(pageData.title);
+             console.log("mainTimer:NEW:pageData.title:"+pageData.title);
                if (autoPR.pausePortal.indexOf(pageData.title)>=0){
                  autoPR.settings.autoReview="false";
                  if(!messageNotice.alertwindow){
-                   setTimeout("alert("+"'"+pageData.title+":"+gpausePortalString[gpausePortal.indexOf(pageData.title)]+"')", 1000);
-                   messageNotice.alertwindow="Displayed";
+                   setTimeout(function (){
                    messageNotice.alertShow();
-                   //alert(pageData.title+":"+autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)]);
+                   setTimeout(function(){alert(pageData.title+":"+autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)]);},0);
+                   },0);
                  }
                } else if (gpausePortal.indexOf(pageData.title)>=0){
                  autoPR.settings.autoReview="false";
                  if(!messageNotice.alertwindow){
-                   setTimeout("alert("+"'"+pageData.title+":"+gpausePortalString[gpausePortal.indexOf(pageData.title)]+"')", 1000);
-                   messageNotice.alertwindow="Displayed";
+                   setTimeout(function (){
                    messageNotice.alertShow();
-                   //alert(pageData.title+":"+gpausePortalString[gpausePortal.indexOf(pageData.title)]);
+                   setTimeout(function(){alert(pageData.title+":"+gpausePortalString[gpausePortal.indexOf(pageData.title)]);},0);
+                   },0);
                  }
                } else if (autoPR.privatePortal.indexOf(pageData.title)>=0){
                  autoPR.settings.autoReview="false";
-                 setTimeout("alert('需要手动干预！')", 1000);
-                 messageNotice.alertwindow="Displayed";
-                 messageNotice.alertShow();
-                 //alert("需要手动干预！");
+                 setTimeout(function () {
+                   messageNotice.alertShow();
+                   setTimeout(function(){alert("需要手动干预!");},0);
+                 },0);
                }
            }
            if (pageData.type == "EDIT")  //池中编辑po,一律暂停
@@ -1201,12 +1214,15 @@ window.nextRun = function (callback) {
                iLatLon=1;
                if (iloc==1){
                  autoPR.settings.autoReview="false";
-                 messageNotice.alertwindow="Displayed";
-                 messageNotice.alertShow();
-                 setTimeout("alert('需要手动干预！')", 1000);
-                 //alert("需要手动干预！");
+                 if(messageNotice.alertwindow==undefined){
+                   setTimeout(function (){
+                     messageNotice.alertShow();
+                     setTimeout(function(){alert("需要手动干预!");},0);
+                   },0);
+                 }
                }
            }
+         }
          //图片编辑，时间范围减半
          autoPR.initSettings.portalTime = (new Date().valueOf() - parseInt(localStorage["portalTime"])) /500; // 半秒
 //             console.log("提交前："+autoPR.initSettings.portalTime +" : "+ vper*2 +" : "+autoPR.settings.autoReview);
@@ -1221,13 +1237,12 @@ window.nextRun = function (callback) {
              if (document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary wf-button--disabled"]')){
                if(!messageNotice.timer){
                    console.log("not selected:"+document.URL);
-                   setTimeout("alert('需要手动干预！')", 1000);
-                   messageNotice.alertwindow="Displayed";
-                   messageNotice.alertShow();
-                   //alert("需要手动干预!");  //出现未选中的情况
+                   setTimeout(function () {
+                     messageNotice.alertShow();
+                     setTimeout(function(){alert("需要手动干预!");},0);
+                   },0);
                }
              }
-//             if (btn1==null) autoPR.UserEditBugTemp();
          }
          if((autoPR.initSettings.portalTime>=autoPR.initSettings.itimeout & autoPR.settings.autoReview=="true" & pageData.captcha=="false"
                    & pageData.code!="EXHAUSTED" )){  //超时了
@@ -1305,6 +1320,7 @@ window.nextRun = function (callback) {
        if(typeof(autoPR.username)!="undefined" || typeof(autoPR.useremail)!="undefined") {  $("#useradd002").innerText= "   ||   " + localStorage['currentUser'] ;  }
 
        if(typeof(pageData)!="undefined"){
+         if(pageData!=null){
             if(chsaddr == null)
             {
 //                console.log("lastchsaddr : "+lastchsaddr);
@@ -1348,6 +1364,7 @@ window.nextRun = function (callback) {
                 }
                 }  //更新英文地址
            }
+         }
        }  //如果pageData存在
 
 
