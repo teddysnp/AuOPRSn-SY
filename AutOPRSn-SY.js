@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.1.7
+// @version      3.1.8
 // @description  审po专用
 // @author       snpsl
 // @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
@@ -38,6 +38,7 @@ var gpausePortal=[];
 var gpausePortalString=[];
 var igetpos=null;
 const mywin=window;
+var iWarning = 0;
 // xhrPromise1 getAddr1 UserSubmit
 //XMLHttpRequest.prototype.open
 //document.addEventListener('DOMNodeInserted', function()
@@ -931,7 +932,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
   originOpen1.apply(this, arguments);
 };
 
-//节点更新监听：用于页面有刷新时的处理； 但是会处理多次
+//节点更新监听：用于页面有刷新时的处理； 但是会处理多次(将来可能用这个取代：MutationObserver)
 document.addEventListener('DOMNodeInserted', function() {
 
     if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
@@ -1072,11 +1073,17 @@ window.nextRun = function (callback) {
 (function () {
     //
 //    window.localStorage.clear()
-                   createNotify("欢迎", {
-                     body: "请自行承担后果(包括被N社踢出)!",
-                     icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                     requireInteraction: false
-                   });
+    if(localStorage["Warning"]) {
+      iWarning = localStorage["Warning"];
+    }
+    if (iWarning == 0) {
+      createNotify("欢迎", {
+        body: "请自行承担后果(包括被N社踢出)!",
+        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+        requireInteraction: false
+      });
+      localStorage.setItem("Warning",1);
+  }
     // 读取参数
     console.log("init:"+document.URL);
     autoPR.settings = autoPR.initSettings;
