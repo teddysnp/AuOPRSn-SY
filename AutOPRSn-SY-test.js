@@ -4,11 +4,10 @@
 // @version      3.2
 // @description  审po专用
 // @author       snpsl
-// @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
-// @downloadURL  https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
+// @require      https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/AuOPRSn-SY-PortalList.js
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // ==/UserScript==
@@ -34,10 +33,9 @@ const private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[
 var bdisplaychsaddr = 0; //中文地址，0:取;1:不取
 var skey="";  //You need input your own key at the showcase page!
 var doctitle;
-var gpausePortal=[];
-var gpausePortalString=[];
 var igetpos=null;
 const mywin=window;
+var iWarning = 0;
 // xhrPromise1 getAddr1 UserSubmit
 //XMLHttpRequest.prototype.open
 //document.addEventListener('DOMNodeInserted', function()
@@ -931,8 +929,19 @@ XMLHttpRequest.prototype.open = function (_, url) {
   originOpen1.apply(this, arguments);
 };
 
-//节点更新监听：用于页面有刷新时的处理； 但是会处理多次
+//节点更新监听：用于页面有刷新时的处理； 但是会处理多次(将来可能用这个取代：MutationObserver)
 document.addEventListener('DOMNodeInserted', function() {
+
+  if (document.querySelector("a[class='login-link login-link--niantic']")) {
+    if(!messageNotice.alertwindow){
+       createNotify("登录", {
+         body: "需要登录",
+         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+         data: "https://wayfarer.nianticlabs.com/new/"
+       });
+      messageNotice.alertShow();
+    }
+  }
 
     if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
 //        console.log(messageNotice.alertwindow);
@@ -1072,11 +1081,17 @@ window.nextRun = function (callback) {
 (function () {
     //
 //    window.localStorage.clear()
-                   createNotify("欢迎", {
-                     body: "请自行承担后果(包括被N社踢出)!",
-                     icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                     requireInteraction: false
-                   });
+    if(localStorage["Warning"]) {
+      iWarning = localStorage["Warning"];
+    }
+    if (iWarning == 0) {
+      createNotify("欢迎", {
+        body: "请自行承担后果(包括被N社踢出)!",
+        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+        requireInteraction: false
+      });
+      localStorage.setItem("Warning",1);
+  }
     // 读取参数
     console.log("init:"+document.URL);
     autoPR.settings = autoPR.initSettings;
