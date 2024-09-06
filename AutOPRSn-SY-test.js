@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.2
+// @version      3.2.1
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1081,6 +1081,8 @@ window.nextRun = function (callback) {
 (function () {
     //
 //    window.localStorage.clear()
+    let gpausePortal = [];
+    let gpausePortalString = [];
     if(localStorage["Warning"]) {
       iWarning = localStorage["Warning"];
     }
