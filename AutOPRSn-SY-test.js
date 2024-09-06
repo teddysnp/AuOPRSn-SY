@@ -937,7 +937,7 @@ document.addEventListener('DOMNodeInserted', function() {
        createNotify("登录", {
          body: "需要登录",
          icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-         data: "https://wayfarer.nianticlabs.com/new/"
+         requireInteraction: true
        });
       messageNotice.alertShow();
     }
