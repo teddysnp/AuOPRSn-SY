@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.2.2
+// @version      3.2.3
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1002,6 +1002,9 @@ document.addEventListener('DOMNodeInserted', function() {
                while(strarr.indexOf("undefined")>0){
                    strarr = strarr.replace("undefined","0");
                }
+                       while(strarr.indexOf('""')>0){
+                         strarr = strarr.replace('""','"');
+                       }
 //               console.log(strarr);
                stmparr = eval("(" + strarr + ")");
 //               console.log(JSON.parse(prpo[i]));
@@ -1030,6 +1033,9 @@ document.addEventListener('DOMNodeInserted', function() {
                while(strarr.indexOf("undefined")>0){
                    strarr = strarr.replace("undefined","0");
                }
+                       while(strarr.indexOf('""')>0){
+                         strarr = strarr.replace('""','"');
+                       }
 //               console.log(strarr);
                stmparr = eval("(" + strarr + ")");
 //               console.log(JSON.parse(prpo[i]));
@@ -1080,8 +1086,8 @@ window.nextRun = function (callback) {
 (function () {
     //
 //    window.localStorage.clear()
-    let gpausePortal = [];
-    let gpausePortalString = [];
+//    let gpausePortal = [];
+//    let gpausePortalString = [];
     if(localStorage["Warning"]) {
       iWarning = localStorage["Warning"];
     }
