@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.2.3
+// @version      3.2.4
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1237,8 +1237,8 @@ window.nextRun = function (callback) {
                if (autoPR.pausePortal.indexOf(pageData.title)>=0){
                  autoPR.settings.autoReview="false";
                  if(!messageNotice.alertwindow) {
-                   createNotify("需要干预", {
-                     body: pageData.title+":"+autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)],
+                   createNotify(pageData.title, {
+                     body: autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)],
                      icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                      requireInteraction: true
                    });
@@ -1247,8 +1247,8 @@ window.nextRun = function (callback) {
                } else if (gpausePortal.indexOf(pageData.title)>=0){
                  autoPR.settings.autoReview="false";
                  if(!messageNotice.alertwindow){
-                   createNotify("需要干预", {
-                     body: pageData.title+":"+gpausePortalString[gpausePortal.indexOf(pageData.title)],
+                   createNotify(pageData.title, {
+                     body: gpausePortalString[gpausePortal.indexOf(pageData.title)],
                      icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                      requireInteraction: true
                    });
@@ -1284,17 +1284,20 @@ window.nextRun = function (callback) {
 //               console.log("timer:iloc:"+iloc);
                if (iloc==1){
                  autoPR.settings.autoReview="false";
-                 var almsg="需要手动干预!";
+                 let almsg1="需要手动干预!";
+                 let almsg2="需要手动干预!";
 
                  if (autoPR.pausePortal.indexOf(pageData.title)>=0){
-                   almsg=pageData.title+":"+autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)];
+                   almsg1=pageData.title;
+                   almsg2=autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)];
                  } else if (gpausePortal.indexOf(pageData.title)>=0){
-                   almsg=pageData.title+":"+autoPR.gpausePortalString[autoPR.gpausePortal.indexOf(pageData.title)];
+                   almsg1=pageData.title;
+                   almsg2=autoPR.gpausePortalString[autoPR.gpausePortal.indexOf(pageData.title)];
                  }
 
                  if(!messageNotice.alertwindow){
-                   createNotify("需要干预", {
-                     body: almsg,
+                   createNotify(almsg1, {
+                     body: almsg2,
                      icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                      requireInteraction: true
                    });
