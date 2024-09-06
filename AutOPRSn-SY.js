@@ -935,6 +935,17 @@ XMLHttpRequest.prototype.open = function (_, url) {
 //节点更新监听：用于页面有刷新时的处理； 但是会处理多次(将来可能用这个取代：MutationObserver)
 document.addEventListener('DOMNodeInserted', function() {
 
+  if (document.querySelector("a[class='login-link login-link--niantic']")) {
+    if(!messageNotice.alertwindow){
+       createNotify("登录", {
+         body: "需要登录",
+         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+         data: "https://wayfarer.nianticlabs.com/new/"
+       });
+      messageNotice.alertShow();
+    }
+  }
+
     if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
 //        console.log(messageNotice.alertwindow);
         if(!messageNotice.alertwindow){
