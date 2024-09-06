@@ -140,8 +140,8 @@ autoPR = {
     latlon:[],
     settings: null,
     privatePortal: ["占位po"],
-    pausePortal: ["鑫丰中心里正门","数字花朵","丛林里的梅花鹿","镂空拱"],
-    pausePortalString: ["↑向上↑","↓向下↓","向右→","xjbz"],  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
+    pausePortal: ["数字花朵","丛林里的梅花鹿"],
+    pausePortalString: ["↓向下↓","向右→"],  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
     privatePortalDisplay1: 30,
     privatePortalDisplay2: 20,
 
