@@ -1352,7 +1352,7 @@ window.nextRun = function (callback) {
                        while(strarr.indexOf('""')>0){
                          strarr = strarr.replace('""','"');
                        }
-                       console.log(strarr);
+//                       console.log(strarr);
                        let stmparr = eval("(" + strarr + ")");
 //                     console.log("stmparr.user:"+stmparr.user);
 //                     console.log("  currentUser:"+lobalStorage["currentUser"]);
