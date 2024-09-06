@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.2.1
+// @version      3.2.2
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -733,7 +733,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
 //              console.log(autoPR.username != null );
 //              console.log(autoPR.useremail != null );
               if(autoPR.username != null ){
-                  localStorage.setItem("currentUser", JSON.stringify(autoPR.username));
+                  localStorage.setItem("currentUser", autoPR.username);
                   userlist = JSON.parse(localStorage.getItem("userList"));
 //              console.log(userlist);
                   if(userlist === null) {userlist = [];};
@@ -1349,9 +1349,16 @@ window.nextRun = function (callback) {
                        while(strarr.indexOf("undefined")>0){
                            strarr = strarr.replace("undefined","0");
                        }
-                       //               console.log(strarr);
+                       while(strarr.indexOf('""')>0){
+                         strarr = strarr.replace('""','"');
+                       }
+                       console.log(strarr);
                        let stmparr = eval("(" + strarr + ")");
-                       if(stmparr.user==localStorage["currentUser"]){
+//                     console.log("stmparr.user:"+stmparr.user);
+//                     console.log("  currentUser:"+lobalStorage["currentUser"]);
+//                     console.log(" autoPR.useremail:"+autoPR.useremail);
+//                     console.log("stmparr.user:"+stmpar.ruser+"  currentUser:"+lobalStorage["currentUser"]+" autoPR.useremail:"+autoPR.useremail);
+                       if((stmparr.user==localStorage["currentUser"] || stmparr.user==autoPR.useremail)){
                          stmp += stmparr.title+"/";
                          icnt++;
                          if (icnt>=5) break;
