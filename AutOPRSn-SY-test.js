@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.2.6
+// @version      3.2.6-beta
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -638,11 +638,11 @@ autoPR = {
             const optp2 = document.querySelector('mat-radio-button');
             if (optp2) {
               optp2.scrollIntoView(true);
-              var opt2 = optp2.querySelector('mat-radio-button label')[0];
+              var opt2 = optp2.querySelector("label[class='mat-radio-label']");
               console.log(opt2);
               while(!opt2) {
                   setTimeout(function(){
-                  opt2 = optp2.querySelector('mat-radio-button label')[0];
+                  opt2 = optp2.querySelector("label[class='mat-radio-label']");
                   console.log(opt2);
                 },1000);
                 icnt2++;
