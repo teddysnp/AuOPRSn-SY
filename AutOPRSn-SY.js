@@ -1,11 +1,9 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.1.8
+// @version      3.2.5
 // @description  审po专用
 // @author       snpsl
-// @updateURL    https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
-// @downloadURL  https://github.com/teddysnp/AuOPRSn-SY/raw/main/AutOPRSn-SY.js
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
@@ -19,6 +17,9 @@ window.reviewData;
 window.editData;
 window.photoData;
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
+
+//var gpausePortal=["金字塔","乒乓球桌","星摩尔广场","小区运动场","彩绘电箱-冬团"];
+//var gpausePortalString=["测试挪1","重复了!!!","测试挪3","测试挪4","向右"];
 
 var chsaddr=null;
 var engaddr=null;
@@ -34,22 +35,44 @@ const private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[
 var bdisplaychsaddr = 0; //中文地址，0:取;1:不取
 var skey="";  //You need input your own key at the showcase page!
 var doctitle;
-var gpausePortal=[];
-var gpausePortalString=[];
 var igetpos=null;
 const mywin=window;
 var iWarning = 0;
+//var gpausePortal=[];
+//var gpausePortalString=[];
 // xhrPromise1 getAddr1 UserSubmit
 //XMLHttpRequest.prototype.open
 //document.addEventListener('DOMNodeInserted', function()
 //window.onload
+
+const checkImgExists = (imgUrl) => {
+  return new Promise(function (resolve, reject){
+    const ImgObj = new Image();
+    ImgObj.src = imgUrl;
+    ImgObj.onload = (res) =>{
+      resolve(res);
+    }
+    ImgObj.onerror = (err)=>{
+      reject(err);
+    }
+  })
+}
+
+function ImageExist(url)
+{
+  let img = new Image();
+  img.src = new URL(url);
+  console.log(img);
+  console.log(img.height);
+  return img.height !=0 ;
+}
 
 function createNotify(title, options) {
   var PERMISSON_GRANTED = "granted";
   var PERMISSON_DENIED = "denied";
   var PERMISSON_DEFAULT = "default";
 
-  // 如果用户已经允许，直接显示消息，如果不允许则提示用户授权
+// 如果用户已经允许，直接显示消息，如果不允许则提示用户授权
   if (Notification.permission === PERMISSON_GRANTED) {
     notify(title, options);
   } else {
@@ -72,8 +95,13 @@ function createNotify(title, options) {
     };
     notification.onclick = function (event) {
       console.log("click : ", event);
+      console.log("notify:title:"+title);
       notification.close();
       mywin.focus();
+      console.log(checkImgExists("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png"));
+//      if (ImageExist("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png")) {
+        mywin.open("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
+//      }
     };
   }
 }
@@ -131,11 +159,6 @@ autoPR = {
         saveportalcnt1 :500,        //本地po保存数量
         saveportalcnt2 :200        //外地po保存数量
     },
-//    chsaddr : null,      //中文地址
-//    engaddr : null,      //英文地址
-//    addrgoing:0,         //地址请求中，0:未请求;1:请求中
-//    lastchsaddr : null,  //前一个中文地址
-    lastengaddr : null,  //前一个英文地址
     useremail: null,
     username:  null,
     userlist: [],
@@ -144,10 +167,11 @@ autoPR = {
     latlon:[],
     settings: null,
     privatePortal: ["占位po"],
-    pausePortal: ["鑫丰中心里正门","数字花朵","丛林里的梅花鹿","镂空拱"],
-    pausePortalString: ["↑向上↑","↓向下↓","向右→","xjbz"],  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
-    privatePortalDisplay1: 30,
-    privatePortalDisplay2: 20,
+    pausePortal: ["数字花朵","丛林里的梅花鹿"],
+    pausePortalString: ["↓向下↓","向右→"],  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
+    privatePortalDisplay1: 30,  //首页列表中显示池中已审po数量
+    privatePortalDisplay2: 20,  //首页列表中显示非池已审po数量
+    autoReviewPRG:"false",
 
     usrtest:function() {
     },
@@ -206,8 +230,9 @@ autoPR = {
     startstopAuto: function  ()
     {
 //      PlaySound();
-      if (autoPR.settings.autoReview=='true') {
+      if (autoPR.settings.autoReview == 'true') {
           autoPR.settings.autoReview = 'false';
+//          autoPR.autoReviewPRG = 'false';
           $("#autoRev").replaceWith('<span style="color:red" id = "autoRev" > 手动 </span>')
        } else {
            autoPR.settings.autoReview = 'true';
@@ -375,6 +400,7 @@ autoPR = {
             if( pageData.streetAddress.indexOf("Shen Yang")>0 || pageData.streetAddress.indexOf("Liao Ning")>0
                || pageData.streetAddress.indexOf("Ji Lin")>0 || pageData.streetAddress.indexOf("Shenyang")>0
                || pageData.streetAddress.indexOf("通化市")>0 || pageData.streetAddress.indexOf("吉林省")>0
+               || pageData.streetAddress.indexOf("Tonghua")>0 || pageData.streetAddress.indexOf("Tong Hua")>0
                || pageData.streetAddress.indexOf("Liaoning")>0 || pageData.streetAddress.indexOf("辽宁省")>0
               ){
             ibaserate=3; //本地
@@ -629,7 +655,10 @@ autoPR = {
             iHaveRate="true";    //已经打分
             //本地，如果是自动，则切换为手动
             if (autoPR.settings.autoReview=='true' & ibaserate==4) {
-                autoPR.settings.autoReview = 'false';
+                 if(autoPR.settings.autoReview=="true"){
+                   if (autoPR.autoReviewPRG=="false"){ autoPR.autoReviewPRG = autoPR.settings.autoReview};
+                   autoPR.settings.autoReview="false";
+                 }
                 $("#autoRev").replaceWith('<span style="color:red" id = "autoRev" > 手动 </span>')
             }
             //滚回顶部
@@ -737,7 +766,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
 //              console.log(autoPR.username != null );
 //              console.log(autoPR.useremail != null );
               if(autoPR.username != null ){
-                  localStorage.setItem("currentUser", JSON.stringify(autoPR.username));
+                  localStorage.setItem("currentUser", autoPR.username);
                   userlist = JSON.parse(localStorage.getItem("userList"));
 //              console.log(userlist);
                   if(userlist === null) {userlist = [];};
@@ -788,27 +817,26 @@ XMLHttpRequest.prototype.open = function (_, url) {
             const res = JSON.parse(result).result;
             if(res =="api.review.post.accepted") {
             } else{
-            messageNotice.stop();
-            igetpos ="get";
-//          console.log(result);
-//          console.log(res);
-            pageData = res ;
+              messageNotice.stop();
+              igetpos ="get";
+//            console.log(result);
+//            console.log(res);
+              pageData = res ;
 
-
-            autoPR.portalData = {
-              captcha: pageData.captcha,
-              type: pageData.type,
-              id: pageData.id,
-              imageUrl: pageData.imageUrl,
-              title: pageData.title,
-              description: pageData.description,
-              streetAddress: pageData.streetAddress,
-              lat: pageData.lat,
-              lng: pageData.lng,
-              pageData: JSON.stringify(pageData),
-              salt: window.localStorage["salt"],
-              author: localStorage["username"],
-        };
+              autoPR.portalData = {
+                captcha: pageData.captcha,
+                type: pageData.type,
+                id: pageData.id,
+                imageUrl: pageData.imageUrl,
+                title: pageData.title,
+                description: pageData.description,
+                streetAddress: pageData.streetAddress,
+                lat: pageData.lat,
+                lng: pageData.lng,
+                pageData: JSON.stringify(pageData),
+                salt: window.localStorage["salt"],
+                author: localStorage["username"],
+          };
 //            console.log(pageData);
             //发送一次请求中文地址
             if((lastengaddr!=null & engaddr!=lastengaddr) || (chsaddr == lastchsaddr) )
@@ -841,7 +869,12 @@ XMLHttpRequest.prototype.open = function (_, url) {
     //截获提交请求，用于更新本地审po记录
     if (arg0 == 'POST'){    //提交数据
 //        console.log(arguments[0]);
+      iSubmit ="true";
       igetpos ="post";
+      console.log("post:autoReview:"+autoPR.settings.autoReview);
+      console.log("post:autoReviewPRG:"+autoPR.autoReviewPRG);
+      if(autoPR.autoReviewPRG=="true") {autoPR.settings.autoReview="true";autoPR.autoReviewPRG="false"};
+//      autoPR.settings.autoReview=autoPR.autoReviewPRG;
 //      messageNotice.stop();
          let send = this.send;
          let _this = this;
@@ -940,7 +973,7 @@ document.addEventListener('DOMNodeInserted', function() {
        createNotify("登录", {
          body: "需要登录",
          icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-         data: "https://wayfarer.nianticlabs.com/new/"
+         requireInteraction: true
        });
       messageNotice.alertShow();
     }
@@ -1006,6 +1039,9 @@ document.addEventListener('DOMNodeInserted', function() {
                while(strarr.indexOf("undefined")>0){
                    strarr = strarr.replace("undefined","0");
                }
+                       while(strarr.indexOf('""')>0){
+                         strarr = strarr.replace('""','"');
+                       }
 //               console.log(strarr);
                stmparr = eval("(" + strarr + ")");
 //               console.log(JSON.parse(prpo[i]));
@@ -1034,6 +1070,9 @@ document.addEventListener('DOMNodeInserted', function() {
                while(strarr.indexOf("undefined")>0){
                    strarr = strarr.replace("undefined","0");
                }
+                       while(strarr.indexOf('""')>0){
+                         strarr = strarr.replace('""','"');
+                       }
 //               console.log(strarr);
                stmparr = eval("(" + strarr + ")");
 //               console.log(JSON.parse(prpo[i]));
@@ -1084,6 +1123,8 @@ window.nextRun = function (callback) {
 (function () {
     //
 //    window.localStorage.clear()
+//    let gpausePortal = [];
+//    let gpausePortalString = [];
     if(localStorage["Warning"]) {
       iWarning = localStorage["Warning"];
     }
@@ -1147,7 +1188,7 @@ window.nextRun = function (callback) {
                 ' 切换 </button><font size = "3"><span style="color:red" id = "autoRev" > </span></font>'+
                '<span id="useradd001"></span><span id="useradd002">  ||    '+localStorage['currentUser']+' </span><span id="userscore"></span><span id="useradd004"></span><div id="useradd003">地址</div>');
        }
-       if(autoPR.settings.autoReview==="true"){
+       if(autoPR.settings.autoReview=="true"){
            $("#autoRev").replaceWith('<span id="autoRev">自动</span>');
        }else{
            $("#autoRev").replaceWith('<span id="autoRev">手动</span>');
@@ -1231,30 +1272,39 @@ window.nextRun = function (callback) {
            {
 //             console.log("mainTimer:NEW:pageData.title:"+pageData.title);
                if (autoPR.pausePortal.indexOf(pageData.title)>=0){
-                 autoPR.settings.autoReview="false";
+                 if(autoPR.settings.autoReview=="true"){
+                   if (autoPR.autoReviewPRG=="false"){ autoPR.autoReviewPRG = autoPR.settings.autoReview};
+                   autoPR.settings.autoReview="false";
+                 }
                  if(!messageNotice.alertwindow) {
-                   createNotify("需要干预", {
-                     body: pageData.title+":"+autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)],
+                   createNotify(pageData.title, {
+                     body: autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)],
                      icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                      requireInteraction: true
                    });
                    messageNotice.alertShow();
                  }
                } else if (gpausePortal.indexOf(pageData.title)>=0){
-                 autoPR.settings.autoReview="false";
+                 if(autoPR.settings.autoReview=="true"){
+                   if (autoPR.autoReviewPRG=="false"){ autoPR.autoReviewPRG = autoPR.settings.autoReview};
+                   autoPR.settings.autoReview="false";
+                 }
                  if(!messageNotice.alertwindow){
-                   createNotify("需要干预", {
-                     body: pageData.title+":"+gpausePortalString[gpausePortal.indexOf(pageData.title)],
+                   createNotify(pageData.title, {
+                     body: gpausePortalString[gpausePortal.indexOf(pageData.title)],
                      icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                      requireInteraction: true
                    });
                    messageNotice.alertShow();
                  }
                } else if (autoPR.privatePortal.indexOf(pageData.title)>=0){
-                 autoPR.settings.autoReview="false";
+                 if(autoPR.settings.autoReview=="true"){
+                   if (autoPR.autoReviewPRG=="false"){ autoPR.autoReviewPRG = autoPR.settings.autoReview};
+                   autoPR.settings.autoReview="false";
+                 }
                  if(!messageNotice.alertwindow) {
                    createNotify("需要干预", {
-                     body: "需要手动干预!",
+                     body: pageData.title,
                      icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                      requireInteraction: true
                    });
@@ -1279,26 +1329,28 @@ window.nextRun = function (callback) {
                }
 //               console.log("timer:iloc:"+iloc);
                if (iloc==1){
-                 autoPR.settings.autoReview="false";
-                 var almsg="需要手动干预!";
+                 if(autoPR.settings.autoReview=="true"){
+                   if (autoPR.autoReviewPRG=="false"){ autoPR.autoReviewPRG = autoPR.settings.autoReview};
+                   autoPR.settings.autoReview="false";
+                 }
+                 let almsg1="需要手动干预!";
+                 let almsg2="需要手动干预!";
 
                  if (autoPR.pausePortal.indexOf(pageData.title)>=0){
-                   almsg=pageData.title+":"+autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)];
+                   almsg1=pageData.title;
+                   almsg2=autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)];
                  } else if (gpausePortal.indexOf(pageData.title)>=0){
-                   almsg=pageData.title+":"+autoPR.gpausePortalString[autoPR.gpausePortal.indexOf(pageData.title)];
+                   almsg1=pageData.title;
+                   almsg2=autoPR.gpausePortalString[autoPR.gpausePortal.indexOf(pageData.title)];
                  }
 
                  if(!messageNotice.alertwindow){
-                   createNotify("需要干预", {
-                     body: almsg,
+                   createNotify(almsg1, {
+                     body: almsg2,
                      icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                      requireInteraction: true
                    });
                    messageNotice.alertShow();
-//                   setTimeout(function (){
-//                     messageNotice.alertShow();
-//                     setTimeout(function(){alert(almsg);},0);
-//                   },0);
                  }
                }
            }
@@ -1314,6 +1366,10 @@ window.nextRun = function (callback) {
          //如果超过5秒，提交按钮未选中，则出现地图点无法选中的bug，闪烁提示
          if(autoPR.initSettings.portalTime>5){
              if (document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary wf-button--disabled"]')){
+                 if(autoPR.settings.autoReview=="true"){
+                   if (autoPR.autoReviewPRG=="false"){ autoPR.autoReviewPRG = autoPR.settings.autoReview};
+                   autoPR.settings.autoReview="false";
+                 }
                if(!messageNotice.alertwindow){
                    console.log("not selected:"+document.URL);
                    createNotify("需要干预", {
@@ -1322,10 +1378,6 @@ window.nextRun = function (callback) {
                      requireInteraction: true
                    });
                    messageNotice.alertShow();
-//                   setTimeout(function () {
-//                     messageNotice.alertShow();
-//                     setTimeout(function(){alert("需要手动干预!");},0);
-//                   },0);
                }
              }
          }
@@ -1351,9 +1403,16 @@ window.nextRun = function (callback) {
                        while(strarr.indexOf("undefined")>0){
                            strarr = strarr.replace("undefined","0");
                        }
-                       //               console.log(strarr);
+                       while(strarr.indexOf('""')>0){
+                         strarr = strarr.replace('""','"');
+                       }
+//                       console.log(strarr);
                        let stmparr = eval("(" + strarr + ")");
-                       if(stmparr.user==localStorage["currentUser"]){
+//                     console.log("stmparr.user:"+stmparr.user);
+//                     console.log("  currentUser:"+lobalStorage["currentUser"]);
+//                     console.log(" autoPR.useremail:"+autoPR.useremail);
+//                     console.log("stmparr.user:"+stmpar.ruser+"  currentUser:"+lobalStorage["currentUser"]+" autoPR.useremail:"+autoPR.useremail);
+                       if((stmparr.user==localStorage["currentUser"] || stmparr.user==autoPR.useremail)){
                          stmp += stmparr.title+"/";
                          icnt++;
                          if (icnt>=5) break;
@@ -1375,9 +1434,8 @@ window.nextRun = function (callback) {
             if (btn){
                 iSubmit="true";
                 btn.click();
-            console.log("Submit!");
+                console.log("Submit!");
 //             console.log("提交："+autoPR.initSettings.portalTime +" : "+ vper*2 +" : "+autoPR.settings.autoReview);
-//                clearInterval(reviewTimer);
             }
          }
 
