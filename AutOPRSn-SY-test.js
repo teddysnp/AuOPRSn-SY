@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.2.6-beta
+// @version      3.2.7
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -18,8 +18,8 @@ window.editData;
 window.photoData;
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
-//var gpausePortal=["金字塔","乒乓球桌","星摩尔广场","小区运动场","同尘桥"];
-//var gpausePortalString=["测试挪1","重复了!!!","测试挪3","测试挪4","向右"];
+var gpausePortal=["金字塔","乒乓球桌","星摩尔广场","小区运动场","同尘桥"];
+var gpausePortalString=["测试挪1","重复了!!!","测试挪3","测试挪4","向右"];
 
 var chsaddr=null;
 var engaddr=null;
@@ -1250,7 +1250,7 @@ window.nextRun = function (callback) {
          var iLatLon=0;
        var reviewTimer = setInterval(function () {
 //           console.log("timer");
-         // 保存审当前po的起始时间
+        //需要验证窗口
         const acap = document.querySelector("iframe[title='reCAPTCHA']");
 //      console.log("reCAPTCHA:"+acap);
         if ((document.URL == "https://wayfarer.nianticlabs.com/new/captcha") || (document.URL == "wayfarer.nianticlabs.com/new/captcha") || acap ){
@@ -1260,13 +1260,13 @@ window.nextRun = function (callback) {
              createNotify("需要验证", {
                body: "需要验证！",
                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-               requireInteraction: true
+               requireInteraction: false
              });
            }
         }
        if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
+         // 保存审当前po的起始时间
          autoPR.saveStartTime();
-         //判断为池中Edit，则暂停
          if(typeof(pageData)!="undefined"){
 //           console.log("mainTimer:NEW:alertwindow:"+messageNotice.alertwindow);
 //           console.log("mainTimer:NEW:iSubmit:"+iSubmit);
@@ -1314,8 +1314,28 @@ window.nextRun = function (callback) {
                    });
                    messageNotice.alertShow();
                  }
+               } else {
+                 const mapimglist = document.querySelectorAll("img[class='cursor-pointer h-28 w-auto mr-[4px] last:mr-0 ng-star-inserted']");
+                 for (let i=0;i<mapimglist.length;i++){
+                   if (mapimglist[i].alt==pageData.title){
+                     if(autoPR.settings.autoReview=="true"){
+                       if (autoPR.autoReviewPRG=="false"){ autoPR.autoReviewPRG = autoPR.settings.autoReview};
+                       autoPR.settings.autoReview="false";
+                     }
+                     if(!messageNotice.alertwindow) {
+                       createNotify("可能有重复po", {
+                         body: pageData.title+"/"+mapimglist[i].alt,
+                         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                         requireInteraction: true
+                       });
+                       messageNotice.alertShow();
+                     }
+                     break;
+                   }
+                 }
                }
            } //NEW
+           //判断为池中Edit，则暂停
            if (pageData.type == "EDIT")  //池中编辑po,一律暂停
            {
                var i;var iloc=0;
