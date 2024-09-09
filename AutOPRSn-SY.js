@@ -18,8 +18,8 @@ window.editData;
 window.photoData;
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
-var gpausePortal=["金字塔","乒乓球桌","星摩尔广场","小区运动场","同尘桥"];
-var gpausePortalString=["测试挪1","重复了!!!","测试挪3","测试挪4","向右"];
+//var gpausePortal=["金字塔","乒乓球桌","星摩尔广场","小区运动场","同尘桥"];
+//var gpausePortalString=["测试挪1","重复了!!!","测试挪3","测试挪4","向右"];
 
 var chsaddr=null;
 var engaddr=null;
