@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.2.7
+// @version      3.2.8
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -99,6 +99,7 @@ function createNotify(title, options) {
       console.log("notify:title:"+title);
       notification.close();
       mywin.focus();
+        console.log("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
       checkImgExists("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png").then(res =>{
         mywin.open("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
       },err=>{console.log("Image not found!");});
@@ -969,56 +970,12 @@ XMLHttpRequest.prototype.open = function (_, url) {
   originOpen1.apply(this, arguments);
 };
 
-//节点更新监听：用于页面有刷新时的处理； 但是会处理多次(将来可能用这个取代：MutationObserver)
-document.addEventListener('DOMNodeInserted', function() {
-
-  if (document.querySelector("a[class='login-link login-link--niantic']")) {
-    if(!messageNotice.alertwindow){
-       createNotify("登录", {
-         body: "需要登录",
-         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-         requireInteraction: true
-       });
-      messageNotice.alertShow();
-    }
-  }
-
-    if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
-//        console.log(messageNotice.alertwindow);
-        if(!messageNotice.alertwindow){
-//          console.log("listener:"+document.URL);
-//          setTimeout(function (){
-//          setTimeout(function (){
-//            messageNotice.alertWindow="Displayed";
-//            setTimeout(function(){alert("需要验证!");},0);
-//          },0);
-//          },0);
-        }
-    }
-    if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
-      try{
-          if(skey==""){
-//            console.log(localStorage["txskey"]);
-            if (typeof localStorage["txskey"] != "undefined")
-              skey = JSON.parse(localstorage.getItem("txskey"));
-            console.log(skey);} } catch(e){}
-    }//判断是否审核页面
-
-    //showcase-gallery
-    //判断是否在展示页面(首页)
-    if (document.URL == "https://wayfarer.nianticlabs.com/new/showcase") {
-//    if (url === "/api/v1/vault/home") {
-//       console.log(autoPR.username);
+function showPortalReviewed (){
        try{
          var strarr ="";
          var stmparr=[];
          //在首页显示池内已审po的表格
          var prpo = [];
-//         skey = localStorage["txskey"];
-//         if(typeof(skey)!="undefined"){
-//           if(skey.length>0){} else {
-//           console.log("getItem sskey : "+skey);}
-//         } else {skey="";}
        if(!autoPR.username)
        {
            autoPR.username=localStorage["currentUser"];
@@ -1092,6 +1049,80 @@ document.addEventListener('DOMNodeInserted', function() {
        $("#privatePortal2").replaceWith(stmp);
 //       console.log(prpo[0].title);
        }
+};
+
+function reviewShow(){
+};
+
+  //监听页面变动
+  let observer = new MutationObserver(function(mutations){
+    mutations.forEach(function(mutation){
+      //页面变动
+//      console.log('页面发生了变动');
+//      console.log(mutation);
+      let leftpage = document.querySelector('mat-sidenav');
+//      console.log(leftpage);
+      if(leftpage!=null) {
+        let righturl = document.querySelector('mat-sidenav').ownerDocument.location.href;
+//        console.log(righturl);
+        if(righturl=="https://wayfarer.nianticlabs.com/new/showcase"){  //展示页面
+          if(!document.querySelector("div[class='placestr']")){         //相当于加个标签，防止执行多次
+            console.log("show portal reviewed!");
+            showPortalReviewed();
+          }
+        }
+        if(righturl=="https://wayfarer.nianticlabs.com/new/review"){    //审核页面
+          reviewShow();
+        }
+      };
+    });
+  });
+  //配置观察选项
+  let config = {subtree: true,attributes: true,childList: true,characterData: true};
+  //开始观察
+  observer.observe(document.body, config);
+
+
+//节点更新监听：用于页面有刷新时的处理； 但是会处理多次(将来可能用这个取代：MutationObserver)
+document.addEventListener('DOMNodeInserted', function() {
+
+  if (document.querySelector("a[class='login-link login-link--niantic']")) {
+    if(!messageNotice.alertwindow){
+       createNotify("登录", {
+         body: "需要登录",
+         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+         requireInteraction: true
+       });
+      messageNotice.alertShow();
+    }
+  }
+
+    if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
+//        console.log(messageNotice.alertwindow);
+        if(!messageNotice.alertwindow){
+//          console.log("listener:"+document.URL);
+//          setTimeout(function (){
+//          setTimeout(function (){
+//            messageNotice.alertWindow="Displayed";
+//            setTimeout(function(){alert("需要验证!");},0);
+//          },0);
+//          },0);
+        }
+    }
+    if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
+      try{
+          if(skey==""){
+//            console.log(localStorage["txskey"]);
+            if (typeof localStorage["txskey"] != "undefined")
+              skey = JSON.parse(localstorage.getItem("txskey"));
+            console.log(skey);} } catch(e){}
+    }//判断是否审核页面
+
+    //showcase-gallery
+    //判断是否在展示页面(首页)
+    if (document.URL == "https://wayfarer.nianticlabs.com/new/showcase") {
+//    if (url === "/api/v1/vault/home") {
+//       console.log(autoPR.username);
     }   //判断是否首页面
 
 
@@ -1126,9 +1157,6 @@ window.nextRun = function (callback) {
 
 (function () {
     //
-//    window.localStorage.clear()
-//    let gpausePortal = [];
-//    let gpausePortalString = [];
     if(localStorage["Warning"]) {
       iWarning = localStorage["Warning"];
     }
@@ -1172,6 +1200,8 @@ window.nextRun = function (callback) {
 
     //判断在展示页面
     if (document.URL == "https://wayfarer.nianticlabs.com/new/showcase") {
+//      console.log("init:docURL-ischowcase:"+document.URL);
+//      showPortalReviewed();
 //    if (url === "/api/v1/vault/home") {
 //       console.log(autoPR.username);
 //       var sskey="";
@@ -1250,7 +1280,6 @@ window.nextRun = function (callback) {
          var iLatLon=0;
        var reviewTimer = setInterval(function () {
 //           console.log("timer");
-        //需要验证窗口
         const acap = document.querySelector("iframe[title='reCAPTCHA']");
 //      console.log("reCAPTCHA:"+acap);
         if ((document.URL == "https://wayfarer.nianticlabs.com/new/captcha") || (document.URL == "wayfarer.nianticlabs.com/new/captcha") || acap ){
@@ -1358,7 +1387,7 @@ window.nextRun = function (callback) {
                    autoPR.settings.autoReview="false";
                  }
                  let almsg1=pageData.title;
-                 let almsg2="需要手动干预!";
+                 let almsg2=pageData.title;
 
                  if (autoPR.pausePortal.indexOf(pageData.title)>=0){
                    almsg1=pageData.title;
