@@ -1357,7 +1357,7 @@ window.nextRun = function (callback) {
                    if (autoPR.autoReviewPRG=="false"){ autoPR.autoReviewPRG = autoPR.settings.autoReview};
                    autoPR.settings.autoReview="false";
                  }
-                 let almsg1="需要手动干预!";
+                 let almsg1=pageData.title;
                  let almsg2="需要手动干预!";
 
                  if (autoPR.pausePortal.indexOf(pageData.title)>=0){
