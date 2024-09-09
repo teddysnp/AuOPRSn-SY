@@ -1260,7 +1260,7 @@ window.nextRun = function (callback) {
              createNotify("需要验证", {
                body: "需要验证！",
                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-               requireInteraction: false
+               requireInteraction: true
              });
            }
         }
