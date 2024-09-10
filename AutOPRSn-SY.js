@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.2.8
+// @version      3.2.9
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -17,9 +17,6 @@ window.reviewData;
 window.editData;
 window.photoData;
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
-
-//var gpausePortal=["金字塔","乒乓球桌","星摩尔广场","小区运动场","同尘桥"];
-//var gpausePortalString=["测试挪1","重复了!!!","测试挪3","测试挪4","向右"];
 
 var chsaddr=null;
 var engaddr=null;
@@ -220,17 +217,27 @@ autoPR = {
         alert("settings设置成功");
     },
     saveStartTime: function () {
+      try{
         if(typeof(pageData)!="undefined"){
           if (pageData.id== localStorage["portalID"]) return;
           localStorage.setItem("portalID", pageData.id);
           localStorage.setItem("portalTime", new Date().valueOf());
         }
+      } catch (e)
+      {
+        console.log(e);
+      }
     },
     saveKey:function (){
         var stmp="";
         console.log(document.querySelector("input[id='sskey']"));
         stmp=document.querySelector("input[id='sskey']").value;
         localStorage.setItem("txskey", stmp);
+    },
+    saveMission:function (){
+      let cbx = document.querySelector("input[id='cbxmission']");
+//      console.log(cbx.checked);
+      localStorage.setItem("cbxmission",cbx.checked);
     },
     startstopAuto: function  ()
     {
@@ -617,12 +624,12 @@ autoPR = {
             if (optp) {
               optp.scrollIntoView(true);
               var opt1 = optp.querySelector('div[role="button"]');
-              console.log(opt1);
+//              console.log(opt1);
               while(!opt1) {
                 setTimeout(function(){
                   opt1 = optp.querySelector('div[role="button"]');
 //                  if (opt1) { break;}
-                  console.log(opt1);
+//                  console.log(opt1);
                 },1000);
                   icnt1++;
                   if (icnt1>10) { break;}
@@ -634,9 +641,9 @@ autoPR = {
               }
             }
 
-            //点集合中的第一个选项
+            //标题：点集合中的第一个选项
             const icnt2 = 0;
-            const optp2 = document.querySelector('mat-radio-button');
+            const optp2 = document.querySelector('app-select-title-edit mat-radio-button');
             if (optp2) {
               optp2.scrollIntoView(true);
               var opt2 = optp2.querySelector("label[class='mat-radio-label']");
@@ -656,6 +663,27 @@ autoPR = {
               }
             }
 
+            //描述：点集合中的第一个选项
+            const icnt3 = 0;
+            const optp3 = document.querySelector('app-select-description-edit mat-radio-button');
+            if (optp3) {
+              optp3.scrollIntoView(true);
+              var opt3 = optp3.querySelector("label[class='mat-radio-label']");
+              console.log(opt3);
+              while(!opt3) {
+                  setTimeout(function(){
+                  opt3 = optp3.querySelector("label[class='mat-radio-label']");
+                  console.log(opt3);
+                },1000);
+                icnt3++;
+                if (icnt3>10) { break;}
+              }
+              console.log(opt3);
+              if (opt3) {
+                opt3.click();
+                console.log("options click!");
+              }
+            }
 
             iHaveRate="true";    //已经打分
             //本地，如果是自动，则切换为手动
@@ -794,7 +822,6 @@ XMLHttpRequest.prototype.open = function (_, url) {
                   }
               }
           }
-
           return result;
         } catch (e) {
             console.log(e);
@@ -821,6 +848,11 @@ XMLHttpRequest.prototype.open = function (_, url) {
         try {
             const res = JSON.parse(result).result;
             if(res =="api.review.post.accepted") {
+//              if(autoPR.autoReviewPRG=="true") {autoPR.settings.autoReview="true";autoPR.autoReviewPRG="false"};
+              if(localStorage["autoReview"]) {autoPR.settings.autoReview=localStorage["autoReview"];autoPR.autoReviewPRG="false"};
+              console.log("review accepted:");
+              console.log(localStorage["autoReview"]);
+              console.log(autoPR.settings.autoReview);
             } else{
               messageNotice.stop();
               igetpos ="get";
@@ -876,9 +908,11 @@ XMLHttpRequest.prototype.open = function (_, url) {
 //        console.log(arguments[0]);
       iSubmit ="true";
       igetpos ="post";
-      console.log("post:autoReview:"+autoPR.settings.autoReview);
+      console.log("review accepted:");
+      console.log("post:localStorage:autoReview:"+localStorage["autoReview"]);
+      console.log("post:settings:autoReview:"+autoPR.settings.autoReview);
       console.log("post:autoReviewPRG:"+autoPR.autoReviewPRG);
-      if(autoPR.autoReviewPRG=="true") {autoPR.settings.autoReview="true";autoPR.autoReviewPRG="false"};
+      if(localStorage["autoReview"]) {autoPR.settings.autoReview=localStorage["autoReview"];autoPR.autoReviewPRG="false"};
 //      autoPR.settings.autoReview=autoPR.autoReviewPRG;
 //      messageNotice.stop();
          let send = this.send;
@@ -981,12 +1015,24 @@ function showPortalReviewed (){
            autoPR.username=localStorage["currentUser"];
        }
 //       if(autoPR.username){
+         let cbxmiss = localStorage["cbxmission"];
          $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+autoPR.username+"</font></div>"+
             "<div><font size=5>skey:"+
             "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
             "<button class='wf-button' onclick=autoPR.saveKey()>保存</button></font></div>"+
             "<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>");
-       $(".showcase-gallery").replaceWith("<div><font size=5>池中已审</font></div><div id='privatePortal1'></div><br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>");
+       $(".showcase-gallery").replaceWith("<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=autoPR.saveMission()>任务完成自动暂停</input></div><div id='missionPortal1'></div><br><div><font size=5>池中已审</font></div><div id='privatePortal1'></div><br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>");
+       if(cbxmiss){
+         if(cbxmiss=="true"){
+           let obj = document.getElementById("cbxmission");
+           obj.checked = true;
+         }
+       }
+       let smis="<table style='width:100%'><thead><tr><th style='width:20%'>名称</th><th style='width:20%'>位置</th><th style='width:10%'>类型</th><th style='width:10%'>开审</th><th style='width:10%'>已审</th><th style='width:25%'>时间</th></tr></thead>";
+       let smistmp="";let sstmp="";
+       let missionlist1 = missionlist;
+       smistmp=smis+"<tbody>";
+       console.log(missionlist);
 
        prpo = JSON.parse(localStorage.getItem('Reviewed1'));
 //       console.log(prpo);
@@ -997,21 +1043,43 @@ function showPortalReviewed (){
 //               console.log(prpo[i]);
                strarr = prpo[i];
                try {
-               while(strarr.indexOf("undefined")>0){
-                   strarr = strarr.replace("undefined","0");
-               }
-                       while(strarr.indexOf('""')>0){
-                         strarr = strarr.replace('""','"');
+                 while(strarr.indexOf("undefined")>0){
+                     strarr = strarr.replace("undefined","0");
+                 }
+                 while(strarr.indexOf('""')>0){
+                   strarr = strarr.replace('""','"');
+                 }
+//                 console.log(strarr);
+                 stmparr = eval("(" + strarr + ")");
+//                 console.log(JSON.parse(prpo[i]));
+                 stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
+                 if(stmparr.user==autoPR.username || stmparr.user==autoPR.useremail){
+                   for(let k=0;k<missionlist1.length;k++){
+                     if (missionlist1[k][0]==stmparr.title){  //名称,位置,开始,类型,已审,时间
+                       if(new Date(missionlist1[k][5]) <= new Date(stmparr.dt)){
+//                         console.log("missionlist1[k][0]:"+missionlist1[k][0]+" stmparr.title:"+stmparr.title);
+                         missionlist1[k][1] =stmparr.lat+","+stmparr.lng;
+                         missionlist1[k][3] = stmparr.type;
+                         missionlist1[k][4] = "✓";
+                         missionlist1[k][5] = stmparr.dt;
+                       } else {
+                         missionlist1[k][4] = "✗";
+                         missionlist1[k][5] = "";
                        }
-//               console.log(strarr);
-               stmparr = eval("(" + strarr + ")");
-//               console.log(JSON.parse(prpo[i]));
-               stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
+                     }
+                   }
+                 }
                } catch(err) {
                    console.log(err);
                }
            }
+         for(let k=0;k<missionlist1.length;k++){
+           if (missionlist1[k][2]=="true") {sstmp="✓"} else {sstmp="✗";};
+           smistmp+="<tr><td>"+missionlist1[k][0]+"</td><td>"+missionlist1[k][1]+"</td><td>"+missionlist1[k][3]+"</td><td>"+sstmp+"</td><td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td></tr>";
+         }
+         smistmp+="</tbody></table>";
          stmp+="</tbody></table>";
+         $("#missionPortal1").replaceWith(smistmp);
          $("#privatePortal1").replaceWith(stmp);
        }
 //       }
@@ -1110,12 +1178,13 @@ document.addEventListener('DOMNodeInserted', function() {
         }
     }
     if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
-      try{
-          if(skey==""){
-//            console.log(localStorage["txskey"]);
-            if (typeof localStorage["txskey"] != "undefined")
-              skey = JSON.parse(localstorage.getItem("txskey"));
-            console.log(skey);} } catch(e){}
+//      try{
+//          if(skey==""){
+////            console.log(localStorage["txskey"]);
+//            if (typeof localStorage["txskey"] != "undefined")
+//              skey = JSON.parse(localstorage.getItem("txskey"));
+//            console.log(skey);
+//          } } catch(e){}
     }//判断是否审核页面
 
     //showcase-gallery
@@ -1197,6 +1266,9 @@ window.nextRun = function (callback) {
     chsaddr = null;
     setTimeout(function () {
     ~(async function () {
+    if(localStorage["currentUser"]){
+      document.title = localStorage["currentUser"];
+    }
 
     //判断在展示页面
     if (document.URL == "https://wayfarer.nianticlabs.com/new/showcase") {
@@ -1214,26 +1286,31 @@ window.nextRun = function (callback) {
     }
     //判断在审核页面
     if(document.URL == "https://wayfarer.nianticlabs.com/new/review"){
-       if(document.getElementById("useradd002")){
-       }else
-       {
-           $(".wf-page-header__title.ng-star-inserted").after(
-               '<button type="button" id="userbtn" style="background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:40px" onclick = "autoPR.startstopAuto()">' +
-                ' 切换 </button><font size = "3"><span style="color:red" id = "autoRev" > </span></font>'+
-               '<span id="useradd001"></span><span id="useradd002">  ||    '+localStorage['currentUser']+' </span><span id="userscore"></span><span id="useradd004"></span><div id="useradd003">地址</div>');
-       }
-       if(autoPR.settings.autoReview=="true"){
-           $("#autoRev").replaceWith('<span id="autoRev">自动</span>');
-       }else{
-           $("#autoRev").replaceWith('<span id="autoRev">手动</span>');
-       }
-       if (autoPR.privatePortal.indexOf(pageData.title)>0){
-           console.log("池中Portal");
-           $("#useradd004").replaceWith('<font size=3 style="color:red"><span id="useradd004">  注意：池中Portal！！！</span> </font> ');
-       }else {
+//       if(document.getElementById("useradd002")){
+//       }else
+//       {
+//           $(".wf-page-header__title.ng-star-inserted").after(
+//               '<button type="button" id="userbtn" style="background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:40px" onclick = "autoPR.startstopAuto()">' +
+//                ' 切换 </button><font size = "3"><span style="color:red" id = "autoRev" > </span></font>'+
+//               '<span id="useradd001"></span><span id="useradd002">  ||    '+localStorage['currentUser']+' </span><span id="userscore"></span><span id="useradd004"></span><div id="useradd003">地址</div>');
+//       }
+//       if(autoPR.settings.autoReview=="true"){
+//           $("#autoRev").replaceWith('<span id="autoRev">自动</span>');
+//       }else{
+//           $("#autoRev").replaceWith('<span id="autoRev">手动</span>');
+//       }
+      if(pageData){
+         if (autoPR.privatePortal.indexOf(pageData.title)>0){  //bug : pageData.title 不存在的时候出错
+            console.log("池中Portal");
+            $("#useradd004").replaceWith('<font size=3 style="color:red"><span id="useradd004">  注意：池中Portal！！！</span> </font> ');
+         } else {
            console.log("池外Portal");
            $("#useradd004").replaceWith('<font size=3 style="color:red"><span id="useradd004"> </span> </font> ');
-       }
+         }
+      }
+      else {
+        $("#useradd004").replaceWith('<font size=3 style="color:red"><span id="useradd004"> </span> </font> ');
+      }
 //       console.log(chsaddr);
 //       var addr = await autoPR.getAddr1(pageData.lat,pageData.lng);  //取qq.com的中文地址
 
@@ -1369,17 +1446,17 @@ window.nextRun = function (callback) {
            {
                var i;var iloc=0;
 //               console.log("timer:iLatLon:"+iLatLon);
-               if(iLatLon==0){
+//               if(iLatLon==0){
                for (i=0;i<=prt;i++){
 //                   console.log(i);
                    if(pageData.lat>private[i][0]-private[i][2]/100000 & pageData.lat<private[i][0]+private[i][2]/100000 & pageData.lng>private[i][1]-private[i][3]/100000 & pageData.lng<private[i][1]+private[i][3]/100000)
                    {
                        iloc=1;
-                       console.log("池中");
+//                       console.log("池中");
                    }
                  }
                  iLatLon=1;
-               }
+//               }
 //               console.log("timer:iloc:"+iloc);
                if (iloc==1){
                  if(autoPR.settings.autoReview=="true"){
@@ -1395,6 +1472,10 @@ window.nextRun = function (callback) {
                  } else if (gpausePortal.indexOf(pageData.title)>=0){
                    almsg1=pageData.title;
                    almsg2=autoPR.gpausePortalString[autoPR.gpausePortal.indexOf(pageData.title)];
+                 }
+                 if(autoPR.settings.autoReview=="true"){
+                   if (autoPR.autoReviewPRG=="false"){ autoPR.autoReviewPRG = autoPR.settings.autoReview};
+                   autoPR.settings.autoReview="false";
                  }
 
                  if(!messageNotice.alertwindow){
@@ -1442,7 +1523,7 @@ window.nextRun = function (callback) {
        //首页显示最近审过的5个池内po
        let retitle = document.getElementById("latestpo");
        if( !retitle){
-           $(".wf-page-header__title.ng-star-inserted").replaceWith("<font size=3><div class='wf-page-header__title ng-star-inserted' id='latestpo'>最近审的po</div></font>");
+           let tmpmissionlist = missionlist;
            let prpo1 = JSON.parse(localStorage.getItem('Reviewed1'));
 //           console.log(prpo1);
            //       console.log(prpo[0]);
@@ -1461,21 +1542,46 @@ window.nextRun = function (callback) {
                        }
 //                       console.log(strarr);
                        let stmparr = eval("(" + strarr + ")");
-//                     console.log("stmparr.user:"+stmparr.user);
-//                     console.log("  currentUser:"+lobalStorage["currentUser"]);
-//                     console.log(" autoPR.useremail:"+autoPR.useremail);
-//                     console.log("stmparr.user:"+stmpar.ruser+"  currentUser:"+lobalStorage["currentUser"]+" autoPR.useremail:"+autoPR.useremail);
                        if((stmparr.user==localStorage["currentUser"] || stmparr.user==autoPR.useremail)){
-                         stmp += stmparr.title+"/";
+                         //最近审的5个po
+                         if(icnt<5){
+                           stmp += stmparr.title+"/";
+//                           if (icnt>=5) break;
+                         }
                          icnt++;
-                         if (icnt>=5) break;
+                         //任务  //0名称,1位置,2开始,3类型,4已审,5时间
+//                         console.log(tmpmissionlist);
+                         for(let k=0;k<tmpmissionlist.length;k++){
+                           if(stmparr.title==tmpmissionlist[k][0]){
+                             if(tmpmissionlist[k][3]!="true"){ //第一条匹配的
+                               if(new Date(stmparr.dt) >= new Date(tmpmissionlist[k][5]+" 00:00:00")){ //进审po池子后审到的
+                                 tmpmissionlist[k][3]="true";tmpmissionlist[k][4]="true"; //标记已经找到;审过了
+                               }
+                             }
+                           }
+                         }
                        }
                    } catch(e) {
                        console.log(e);
                    }
                }
 //               console.log(stmp);
-               $("#latestpo").replaceWith("<button class='wf_button' onclick='autoPR.usrtest()'>测试</button><font size=3><div class='wf-page-header__title ng-star-inserted' id='latestpo'>最近审的po："+stmp+"</div></font>");
+               let tmmiss1="";let tmmiss2="";let tmmiss3="";
+               for (let j=0;j<tmpmissionlist.length;j++){
+                 if (tmpmissionlist[j][2]=="false"){
+                   tmmiss3+="["+tmpmissionlist[j][0]+"]";
+                 }
+                 else if(tmpmissionlist[j][4]=="true"){
+                   tmmiss1+="["+tmpmissionlist[j][0]+"]";
+                 } else {
+                   tmmiss2+="["+tmpmissionlist[j][0]+"]";
+                 }
+               }
+               if(tmmiss2==""){ //Mission over
+               }
+//           $(".wf-page-header__title.ng-star-inserted").replaceWith("<font size=3><div class='wf-page-header__title ng-star-inserted' id='latestpo'>最近审的po</div></font>");
+               $(".wf-page-header__title.ng-star-inserted").replaceWith("<font size=3><div class='userclass missionpo' id='missionpo'>任务~【待完成:"+tmmiss2+"】【已完成:"+tmmiss1+"】【未进池:"+tmmiss3+"】</div></font>"+
+                                          "<font size=3><div class='userclasss latestpo' id='latestpo'>最近审的po："+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div>");
            }
        }
 
@@ -1498,10 +1604,16 @@ window.nextRun = function (callback) {
        if(document.getElementById("useradd001")){
        }else
        {
-         $(".wf-page-header__title.ng-star-inserted").after(
-               '<button type="button" id="userbtn" style="background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:40px" onclick = "autoPR.startstopAuto()">' +
-                ' 切换 </button><font size = "3"> <span style="color:red" id = "autoRev" > </span></font>'+
-             '<span id="useradd001"></span><font size=3 style="color:black"><span id="useradd002">   ||    '+localStorage['currentUser']+' </span><span id="userscore">'+sspos+'</span><span id="useradd004"></span></font><font size=3 style="color:black"><div id="useradd003"></div></font>');
+         if(document.querySelector("button[id='userbtn']")==null){
+           console.log(document.querySelector("button[id='userbtn']"));
+           $(".wf-page-header__title.ng-star-inserted").after(
+              '<button type="button" id="userbtn" style="background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:40px" onclick = "autoPR.startstopAuto()"> 切换 </button>'+
+             '<font size = "3"> <span style="color:red" id = "autoRev" > </span></font>'+
+              '<span id="useradd001"></span>'+
+             '<font size=3 style="color:black"><span id="useradd002">   ||    '+localStorage['currentUser']+' </span>'+
+             '<span id="userscore">'+sspos+'</span><span id="useradd004"></span></font>'+
+             '<font size=3 style="color:black"><div id="useradd003"></div></font>');
+         }
        }
        if(autoPR.settings.autoReview==="true"){
            $("#autoRev").replaceWith('<span id="autoRev">自动</span>');
