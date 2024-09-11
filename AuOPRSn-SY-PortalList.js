@@ -9,7 +9,7 @@
 // @grant        none
 // ==/UserScript==
 
-var gpausePortal=["金字塔","乒乓球桌","星摩尔广场","小区运动场"];
+var gpausePortal=["金字塔","乒乓球桌aaaa","星摩尔广场","小区运动场"];
 var gpausePortalString=["测试挪1","重复了!!!","测试挪3","测试挪4"];
 const mission ={  //名称,位置,开始,类型,已审,时间
   name: "",
