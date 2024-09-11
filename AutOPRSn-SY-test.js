@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.2.9-alpha1
+// @version      3.2.9-beta
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -219,9 +219,11 @@ autoPR = {
     saveStartTime: function () {
       try{
         if(typeof(pageData)!="undefined"){
-          if (pageData.id== localStorage["portalID"]) return;
-          localStorage.setItem("portalID", pageData.id);
-          localStorage.setItem("portalTime", new Date().valueOf());
+          if (pageData.id!=null) {
+            if (pageData.id== localStorage["portalID"]) return;
+            localStorage.setItem("portalID", pageData.id);
+            localStorage.setItem("portalTime", new Date().valueOf());
+          }
         }
       } catch (e)
       {
@@ -853,6 +855,8 @@ XMLHttpRequest.prototype.open = function (_, url) {
             if(res =="api.review.post.accepted") {
 //              if(autoPR.autoReviewPRG=="true") {autoPR.settings.autoReview="true";autoPR.autoReviewPRG="false"};
               autoPR.settings.autoReview=localStorage["autoReview"];
+              if(autoPR.settings.autoReview=="true") $("#autoRev").replaceWith('<span style="color:red" id = "autoRev" > 自动 </span>');
+              if(autoPR.settings.autoReview!="true") $("#autoRev").replaceWith('<span style="color:red" id = "autoRev" > 手动 </span>');
               console.log("review accepted:");
               console.log(localStorage["autoReview"]);
               console.log(autoPR.settings.autoReview);
@@ -915,7 +919,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
       console.log("post:localStorage:autoReview:"+localStorage["autoReview"]);
       console.log("post:settings:autoReview:"+autoPR.settings.autoReview);
       console.log("post:autoReviewPRG:"+autoPR.autoReviewPRG);
-      autoPR.settings.autoReview=localStorage["autoReview"];
+//      autoPR.settings.autoReview=localStorage["autoReview"];
 //      autoPR.settings.autoReview=autoPR.autoReviewPRG;
 //      messageNotice.stop();
          let send = this.send;
@@ -1131,6 +1135,9 @@ function reviewShow(){
       //页面变动
 //      console.log('页面发生了变动');
 //        console.log(mutation);
+    if(localStorage["currentUser"]){
+      document.title = localStorage["currentUser"];
+    }
       let leftpage = document.querySelector('mat-sidenav');
 //      console.log(leftpage);
       if(leftpage!=null) {
@@ -1376,6 +1383,7 @@ window.nextRun = function (callback) {
        if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
          // 保存审当前po的起始时间
          autoPR.saveStartTime();
+         if(pageData){
          if(typeof(pageData)!="undefined" & pageData!=null){
 //           console.log("mainTimer:NEW:alertwindow:"+messageNotice.alertwindow);
 //           console.log("mainTimer:NEW:iSubmit:"+iSubmit);
@@ -1434,7 +1442,8 @@ window.nextRun = function (callback) {
                    }
                  }
                }
-           } //NEW
+           }
+         }//NEW
            //判断为池中Edit，则暂停
            if (pageData.type == "EDIT")  //池中编辑po,一律暂停
            {
