@@ -545,6 +545,7 @@ function UserSubmitEdit(ibaserate){
 }
 //新po打分，因为地图不能全部加载，所以开始滚动至地图处，最后再滚回顶部，以便地图全部加载，判断是否有重复
 function UserSubmitNew(ibaserate){
+    let iscore = "";
     const optpmap = document.querySelector("nia-map");
     //'agm-map'); //flex justify-center mt-8 ng-star-inserted
     //wf-page-header__actions ng-star-inserted
@@ -569,6 +570,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
         }
+        iscore+="D";
     } else
     {
         if(document.querySelector('#appropriate-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
@@ -579,6 +581,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
         }
+        iscore+="Y";
     } //适当
     //安全2
     if(iram1>3 & iram1<7){
@@ -590,6 +593,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
         }
+        iscore+="D";
     } else
     {
         if(document.querySelector('#safe-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
@@ -600,6 +604,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
         }
+        iscore+="Y";
     }//安全
     //准确3
     if(iram1>6 & iram1<10){
@@ -611,6 +616,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
         }
+        iscore+="D";
     } else
     {
         if(document.querySelector('#accurate-and-high-quality-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
@@ -621,6 +627,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
         }
+        iscore+="Y";
     }//准确
     //永久4
     if(iram1>9 & iram1<13){
@@ -632,6 +639,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
         }
+        iscore+="D";
     } else
     {
         if(document.querySelector('#permanent-location-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
@@ -642,6 +650,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#permanent-location-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
         }
+        iscore+="Y";
     }//永久
     //社交5  5-no    1-3 34-37  5-不知道  4-33 38-67
     if((iram2>0 & iram2<7) || (iram3>0 & iram3<3)){
@@ -649,12 +658,14 @@ function UserSubmitNew(ibaserate){
         {
             document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
         }
+        iscore+="N";
     } else if ((iram2>18 & iram2<43) || (iram3>3 & iram3<14))
     {
         if(document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
         {
             document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
         }
+        iscore+="D";
     } else
     {
         if(document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
@@ -665,6 +676,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#socialize-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
         }
+        iscore+="Y";
     }//社交
     //运动6 6-no  34-36 68-70  6-不知道 37-67 71-99
     if( (iram2>6 & iram2<13)  || (iram3>33 & iram3<36)) {
@@ -672,12 +684,14 @@ function UserSubmitNew(ibaserate){
         {
             document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
         }
+        iscore+="N";
     } else if ( (iram2>45 & iram2<69) || (iram3>36 & iram3<48))
     {
         if(document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
         {
             document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
         }
+        iscore+="D";
     } else
     {
         if(document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
@@ -688,6 +702,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#exercise-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
         }
+        iscore+="Y";
     }
     //探索7 7-no  68-70 1-3    7-不知道 71-99 4-33
     if( (iram2>12 & iram2<19)  || (iram3>67 & iram3<70) ) {
@@ -695,12 +710,14 @@ function UserSubmitNew(ibaserate){
         {
             document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
         }
+        iscore+="N";
     } else if ( (iram2>72 & iram2<97) || (iram3>70 & iram3<82) )
     {
         if(document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
         {
             document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
         }
+        iscore+="D";
     } else
     {
         if(document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
@@ -711,6 +728,7 @@ function UserSubmitNew(ibaserate){
         { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
             document.querySelector('#explore-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
         }
+        iscore+="Y";
     }
     //            } catch(err) { console.log(err);};
 
@@ -730,6 +748,7 @@ function UserSubmitNew(ibaserate){
         conpan.scrollTo({top:0,left:0,behavior:'smooth'});
     }
 
+    $("#useradd004").replaceWith('<font size=3 style="color:blue"><span id="useradd004">【'+iscore+'】</span> </font> ');
     iHaveRate="true";
 }
 
