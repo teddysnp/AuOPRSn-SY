@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.3.0.1
+// @version      3.3.0.2
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -18,21 +18,6 @@ window.editData;
 window.photoData;
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
-//以下，发页到github时注释或删除
-/*
-var gpausePortal=["金字塔","乒乓球桌aaa","星摩尔广场","小区运动场"];
-var gpausePortalString=["测试挪1","重复了!!!","测试挪3","测试挪4"];
-const mission ={  //名称,位置,开始,类型,已审,时间
-  name: "",
-  location: "",
-  action: "",
-  type: "",
-  done: "",
-  dt: ""
-  };
-const missionlist=[["职工文体广场","北一路万达","true","编辑","","2024-09-09"],["摆烂的天使","北一路万达","true","新增","","2024-09-09"],["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-12"]];
-//以上，发页到github时注释或删除
-*/
 var chsaddr=null;
 var engaddr=null;
 var lastchsaddr=null;
@@ -96,16 +81,16 @@ function createNotify(title, options) {
   //显示消息
   function notify($title, $options) {
     var notification = new Notification($title, $options);
-    console.log(notification);
+//    console.log(notification);
     notification.onshow = function (event) {
-      console.log("show : ", event);
+//      console.log("show : ", event);
     };
     notification.onclose = function (event) {
-      console.log("close : ", event);
+//      console.log("close : ", event);
     };
     notification.onclick = function (event) {
-      console.log("click : ", event);
-      console.log("notify:title:"+title);
+//      console.log("click : ", event);
+//      console.log("notify:title:"+title);
       notification.close();
       mywin.focus();
       console.log("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
@@ -325,7 +310,7 @@ function xhrPromise1 (method, url, data, headers = null) {
         //                        console.log(chsaddr);
       },
       onerror: function(err){
-        console.log('err:'+err);
+        console.log(err);
         return err;
       },
     });
@@ -467,12 +452,14 @@ function formatDate(date, fmt)
 }
 
 //模拟用户点击打分
+//图片打分
 function UserSubmitPhoto(ibaserate){
   const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card')[0];
   //            console.log(photo);
   if (photo) photo.click();
   iHaveRate="true";
 }
+//编辑po打分
 function UserSubmitEdit(ibaserate){
   //点地图中的第一个点
   const icnt1 = 0;
@@ -507,7 +494,7 @@ function UserSubmitEdit(ibaserate){
     while(!opt2) {
       setTimeout(function(){
         opt2 = optp2.querySelector("label[class='mat-radio-label']");
-        console.log(opt2);
+//        console.log(opt2);
       },1000);
       icnt2++;
       if (icnt2>10) { break;}
@@ -529,7 +516,7 @@ function UserSubmitEdit(ibaserate){
     while(!opt3) {
       setTimeout(function(){
         opt3 = optp3.querySelector("label[class='mat-radio-label']");
-        console.log(opt3);
+//        console.log(opt3);
       },1000);
       icnt3++;
       if (icnt3>10) { break;}
@@ -556,182 +543,197 @@ function UserSubmitEdit(ibaserate){
     conpan.scrollTo({top:0,left:0,behavior:'smooth'});
   }
 }
+//新po打分，因为地图不能全部加载，所以开始滚动至地图处，最后再滚回顶部，以便地图全部加载，判断是否有重复
 function UserSubmitNew(ibaserate){
-  const ratingElementParts = document.getElementsByClassName("wf-review-card");
-  var iram1,iram2,iram3;
-  if (ibaserate==4){iram1=0;iram2=0;}
-  if (ibaserate==3){iram2=Math.floor(Math.random()*100);iram1=0;}     //本地，随机数1-100 90% 5/6/7必选一个，选中10%no/90%dont know
-  //外地 随机1-100 90% 5/6/7必选一个，选中10%no/90%dont know; 30%选中第二个，选中10%no/90%dont know
-  if (ibaserate==2){iram3=Math.floor(Math.random()*100);iram2=Math.floor(Math.random()*100);iram1=Math.floor(Math.random()*100);}
-  console.log("ibaserate : "+ibaserate+" iram1 : "+iram1 + " iram2 : "+iram2 + " iram3 : "+iram3);
-  //适当1
-  if (iram1>0 & iram1<4){
-    if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+    const optpmap = document.querySelector("nia-map");
+    //'agm-map'); //flex justify-center mt-8 ng-star-inserted
+    //wf-page-header__actions ng-star-inserted
+    //    console.log(optpmap);
+    if (optpmap) {
+        optpmap.scrollIntoView(true);
+    }
+    const ratingElementParts = document.getElementsByClassName("wf-review-card");
+    var iram1,iram2,iram3;
+    if (ibaserate==4){iram1=0;iram2=0;}
+    if (ibaserate==3){iram2=Math.floor(Math.random()*100);iram1=0;}     //本地，随机数1-100 90% 5/6/7必选一个，选中10%no/90%dont know
+    //外地 随机1-100 90% 5/6/7必选一个，选中10%no/90%dont know; 30%选中第二个，选中10%no/90%dont know
+    if (ibaserate==2){iram3=Math.floor(Math.random()*100);iram2=Math.floor(Math.random()*100);iram1=Math.floor(Math.random()*100);}
+    console.log("ibaserate : "+ibaserate+" iram1 : "+iram1 + " iram2 : "+iram2 + " iram3 : "+iram3);
+    //适当1
+    if (iram1>0 & iram1<4){
+        if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        {
+            document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+        }
+        if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
+        }
+    } else
     {
-      document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
-    }
-    if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#appropriate-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
-    }
-  } else
-  {
-    if(document.querySelector('#appropriate-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
-    { //
-      document.querySelector('#appropriate-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
-    }
-    if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
-    }
-  } //适当
-  //安全2
-  if(iram1>3 & iram1<7){
-    if(document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        if(document.querySelector('#appropriate-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+        { //
+            document.querySelector('#appropriate-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+        }
+        if(document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#appropriate-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+        }
+    } //适当
+    //安全2
+    if(iram1>3 & iram1<7){
+        if(document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        {
+            document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+        }
+        if(document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
+        }
+    } else
     {
-      document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
-    }
-    if(document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#safe-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
-    }
-  } else
-  {
-    if(document.querySelector('#safe-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
-    { //
-      document.querySelector('#safe-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
-    }
-    if(document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
-    }
-  }//安全
-  //准确3
-  if(iram1>6 & iram1<10){
-    if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        if(document.querySelector('#safe-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+        { //
+            document.querySelector('#safe-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+        }
+        if(document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+        }
+    }//安全
+    //准确3
+    if(iram1>6 & iram1<10){
+        if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        {
+            document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+        }
+        if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
+        }
+    } else
     {
-      document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
-    }
-    if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
-    }
-  } else
-  {
-    if(document.querySelector('#accurate-and-high-quality-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
-    { //
-      document.querySelector('#accurate-and-high-quality-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
-    }
-    if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
-    }
-  }//准确
-  //永久4
-  if(iram1>9 & iram1<13){
-    if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        if(document.querySelector('#accurate-and-high-quality-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+        { //
+            document.querySelector('#accurate-and-high-quality-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+        }
+        if(document.querySelector('#accurate-and-high-quality-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+        }
+    }//准确
+    //永久4
+    if(iram1>9 & iram1<13){
+        if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        {
+            document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+        }
+        if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
+        }
+    } else
     {
-      document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
-    }
-    if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#permanent-location-card').querySelector('button[class="wf-button ml-4 dont-know-button wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-key-bracket-3"]').click();
-    }
-  } else
-  {
-    if(document.querySelector('#permanent-location-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
-    { //
-      document.querySelector('#permanent-location-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
-    }
-    if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#permanent-location-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
-    }
-  }//永久
-  //社交5  5-no    1-3 34-37  5-不知道  4-33 38-67
-  if((iram2>0 & iram2<7) || (iram3>0 & iram3<3)){
-    if(document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
+        if(document.querySelector('#permanent-location-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+        { //
+            document.querySelector('#permanent-location-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+        }
+        if(document.querySelector('#permanent-location-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#permanent-location-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+        }
+    }//永久
+    //社交5  5-no    1-3 34-37  5-不知道  4-33 38-67
+    if((iram2>0 & iram2<7) || (iram3>0 & iram3<3)){
+        if(document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
+        {
+            document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
+        }
+    } else if ((iram2>18 & iram2<43) || (iram3>3 & iram3<14))
     {
-      document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
-    }
-  } else if ((iram2>18 & iram2<43) || (iram3>3 & iram3<14))
-  {
-    if(document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        if(document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        {
+            document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+        }
+    } else
     {
-      document.querySelector('#socialize-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
-    }
-  } else
-  {
-    if(document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+        if(document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+        {
+            document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+        }
+        if(document.querySelector('#socialize-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#socialize-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+        }
+    }//社交
+    //运动6 6-no  34-36 68-70  6-不知道 37-67 71-99
+    if( (iram2>6 & iram2<13)  || (iram3>33 & iram3<36)) {
+        if(document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
+        {
+            document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
+        }
+    } else if ( (iram2>45 & iram2<69) || (iram3>36 & iram3<48))
     {
-      document.querySelector('#socialize-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
-    }
-    if(document.querySelector('#socialize-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#socialize-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
-    }
-  }//社交
-  //运动6 6-no  34-36 68-70  6-不知道 37-67 71-99
-  if( (iram2>6 & iram2<13)  || (iram3>33 & iram3<36)) {
-    if(document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
+        if(document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        {
+            document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+        }
+    } else
     {
-      document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
+        if(document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+        {
+            document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+        }
+        if(document.querySelector('#exercise-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#exercise-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+        }
     }
-  } else if ( (iram2>45 & iram2<69) || (iram3>36 & iram3<48))
-  {
-    if(document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+    //探索7 7-no  68-70 1-3    7-不知道 71-99 4-33
+    if( (iram2>12 & iram2<19)  || (iram3>67 & iram3<70) ) {
+        if(document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
+        {
+            document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
+        }
+    } else if ( (iram2>72 & iram2<97) || (iram3>70 & iram3<82) )
     {
-      document.querySelector('#exercise-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
-    }
-  } else
-  {
-    if(document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+        if(document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
+        {
+            document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
+        }
+    } else
     {
-      document.querySelector('#exercise-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+        if(document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
+        {
+            document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
+        }
+        if(document.querySelector('#explore-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
+        { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
+            document.querySelector('#explore-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
+        }
     }
-    if(document.querySelector('#exercise-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#exercise-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
-    }
-  }
-  //探索7 7-no  68-70 1-3    7-不知道 71-99 4-33
-  if( (iram2>12 & iram2<19)  || (iram3>67 & iram3<70) ) {
-    if(document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1])
-    {
-      document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[1].click();
-    }
-  } else if ( (iram2>72 & iram2<97) || (iram3>70 & iram3<82) )
-  {
-    if(document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]'))
-    {
-      document.querySelector('#explore-card').querySelector('button[class="wf-button ml-4 dont-know-button"]').click();
-    }
-  } else
-  {
-    if(document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
-    {
-      document.querySelector('#explore-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
-    }
-    if(document.querySelector('#explore-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
-    { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-      document.querySelector('#explore-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
-    }
-  }
-  //            } catch(err) { console.log(err);};
+    //            } catch(err) { console.log(err);};
 
-  //分类,全部选否
-  const opts = document.querySelectorAll('mat-button-toggle');
-  for (let i = 0; i < opts.length; i++) {
-    //                console.log(opts[i]);
-    if (!opts[i].classList.contains('mat-button-toggle-checked')) {
-      opts[i].querySelector('button').click();
-      //                break;
+    //分类,全部选否
+    const opts = document.querySelectorAll('mat-button-toggle');
+    for (let i = 0; i < opts.length; i++) {
+        //                console.log(opts[i]);
+        if (!opts[i].classList.contains('mat-button-toggle-checked')) {
+            opts[i].querySelector('button').click();
+            //                break;
+        }
     }
-  }
+    //滚回顶部
+    var conpan = document.querySelector('mat-sidenav-content[class="mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100"]');
+    if(conpan)
+    {
+        conpan.scrollTo({top:0,left:0,behavior:'smooth'});
+    }
 
-  iHaveRate="true";
+    iHaveRate="true";
 }
 
+//判断池内，本地，外地，并调用打分程序
 //并不提交，提交在定时器中，到时点击提交按钮实现
 function UserSubmit(){
   if( pageData == null ) return;
@@ -756,14 +758,12 @@ function UserSubmit(){
       ibaserate=3; //本地
       spos="本地:";
     }
-
     else
     {
       ibaserate=2; //外地
       spos="外地:";
     }
-
-  }
+  } else {console.log(pageData);}
   var i;
   //池中池外经纬度判断
   for (i=0;i<=prt;i++){
@@ -772,6 +772,20 @@ function UserSubmit(){
      console.log("池中啦" + i);
     }
   }
+
+    switch (ibaserate){
+        case 4:
+            $("#polocate").replaceWith('<font size=3 style="color:red"><span id="polocate">  注意：池中Portal！！！</span> </font> ');
+            break;
+        case 3:
+            $("#polocate").replaceWith('<font size=3 style="color:black"><span id="polocate">  本地</span> </font> ');
+            break;
+        case 2:
+            $("#polocate").replaceWith('<font size=3 style="color:black"><span id="polocate">  外地</span> </font> ');
+            break;
+        default:
+            $("#polocate").replaceWith('<font size=3 style="color:black"><span id="polocate">  未知</span> </font> ');
+    }
 
   //新po待审核，打分
   if(pageData.type=="NEW"){
@@ -795,6 +809,18 @@ XMLHttpRequest.prototype.open = function (_, url) {
   let arg0 = arguments[0];
 //    console.log(arguments);
 
+    if(url=="/api/v1/vault/loginconfig")
+    {
+        console.log(url);
+        if(!messageNotice.alertwindow){
+            createNotify("登录", {
+                body: "需要登录",
+                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                requireInteraction: true
+            });
+            messageNotice.alertShow();
+        }
+    }
 //https://wayfarer.nianticlabs.com/api/v1/vault/home
   if (url == "/api/v1/vault/home" || url =="https://wayfarer.nianticlabs.com/api/v1/vault/home") {
      const resp = U_XMLHttpRequest("GET","https://wayfarer.nianticlabs.com/api/v1/vault/properties")
@@ -874,6 +900,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
 //    console.log("XMLHttpRequest:review:"+url);
     //截获刷新请求
     if (arg0 == 'GET') {     //刷新页面
+//      console.log(arguments);
       const xhr = this;
       const getter = Object.getOwnPropertyDescriptor(
         XMLHttpRequest.prototype,
@@ -883,6 +910,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
         get: () => {
           let result = getter.call(xhr);
           try {
+//              console.log("get");
             const res = JSON.parse(result).result;
             //提交成功后的返回
             if(res =="api.review.post.accepted") {
@@ -890,7 +918,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
             } else
             //截获review的get数据，传递给autoPR.portalData及pageData
             {
-              messageNotice.stop();
+//              messageNotice.stop();
               igetpos ="get";
               //            console.log(result);
               //            console.log(res);
@@ -929,7 +957,104 @@ XMLHttpRequest.prototype.open = function (_, url) {
               iSubmit="false";
               iHaveRate="false";
 
-              return result;
+                let iLatlon=0;
+                if(pageData != null){
+                    //           console.log("mainTimer:NEW:alertwindow:"+messageNotice.alertwindow);
+                    //           console.log("mainTimer:NEW:iSubmit:"+iSubmit);
+                    //           console.log("mainTimer:NEW:alertwindow:"+messageNotice.alertwindow);
+                    //           console.log("mainTimer:NEW:igetpos:"+igetpos);
+                    //新po判断需暂停或可能重复，则暂停
+                    if (pageData.type == "NEW" & igetpos=="get")  //指定po，不管位置，一律暂停
+                    {
+                        //             console.log("mainTimer:NEW:pageData.title:"+pageData.title);
+                        if (autoPR.pausePortal.indexOf(pageData.title)>=0){
+                            autoPR.settings.autoReview="false";
+                            console.log("autoReview set false");
+                            if(!messageNotice.alertwindow) {
+                                console.log("5");
+                                createNotify(pageData.title, {
+                                    body: autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)],
+                                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                                    requireInteraction: true
+                                });
+                                messageNotice.alertShow();
+                            }
+                        } else if (gpausePortal.indexOf(pageData.title)>=0){
+                            autoPR.settings.autoReview="false";
+                            console.log("autoReview set false");
+                            if(!messageNotice.alertwindow){
+                                console.log("6");
+                                createNotify(pageData.title, {
+                                    body: gpausePortalString[gpausePortal.indexOf(pageData.title)],
+                                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                                    requireInteraction: true
+                                });
+                                messageNotice.alertShow();
+                            }
+                        } else if (autoPR.privatePortal.indexOf(pageData.title)>=0){
+                            autoPR.settings.autoReview="false";
+                            console.log("autoReview set false");
+                            if(!messageNotice.alertwindow) {
+                                console.log("7");
+                                createNotify("需要干预", {
+                                    body: pageData.title,
+                                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                                    requireInteraction: true
+                                });
+                                messageNotice.alertShow();
+                            }
+                        }
+                    }//NEW
+                    //判断为池中Edit，则暂停
+                    if (pageData.type == "EDIT")  //池中编辑po,一律暂停
+                    {
+                        var i;var iloc=0;
+                        //池中lat,lng判定
+                        for (i=0;i<=prt;i++){
+                            //                   console.log(i);
+                            if(pageData.lat>private[i][0]-private[i][2]/100000 & pageData.lat<private[i][0]+private[i][2]/100000 & pageData.lng>private[i][1]-private[i][3]/100000 & pageData.lng<private[i][1]+private[i][3]/100000)
+                            {
+                                iloc=1;
+                                //                       console.log("池中");
+                            }
+                        }
+                        iLatLon=1; //标识，表示已经判定，不需重复判定
+                        if (iloc==1){ //如果是池中，则暂停
+                            //        console.log(pageData.title);
+                            autoPR.settings.autoReview="false";
+                            //        console.log("autoReview set false");
+                            let almsg1=pageData.title;
+                            let almsg2=pageData.title;
+                            //显示消息时的内容：
+                            if (autoPR.pausePortal.indexOf(pageData.title)>=0){
+                                almsg1=pageData.title;
+                                almsg2=autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)];
+                            } else if (gpausePortal.indexOf(pageData.title)>=0)
+                            {
+                                almsg1=pageData.title;
+                                almsg2=autoPR.gpausePortalString[autoPR.gpausePortal.indexOf(pageData.title)];
+                            }
+                            //弹出消息窗口
+                            if(!messageNotice.alertwindow){
+                                console.log("1");
+                                createNotify(almsg1, {
+                                    body: almsg2,
+                                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                                    requireInteraction: true
+                                });
+                                messageNotice.alertShow();
+                            }
+                        } else
+                        {
+                            autoPR.settings.autoReview=localStorage["autoReview"];
+                        }
+                    }
+                }
+                //显示当前用户
+                if(typeof(autoPR.username)!=undefined || typeof(autoPR.useremail)!=undefined) {  $("#useradd002").innerText= "   ||   " + localStorage['currentUser'] ;  }
+
+
+                return result;
             }
           } catch (e) {
             return result;
@@ -951,7 +1076,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
           //下面十行左右，用于提交前对提交数据进行修改，但计划有变，基本无用
           let userdata = data;
           let userdata1 = JSON.parse(userdata[0]);
-          data = userdata ;
+//          data = userdata ;
           post_data = data;
           if (pageData.type == "NEW")
           {
@@ -975,13 +1100,15 @@ XMLHttpRequest.prototype.open = function (_, url) {
           }
           //             console.log("Updating local review storage..");
           //保存池中po至 Reviewed1
-          if (autoPR.privatePortal.indexOf(pageData.title)>=0 || sloc==1 ){
+//          console.log(pageData.title);
+          if (autoPR.privatePortal.indexOf(pageData.title)>=0 || missionlist.indexOf(pageData.title)>0 ||
+              gpausePortal.indexOf(pageData.title)>0 || sloc==1 ) {
             //             console.log("Updating local review storage Reviewed1..");
             localreview = JSON.parse(localStorage.getItem('Reviewed1'));
             //           console.log(localreview);
             if(localreview === null) {localreview = [];};
-            //           console.log(localreview);
-            tmpstorage='{\"user\":\"'+localStorage['currentUser']+'\",\"title\":\"'+pageData.title+'\",\"type\":\"'+JSON.parse(data).type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
+//                       console.log(localreview);
+            tmpstorage='{\"user\":\"'+localStorage['currentUser']+'\",\"title\":\"'+pageData.title+'\",\"type\":\"'+pageData.type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
               ',\"score\":\"'+JSON.parse(data).quality+'/'+JSON.parse(data).description+'/'+JSON.parse(data).location+'/'+JSON.parse(data).cultural+'/'+JSON.parse(data).uniqueness+'/'+JSON.parse(data).safety
               +'\",\"dt\":\"'+sdt+'\"}';
             //           tmpstorage='{"title":"'+pageData.title+'","type":"'+JSON.parse(data).type+'","lat":'+pageData.lat+',"lng":'+pageData.lng+
@@ -997,14 +1124,15 @@ XMLHttpRequest.prototype.open = function (_, url) {
           {
             //             console.log("Updating local review storage Reviewed2..");
             localreview = JSON.parse(localStorage.getItem('Reviewed2'));
-            //           console.log(localreview);
+//                       console.log(pageData);
             if(localreview === null) {localreview = [];};
             //           console.log(localreview);
-            tmpstorage='{\"user\":\"'+localStorage['currentUser']+'\",\"title\":\"'+JSON.parse(data).title+'\",\"type\":\"'+JSON.parse(data).type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
+            tmpstorage='{\"user\":\"'+localStorage['currentUser']+'\",\"title\":\"'+pageData.title+'\",\"type\":\"'+pageData.type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
               ',\"score\":\"'+JSON.parse(data).quality+'/'+JSON.parse(data).description+'/'+JSON.parse(data).location+'/'+JSON.parse(data).cultural+'/'+JSON.parse(data).uniqueness+'/'+JSON.parse(data).safety
               +'\",\"dt\":\"'+sdt+'\"}';
             //           var tmpstorage='{"title":"'+JSON.parse(data).title+'","type":"'+JSON.parse(data).type+'","lat":'+JSON.parse(data).lat+',"lng":'+JSON.parse(data).lng+
             //               ',"score":"'+JSON.parse(data).quality+'/'+JSON.parse(data).description+'/'+JSON.parse(data).cultural+'/'+JSON.parse(data).uniqueness+'/'+JSON.parse(data).safety+'/'+JSON.parse(data).location+'"}';
+//            console.log(tmpstorage);
             localreview.push(tmpstorage);
             //           console.log(localreview.slice(0-autoPR.initSettings.saveportalcnt2));
             localStorage.setItem('Reviewed2', JSON.stringify(localreview.slice(0-autoPR.initSettings.saveportalcnt2)));
@@ -1019,6 +1147,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
               $("#autoRev").replaceWith('<span id="autoRev">手动</span>');
             }
           }
+          messageNotice.stop();
           return send.apply(_this, data);
         } catch (e) {
           console.log(e);
@@ -1032,7 +1161,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
   originOpen1.apply(this, arguments);
 };
 
-//
+//设置页面，暂无用处
 function showSetting(){
   $(".max-w-md.ng-star-inserted").prepend(
     '<div class="settings__item settings-item"><div class="settings-item__header"><div>autoPR设置</div> ' +
@@ -1164,6 +1293,75 @@ function showPortalReviewed (){
 
 //暂时无代码，准备将计时器中review部分代码移至此
 function reviewShow(){
+    //首页显示最近审过的5个池内po
+    let retitle = document.getElementById("latestpo");
+//    console.log(letitle);
+    if( !retitle){
+        let tmpmissionlist = missionlist;
+        let prpo1 = JSON.parse(localStorage.getItem('Reviewed1'));
+//        console.log(prpo1);
+        //       console.log(prpo[0]);
+      let stmp =" ";
+      //           console.log(prpo.length);
+      var icnt=0;
+      if (prpo1!=null){
+            //生成 ：最近审的5个po / 任务po
+            for(let i=prpo1.length-1;i>=0;i--){
+                let strarr = prpo1[i];
+                try {
+                    while(strarr.indexOf("undefined")>0){
+                        strarr = strarr.replace("undefined","0");
+                    }
+                    while(strarr.indexOf('""')>0){
+                        strarr = strarr.replace('""','"');
+                    }
+                    //                       console.log(strarr);
+                    let stmparr = eval("(" + strarr + ")");
+                    if((stmparr.user==localStorage["currentUser"] || stmparr.user==autoPR.useremail)){
+                        //最近审的5个po
+                        if(icnt<5){
+                            stmp += stmparr.title+"/";
+                            //                           if (icnt>=5) break;
+                        }
+                        icnt++;
+                        //任务  //0名称,1位置,2开始,3类型,4已审,5时间
+                        //                         console.log(tmpmissionlist);
+                        for(let k=0;k<tmpmissionlist.length;k++){
+                            if(stmparr.title==tmpmissionlist[k][0]){
+                                if(tmpmissionlist[k][3]!="true"){ //第一条匹配的
+                                    if(new Date(stmparr.dt) >= new Date(tmpmissionlist[k][5]+" 00:00:00")){ //进审po池子后审到的
+                                        tmpmissionlist[k][3]="true";tmpmissionlist[k][4]="true"; //标记已经找到;审过了
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.log(e);
+                }
+            }
+        }
+            //               console.log(stmp);
+            //生成 ：三种任务po归类 ：待完成|已完成|未进池
+            let tmmiss1="";let tmmiss2="";let tmmiss3="";
+            for (let j=0;j<tmpmissionlist.length;j++){
+                if (tmpmissionlist[j][2]=="false"){
+                    tmmiss3+="["+tmpmissionlist[j][0]+"]";
+                }
+                else if(tmpmissionlist[j][4]=="✓" || tmpmissionlist[j][4]=="true"){
+                    tmmiss1+="["+tmpmissionlist[j][0]+"]";
+                } else {
+                    tmmiss2+="["+tmpmissionlist[j][0]+"]";
+                }
+            }
+            //任务完成，给出消息，决定是否暂停                      待开发
+            if(tmmiss2==""){ //Mission over
+            }
+            //替换页面，显示任务及最近审的po
+            $(".wf-page-header__title.ng-star-inserted").replaceWith("<font size=3><div class='userclass missionpo' id='missionpo'>任务~【待完成:"+tmmiss2+"】【已完成:"+tmmiss1+"】【未进池:"+tmmiss3+"】</div></font>"+
+                                                                     "<font size=3><div class='userclasss latestpo' id='latestpo'>最近审的po："+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div>");
+    } ;
+
 
 }
 
@@ -1183,8 +1381,8 @@ let observer = new MutationObserver(function(mutations){
       //        console.log(righturl);
       if(righturl=="https://wayfarer.nianticlabs.com/new/showcase"){  //展示页面
         if(!document.querySelector("div[class='placestr']")){         //相当于加个标签，防止执行多次
-          console.log("show portal reviewed!");
-          showPortalReviewed();
+//          console.log("show portal reviewed!");
+//          showPortalReviewed();
         }
       }
       if(righturl=="https://wayfarer.nianticlabs.com/new/review"){    //审核页面
@@ -1198,21 +1396,93 @@ let config = {subtree: true,attributes: true,childList: true,characterData: true
 //开始观察
 observer.observe(document.body, config);
 
+//判断是否有重复po
+function reviewShow1(){
+    const mapimglist = document.querySelectorAll("img[class='cursor-pointer h-28 w-auto mr-[4px] last:mr-0 ng-star-inserted']");
+//    console.log(mapimglist);
+    for (let i=0;i<mapimglist.length;i++){
+        if (mapimglist[i].alt==pageData.title){
+            if (document.querySelector("[alt='"+mapimglist[i].alt+"']")) {
+                document.querySelector("[alt='"+mapimglist[i].alt+"']").click();
+                autoPR.settings.autoReview="false";
+                console.log("autoReview set false");
+                if(!messageNotice.alertwindow) {
+                    console.log("8");
+                    createNotify("可能有重复po", {
+                        body: pageData.title+"/"+mapimglist[i].alt,
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                        requireInteraction: true
+                    });
+                    messageNotice.alertShow();
+                }
+                break;
+            }
+        }
+        autoPR.settings.autoReview=localStorage["autoReview"];
+    }
+}
+//*******监听页面变动*******//
+let showcaseone=false;
+let observer1 = new MutationObserver(function(mutations){
+  mutations.forEach(function(mutation){
+    //页面变动
+    //      console.log('页面发生了变动');
+    //        console.log(mutation);
+/*       console.log(document.querySelector("a[class='login-link login-link--niantic']"));
+      if (document.querySelector("a[class='login-link login-link--niantic']") & showcaseone==false) {
+          if(!messageNotice.alertwindow){
+              createNotify("登录", {
+                  body: "需要登录",
+                  icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                  requireInteraction: true
+              });
+              messageNotice.alertShow();
+          }
+         showcaseone=true;
+      } */
+      if(localStorage["currentUser"]){
+      document.title = localStorage["currentUser"];
+    }
+    let leftpage = document.querySelector('mat-sidenav');
+    //      console.log(leftpage);
+      if(leftpage!=null & showcaseone==false) {
+          let acap1 = document.querySelector("iframe[title='reCAPTCHA']");
+          let righturl = document.querySelector('mat-sidenav').ownerDocument.location.href;
+          //        console.log(righturl);
+          if(righturl=="https://wayfarer.nianticlabs.com/new/showcase"){  //展示页面
+              if(!document.querySelector("div[class='placestr']")){         //相当于加个标签，防止执行多次
+                  console.log("show portal reviewed 1!");
+                  showPortalReviewed();
+              }
+              showcaseone=true;
+          }
+          if(righturl=="https://wayfarer.nianticlabs.com/new/review"){    //审核页面
+
+              console.log("catch review 1!");
+              reviewShow1();
+              showcaseone=true;
+          }
+          if ((righturl == "https://wayfarer.nianticlabs.com/new/captcha") || (righturl == "wayfarer.nianticlabs.com/new/captcha") || acap1 ){
+              console.log("catch captcha!");
+              console.log(showcaseone);
+              console.log(righturl);
+              showcaseone=true;
+          }
+      } else
+      {
+          showcaseone=false;
+      };
+  });
+});
+//配置观察选项
+let config1 = {childList: true,characterData: true};
+//开始观察
+observer1.observe(document.body, config1);
 
 //节点更新监听：用于页面有刷新时的处理； 但是会处理多次(将来可能用这个取代：MutationObserver)
 document.addEventListener('DOMNodeInserted', function() {
 
-/*   if (document.querySelector("a[class='login-link login-link--niantic']")) {
-    if(!messageNotice.alertwindow){
-       createNotify("登录", {
-         body: "需要登录",
-         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-         requireInteraction: true
-       });
-      messageNotice.alertShow();
-    }
-  }
- */
+
     if (document.URL == "https://wayfarer.nianticlabs.com/new/captcha") {
 //        console.log(messageNotice.alertwindow);
         if(!messageNotice.alertwindow){
@@ -1347,7 +1617,7 @@ window.nextRun = function (callback) {
        }
       }
       //设置显示池中/池外，好象已经不起作用
-      if(pageData != null){
+/*       if(pageData != null){
          if (autoPR.privatePortal.indexOf(pageData.title)>0){  //bug : pageData.title 不存在的时候出错
             console.log("池中Portal");
             $("#useradd004").replaceWith('<font size=3 style="color:red"><span id="useradd004">  注意：池中Portal！！！</span> </font> ');
@@ -1358,7 +1628,7 @@ window.nextRun = function (callback) {
       }
       else {
         $("#useradd004").replaceWith('<font size=3 style="color:red"><span id="useradd004"> </span> </font> ');
-      }
+      } */
 //       console.log(chsaddr);
 //       var addr = await getAddr1(pageData.lat,pageData.lng);  //取qq.com的中文地址
 
@@ -1396,6 +1666,7 @@ window.nextRun = function (callback) {
 //      console.log("reCAPTCHA:"+acap);
       //需要验证时，显示消息
       if ((document.URL == "https://wayfarer.nianticlabs.com/new/captcha") || (document.URL == "wayfarer.nianticlabs.com/new/captcha") || acap ){
+          console.log(messageNotice.alertwindow);
          if(!messageNotice.alertwindow){
            console.log("2");
            setTimeout(function (){messageNotice.alertShow();},0);
@@ -1411,190 +1682,6 @@ window.nextRun = function (callback) {
        //如果审核页面：存开始时间 / 新po判断需暂停或可能重复，则暂停 / 池中编辑po暂停
        if (document.URL == "https://wayfarer.nianticlabs.com/new/review") {
 
-         let iLatlon=0;
-         if(pageData != null){
-           //           console.log("mainTimer:NEW:alertwindow:"+messageNotice.alertwindow);
-           //           console.log("mainTimer:NEW:iSubmit:"+iSubmit);
-           //           console.log("mainTimer:NEW:alertwindow:"+messageNotice.alertwindow);
-           //           console.log("mainTimer:NEW:igetpos:"+igetpos);
-           //新po判断需暂停或可能重复，则暂停
-           if (pageData.type == "NEW" & igetpos=="get")  //指定po，不管位置，一律暂停
-           {
-             //             console.log("mainTimer:NEW:pageData.title:"+pageData.title);
-             if (autoPR.pausePortal.indexOf(pageData.title)>=0){
-               autoPR.settings.autoReview="false";
-               console.log("autoReview set false");
-               if(!messageNotice.alertwindow) {
-                 console.log("5");
-                 createNotify(pageData.title, {
-                   body: autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)],
-                   icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                   requireInteraction: true
-                 });
-                 messageNotice.alertShow();
-               }
-             } else if (gpausePortal.indexOf(pageData.title)>=0){
-               autoPR.settings.autoReview="false";
-               console.log("autoReview set false");
-               if(!messageNotice.alertwindow){
-                 console.log("6");
-                 createNotify(pageData.title, {
-                   body: gpausePortalString[gpausePortal.indexOf(pageData.title)],
-                   icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                   requireInteraction: true
-                 });
-                 messageNotice.alertShow();
-               }
-             } else if (autoPR.privatePortal.indexOf(pageData.title)>=0){
-               autoPR.settings.autoReview="false";
-               console.log("autoReview set false");
-               if(!messageNotice.alertwindow) {
-                 console.log("7");
-                 createNotify("需要干预", {
-                   body: pageData.title,
-                   icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                   requireInteraction: true
-                 });
-                 messageNotice.alertShow();
-               }
-             } else {
-               const mapimglist = document.querySelectorAll("img[class='cursor-pointer h-28 w-auto mr-[4px] last:mr-0 ng-star-inserted']");
-               for (let i=0;i<mapimglist.length;i++){
-                 if (mapimglist[i].alt==pageData.title){
-                   if (document.querySelector("[alt='"+mapimglist[i].alt+"']")) {
-                     document.querySelector("[alt='"+mapimglist[i].alt+"']").click();
-                     autoPR.settings.autoReview="false";
-                     console.log("autoReview set false");
-                     if(!messageNotice.alertwindow) {
-                       console.log("8");
-                       createNotify("可能有重复po", {
-                         body: pageData.title+"/"+mapimglist[i].alt,
-                         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                         requireInteraction: true
-                       });
-                       messageNotice.alertShow();
-                     }
-                     break;
-                   }
-                 }
-                 autoPR.settings.autoReview=localStorage["autoReview"];
-               }
-             }
-           }//NEW
-           //判断为池中Edit，则暂停
-           if (pageData.type == "EDIT")  //池中编辑po,一律暂停
-           {
-             var i;var iloc=0;
-             //池中lat,lng判定
-             for (i=0;i<=prt;i++){
-               //                   console.log(i);
-               if(pageData.lat>private[i][0]-private[i][2]/100000 & pageData.lat<private[i][0]+private[i][2]/100000 & pageData.lng>private[i][1]-private[i][3]/100000 & pageData.lng<private[i][1]+private[i][3]/100000)
-               {
-                 iloc=1;
-                 //                       console.log("池中");
-               }
-             }
-             iLatLon=1; //标识，表示已经判定，不需重复判定
-             if (iloc==1){ //如果是池中，则暂停
-               //        console.log(pageData.title);
-               autoPR.settings.autoReview="false";
-               //        console.log("autoReview set false");
-               let almsg1=pageData.title;
-               let almsg2=pageData.title;
-               //显示消息时的内容：
-               if (autoPR.pausePortal.indexOf(pageData.title)>=0){
-                 almsg1=pageData.title;
-                 almsg2=autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)];
-               } else if (gpausePortal.indexOf(pageData.title)>=0)
-               {
-                 almsg1=pageData.title;
-                 almsg2=autoPR.gpausePortalString[autoPR.gpausePortal.indexOf(pageData.title)];
-               }
-               //弹出消息窗口
-               if(!messageNotice.alertwindow){
-                 console.log("1");
-                 createNotify(almsg1, {
-                   body: almsg2,
-                   icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                   requireInteraction: true
-                 });
-                 messageNotice.alertShow();
-               }
-             } else
-             {
-               autoPR.settings.autoReview=localStorage["autoReview"];
-             }
-           }
-           //首页显示最近审过的5个池内po
-           let retitle = document.getElementById("latestpo");
-           if( !retitle){
-             let tmpmissionlist = missionlist;
-             let prpo1 = JSON.parse(localStorage.getItem('Reviewed1'));
-             //           console.log(prpo1);
-             //       console.log(prpo[0]);
-             if (prpo1!=null){
-               let stmp =" ";
-               //           console.log(prpo.length);
-               var icnt=0;
-               //生成 ：最近审的5个po / 任务po
-               for(let i=prpo1.length-1;i>=0;i--){
-                 let strarr = prpo1[i];
-                 try {
-                   while(strarr.indexOf("undefined")>0){
-                     strarr = strarr.replace("undefined","0");
-                   }
-                   while(strarr.indexOf('""')>0){
-                     strarr = strarr.replace('""','"');
-                   }
-                   //                       console.log(strarr);
-                   let stmparr = eval("(" + strarr + ")");
-                   if((stmparr.user==localStorage["currentUser"] || stmparr.user==autoPR.useremail)){
-                     //最近审的5个po
-                     if(icnt<5){
-                       stmp += stmparr.title+"/";
-                       //                           if (icnt>=5) break;
-                     }
-                     icnt++;
-                     //任务  //0名称,1位置,2开始,3类型,4已审,5时间
-                     //                         console.log(tmpmissionlist);
-                     for(let k=0;k<tmpmissionlist.length;k++){
-                       if(stmparr.title==tmpmissionlist[k][0]){
-                         if(tmpmissionlist[k][3]!="true"){ //第一条匹配的
-                           if(new Date(stmparr.dt) >= new Date(tmpmissionlist[k][5]+" 00:00:00")){ //进审po池子后审到的
-                             tmpmissionlist[k][3]="true";tmpmissionlist[k][4]="true"; //标记已经找到;审过了
-                           }
-                         }
-                       }
-                     }
-                   }
-                 } catch(e) {
-                   console.log(e);
-                 }
-               }
-               //               console.log(stmp);
-               //生成 ：三种任务po归类 ：待完成|已完成|未进池
-               let tmmiss1="";let tmmiss2="";let tmmiss3="";
-               for (let j=0;j<tmpmissionlist.length;j++){
-                 if (tmpmissionlist[j][2]=="false"){
-                   tmmiss3+="["+tmpmissionlist[j][0]+"]";
-                 }
-                 else if(tmpmissionlist[j][4]=="✓" || tmpmissionlist[j][4]=="true"){
-                   tmmiss1+="["+tmpmissionlist[j][0]+"]";
-                 } else {
-                   tmmiss2+="["+tmpmissionlist[j][0]+"]";
-                 }
-               }
-               //任务完成，给出消息，决定是否暂停                      待开发
-               if(tmmiss2==""){ //Mission over
-               }
-               //替换页面，显示任务及最近审的po
-               $(".wf-page-header__title.ng-star-inserted").replaceWith("<font size=3><div class='userclass missionpo' id='missionpo'>任务~【待完成:"+tmmiss2+"】【已完成:"+tmmiss1+"】【未进池:"+tmmiss3+"】</div></font>"+
-                                                                        "<font size=3><div class='userclasss latestpo' id='latestpo'>最近审的po："+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div>");
-             }
-           }
-         }
-         //显示当前用户
-         if(typeof(autoPR.username)!=undefined || typeof(autoPR.useremail)!=undefined) {  $("#useradd002").innerText= "   ||   " + localStorage['currentUser'] ;  }
 
 
          // 保存审当前po的起始时间
@@ -1604,7 +1691,7 @@ window.nextRun = function (callback) {
          //打分，未提交
          if(autoPR.initSettings.portalTime>=2 & iHaveRate=="false"){
            setTimeout(function() {const p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
-           console.log(p1);
+//           console.log(p1);
            if (p1) {
              p1.addEventListener("click", function () {
                console.log("Get clicked!");
@@ -1668,7 +1755,7 @@ window.nextRun = function (callback) {
              '<font size = "3"> <span style="color:red" id = "autoRev" > </span></font>'+
               '<span id="useradd001"></span>'+
              '<font size=3 style="color:black"><span id="useradd002">   ||    '+localStorage['currentUser']+' </span>'+
-             '<span id="userscore">'+sspos+'</span><span id="useradd004"></span></font>'+
+             '<span id="polocate">'+sspos+'</span><span id="useradd004"></span></font>'+
              '<font size=3 style="color:black"><div id="useradd003"></div></font>');
          }
        }
