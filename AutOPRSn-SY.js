@@ -18,6 +18,7 @@ window.editData;
 window.photoData;
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
+//
 
 var chsaddr=null;
 var engaddr=null;
@@ -30,6 +31,10 @@ var sspos=null;
 const prt = 5;
 //测试池中用 var private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,20000,20220],[42.2828685,125.738134,3408,5517],[41.755547, 123.288777,940,1140],[41.81979911, 123.25708028,910,920]];
 const private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[42.2828685,125.738134,3408,5517],[41.755547,123.288777,940,1140],[41.81979911, 123.25708028,910,920],[41.810820,123.376373,547,1036]];
+const privatePortal = ["占位po"];
+const pausePortal = ["占位po1","占位po2"];
+const pausePortalString = ["↓向下↓","向右→"];  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
+const editGYMPhoto = ["重型皮带轮"];
 var bdisplaychsaddr = 0; //中文地址，0:取;1:不取
 var skey="";  //You need input your own key at the showcase page!
 var doctitle;
@@ -163,9 +168,6 @@ class classautoPR {
   portalData = {};
   latlon = [];
   settings = null;
-  privatePortal = ["占位po"];
-  pausePortal = ["和平使命","占位po2"];
-  pausePortalString = ["↑向上挪一下↑","向右→"];  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
   privatePortalDisplay1 = 30;  //首页列表中显示池中已审po数量
   privatePortalDisplay2 = 20;  //首页列表中显示非池已审po数量
 
@@ -455,9 +457,16 @@ function formatDate(date, fmt)
 //模拟用户点击打分
 //图片打分
 function UserSubmitPhoto(ibaserate){
-  const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card')[0];
+  const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
+  const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card');
   //            console.log(photo);
-  if (photo) photo.click();
+  //本地道馆编辑图片，全选 app-accept-all-photos-card
+  if(editGYMPhoto.indexOf(pageData.title) & photoall){
+      photoall.click();
+  } else if (photo)
+  {
+      photo[0].click();
+  }
   iHaveRate="true";
 }
 //编辑po打分
@@ -764,7 +773,7 @@ function UserSubmit(){
   let ibran2 = 0;
   let radscore=0;
   //池中池外地址判断
-  if (autoPR.privatePortal.indexOf(pageData.title)>0){
+  if (privatePortal.indexOf(pageData.title)>0){
     ibaserate=4; //池中
     spos="池中:";
   } else if(pageData.type=="NEW")
@@ -987,13 +996,13 @@ XMLHttpRequest.prototype.open = function (_, url) {
                     if (pageData.type == "NEW" & igetpos=="get")  //指定po，不管位置，一律暂停
                     {
                         //             console.log("mainTimer:NEW:pageData.title:"+pageData.title);
-                        if (autoPR.pausePortal.indexOf(pageData.title)>=0){
+                        if (pausePortal.indexOf(pageData.title)>=0){
                             autoPR.settings.autoReview="false";
                             console.log("autoReview set false");
                             if(!messageNotice.alertwindow) {
                                 console.log("5");
                                 createNotify(pageData.title, {
-                                    body: autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)],
+                                    body: pausePortalString[pausePortal.indexOf(pageData.title)],
                                     icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                                     requireInteraction: true
                                 });
@@ -1014,7 +1023,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
                             console.log(gpausePortal);
                             console.log(pageData.title);
                             console.log(autoPR.settings.autoReview);
-                        } else if (autoPR.privatePortal.indexOf(pageData.title)>=0){
+                        } else if (privatePortal.indexOf(pageData.title)>=0){
                             autoPR.settings.autoReview="false";
                             console.log("autoReview set false");
                             if(!messageNotice.alertwindow) {
@@ -1051,13 +1060,13 @@ XMLHttpRequest.prototype.open = function (_, url) {
                             let almsg1=pageData.title;
                             let almsg2=pageData.title;
                             //显示消息时的内容：
-                            if (autoPR.pausePortal.indexOf(pageData.title)>=0){
+                            if (pausePortal.indexOf(pageData.title)>=0){
                                 almsg1=pageData.title;
-                                almsg2=autoPR.pausePortalString[autoPR.pausePortal.indexOf(pageData.title)];
+                                almsg2=pausePortalString[pausePortal.indexOf(pageData.title)];
                             } else if (gpausePortal.indexOf(pageData.title)>=0)
                             {
                                 almsg1=pageData.title;
-                                almsg2=autoPR.gpausePortalString[autoPR.gpausePortal.indexOf(pageData.title)];
+                                almsg2=gpausePortalString[gpausePortal.indexOf(pageData.title)];
                             }
                             //弹出消息窗口
                             if(!messageNotice.alertwindow){
@@ -1126,7 +1135,7 @@ XMLHttpRequest.prototype.open = function (_, url) {
           //             console.log("Updating local review storage..");
           //保存池中po至 Reviewed1
 //          console.log(pageData.title);
-          if (autoPR.privatePortal.indexOf(pageData.title)>=0 || missionlist.indexOf(pageData.title)>0 ||
+          if (privatePortal.indexOf(pageData.title)>=0 || missionlist.indexOf(pageData.title)>0 ||
               gpausePortal.indexOf(pageData.title)>0 || sloc==1 ) {
             //             console.log("Updating local review storage Reviewed1..");
             localreview = JSON.parse(localStorage.getItem('Reviewed1'));
