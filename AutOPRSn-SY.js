@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.3.0.2
+// @version      3.3.0.3
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -17,6 +17,7 @@ window.reviewData;
 window.editData;
 window.photoData;
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
+
 
 var chsaddr=null;
 var engaddr=null;
@@ -149,7 +150,7 @@ class classautoPR {
     scriptTimeout: 3, //脚本延时（秒）
     endlineTime : 20 ,//审po可用时间：20分钟
     portalTime: 0,
-    postPeriod: [28, 35], // 提交周期（秒）
+    postPeriod: [25, 32], // 提交周期（秒）
     itimeout:180,  //超时
     autoReview: 'false',     //是否自动审
     saveportalcnt1 :500,        //本地po保存数量
@@ -1010,6 +1011,9 @@ XMLHttpRequest.prototype.open = function (_, url) {
                                 });
                                 messageNotice.alertShow();
                             }
+                            console.log(gpausePortal);
+                            console.log(pageData.title);
+                            console.log(autoPR.settings.autoReview);
                         } else if (autoPR.privatePortal.indexOf(pageData.title)>=0){
                             autoPR.settings.autoReview="false";
                             console.log("autoReview set false");
@@ -1022,6 +1026,8 @@ XMLHttpRequest.prototype.open = function (_, url) {
                                 });
                                 messageNotice.alertShow();
                             }
+                        } else {
+                            autoPR.settings.autoReview=localStorage["autoReview"];
                         }
                     }//NEW
                     //判断为池中Edit，则暂停
@@ -1437,7 +1443,6 @@ function reviewShow1(){
                 break;
             }
         }
-        autoPR.settings.autoReview=localStorage["autoReview"];
     }
 }
 //*******监听页面变动*******//
