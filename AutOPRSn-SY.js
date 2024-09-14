@@ -164,8 +164,8 @@ class classautoPR {
   latlon = [];
   settings = null;
   privatePortal = ["占位po"];
-  pausePortal = ["占位po1","占位po2"];
-  pausePortalString = ["↓向下↓","向右→"];  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
+  pausePortal = ["和平使命","占位po2"];
+  pausePortalString = ["↑向上挪一下↑","向右→"];  //↑ ↓ ↘︎ ↗︎ ↖︎ ↗︎ ← →
   privatePortalDisplay1 = 30;  //首页列表中显示池中已审po数量
   privatePortalDisplay2 = 20;  //首页列表中显示非池已审po数量
 
