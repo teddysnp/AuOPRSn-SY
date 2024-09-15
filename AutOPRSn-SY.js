@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY
 // @namespace    http://tampermonkey.net/
-// @version      3.3.0.3
+// @version      3.3.0.4
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
@@ -17,8 +17,6 @@ window.reviewData;
 window.editData;
 window.photoData;
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
-
-//
 
 var chsaddr=null;
 var engaddr=null;
@@ -99,10 +97,10 @@ function createNotify(title, options) {
 //      console.log("notify:title:"+title);
       notification.close();
       mywin.focus();
-      console.log("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
-      checkImgExists("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png").then(res =>{
-        mywin.open("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
-      },err=>{console.log("Image not found!");});
+//      console.log("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
+//      checkImgExists("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png").then(res =>{
+//        mywin.open("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
+//      },err=>{console.log("Image not found!");});
     };
   }
 }
@@ -1282,7 +1280,7 @@ function showPortalReviewed (){
       }
       for(let k=0;k<missionlist1.length;k++){
         if (missionlist1[k][2]=="true") {sstmp="✓"} else {sstmp="✗";};
-        smistmp+="<tr><td>"+missionlist1[k][0]+"</td><td>"+missionlist1[k][1]+"</td><td>"+missionlist1[k][3]+"</td><td>"+sstmp+"</td><td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td></tr>";
+        smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td><td>"+missionlist1[k][1]+"</td><td>"+missionlist1[k][3]+"</td><td>"+sstmp+"</td><td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td></tr>";
       }
       smistmp+="</tbody></table>";
       stmp+="</tbody></table>";
@@ -1377,15 +1375,18 @@ function reviewShow(){
         }
             //               console.log(stmp);
             //生成 ：三种任务po归类 ：待完成|已完成|未进池
+        //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
             let tmmiss1="";let tmmiss2="";let tmmiss3="";
             for (let j=0;j<tmpmissionlist.length;j++){
                 if (tmpmissionlist[j][2]=="false"){
-                    tmmiss3+="["+tmpmissionlist[j][0]+"]";
+                    tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
                 }
                 else if(tmpmissionlist[j][4]=="✓" || tmpmissionlist[j][4]=="true"){
-                    tmmiss1+="["+tmpmissionlist[j][0]+"]";
+                    tmmiss1+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
+//                    tmmiss1+="["+tmpmissionlist[j][0]+"]";
                 } else {
-                    tmmiss2+="["+tmpmissionlist[j][0]+"]";
+                    tmmiss2+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
+//                    tmmiss2+="["+tmpmissionlist[j][0]+"]";
                 }
             }
             //任务完成，给出消息，决定是否暂停                      待开发
