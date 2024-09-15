@@ -459,8 +459,10 @@ function UserSubmitPhoto(ibaserate){
   const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card');
   //            console.log(photo);
   //本地道馆编辑图片，全选 app-accept-all-photos-card
-  if(editGYMPhoto.indexOf(pageData.title)>=0 & photoall){
+  if(editGYMPhoto.indexOf(pageData.title)>=0){
+    if(photoall){
       photoall.click();
+    }
   } else if (photo)
   {
       photo[0].click();
