@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         AuOPRSnPlus-SY
 // @namespace    http://tampermonkey.net/
-// @version      4.0
+// @version      4.0.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
-// @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=nianticlabs.com
 // @grant        none
 // ==/UserScript==
 
@@ -27,7 +27,6 @@ let mission ={  //名称,位置,开始,类型,已审,时间
 let missionlist=[["职工文体广场","北一路万达","true","编辑","","2024-09-09"],
                  ["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-12"],["机械城堡","北一路万达","false","新增","","2024-09-09"],
                  ["海盗船","北一路万达","false","新增","","2024-09-12"],["和平使命","北一路万达","true","新增","","2024-09-09"],
-                 ["劳劳工精神","北一路万达","true","新增","","2024-09-09"],
                  ["虎头狐尾","北一路万达","true","新增","","2024-09-09"],
                  ["沈阳滑翔机制造厂","北一路万达","true","新增","","2024-09-12"],["仨轮子","北一路万达","true","编辑","","2024-09-09"],
                  ["粉嘟对象","北一路万达","true","编辑","","2024-09-12"],["黑鼻对象","北一路万达","true","编辑","","2024-09-09"]
@@ -39,7 +38,6 @@ let editGYMPhoto = ["重型皮带轮"];
 let tryNumber = 10;
 let expireTime = null;
 let reviewTime = 20;  //审po时间为20分钟
-let errNumber = 10;  //问题po，自动重试次数
 let autoReview = null;
 let postPeriod=[25,35];
 //let submitCountDown = null;
@@ -57,6 +55,11 @@ let private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[42
 let timer = null;
 let skey="";
 
+let needCaptcha = false;
+if(localStorage.captchasetting){
+  needCaptcha = localStorage.captchasetting;
+}
+
 //首次运行显示警告
 let iWarning=0;
 if(localStorage.Warning) {
@@ -70,6 +73,34 @@ if (iWarning == 0) {
   });
   localStorage.setItem("Warning",1);
 }
+
+//function errorReload(){
+/* setInterval(() => {
+    console.log("检测是否错误");
+    if(document.querySelector("app-review-error")) {
+        createNotify("错误", {
+            body: "需要重试！",
+            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+            requireInteraction: false
+        });
+        let errbtn = document.querySelector('button[class="wf-button wf-button--primary"]');
+        console.log("errbtn",errbtn);
+        console.log("errNumber",errNumber);
+        if(errbtn & errNumber>=0)
+        {
+            errNumber--;
+            console.log("error clicked!");
+            errbtn.click();
+        } else {
+            createNotify("错误", {
+                body: "重试："+errNumber+"次无法成功，需要人式干预",
+                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                requireInteraction: true
+            });
+        }
+    }
+},10000); */
+//}
 
 function U_XMLHttpRequest(method, url) {
   return new Promise((res, err) => {
@@ -88,14 +119,15 @@ function U_XMLHttpRequest(method, url) {
       err(xhr.statusText);
     };
     xhr.send();
-  });
+  }).catch(e => {
+  console.log('Promise', e)});
 }
 
 //监听http请求，不同的页面实现不同功能
 (function (open) {
   XMLHttpRequest.prototype.open = function (method, url) {
-//    console.log(url);
-//    console.log(method);
+    console.log(url);
+    console.log(method);
     if(url=="/api/v1/vault/loginconfig")
     {
       console.log(url);
@@ -136,25 +168,6 @@ function U_XMLHttpRequest(method, url) {
     if (url == '/api/v1/vault/home' && method == 'GET') {
       this.addEventListener('load', showReviewedHome, false);
     }
-/*     if(document.querySelector("app-review-error"))
-    {
-      createNotify("错误", {
-        body: "需要重试！",
-        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-        requireInteraction: false
-      });
-      let errbtn = document.querySelector('button[class="wf-button wf-button--primary"]');
-      console.log("errbtn",errbtn);
-      console.log("errNumber",errNumber);
-      if(errbtn & errNumber>=0)
-      {
-        errNumber--;
-        console.log("error clicked!");
-        errbtn.click();
-      }
-      return;
-    }
- */
     open.apply(this, arguments);
   };
 })(XMLHttpRequest.prototype.open);
@@ -169,7 +182,8 @@ const awaitElement = get => new Promise((resolve, reject) => {
     triesLeft--;
   }
   queryLoop();
-});
+}).catch(e => {
+  console.log('Promise', e)});
 
 //构造计时器(在wf-logo已经加载下)，并调用初始化计时器initTimer
 /////////json.result中有portal数据，包括nearby portals，可判断重复，有问题直接发消息，并暂停自动提交
@@ -185,13 +199,22 @@ function injectTimer() {
       if (!json) return;
       autoReview = localStorage.autoReview;
       portalData = json.result;
-      //        console.log(json);
+      //console.log(json);
+      console.log("injectTimer:needCaptcha",needCaptcha);
       if (json.captcha) {
-        createNotify("需要验证", {
-          body: "需要验证！",
-          icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-          requireInteraction: true
-        });
+        if(needCaptcha=="true"){
+          createNotify("需要验证", {
+            body: "需要验证！",
+            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+            requireInteraction: true
+          });
+        } else {
+          createNotify("需要验证", {
+            body: "需要验证！",
+            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+            requireInteraction: false
+          });
+        }
         return;
       }
       expireTime = portalData.expires;
@@ -351,7 +374,7 @@ function initTimer(container, expiry , portalData1) {
       divloc.textContent = "定位："+loc +".||.经纬："+portalData1.lat+","+portalData1.lng;
       //兼容Wayfarer Review Timer
       let pnode = document.querySelector("div[class='wayfarerrtmr']");
-      //        console.log(pnode);
+      //console.log(pnode);
       if(pnode) {
         pnode.parentNode.after(divall);
       } else {
@@ -360,7 +383,7 @@ function initTimer(container, expiry , portalData1) {
       if(getPortalStatus(portalData1)) autoReview = "false";  //需暂停的，
       showReviewedReview();
       let submitCountDown = null;
-      if(Math.ceil((new Date().getTime() - expiry + reviewTime*60000) / 1000)>postPeriod[1]+5){
+      if(Math.ceil((new Date().getTime() - expiry + reviewTime*60000) / 1000)>postPeriod[1]){
         submitCountDown = 10;
       } else {
         submitCountDown = (postPeriod[0] + ((postPeriod[1] - postPeriod[0]) * Math.random() ) );
@@ -374,7 +397,7 @@ function initTimer(container, expiry , portalData1) {
         updateTime(ltimerlabel2, expiry);
         if (document.getElementById('appropriate-card') || document.querySelector('app-review-edit') || document.querySelector('app-review-photo'))
         {
-            console.log(scoreAlready);
+//          console.log(scoreAlready);
           if (!scoreAlready){
             showReviewedReview();
             let score = commitScore(portalData1,loc);
@@ -382,14 +405,14 @@ function initTimer(container, expiry , portalData1) {
             scoreAlready = true;
           }
 //          console.log(countdown);
-//                      console.log(submitCountDown);
+//          console.log(submitCountDown);
           if(autoReview=="true"){
             submitCountDown--;
             if(submitCountDown<=0){  //倒计时0，提交
               let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
               if (p1){
                 if(!submitButtonClicked){
-                  //                    console.log(submitButtonClicked);
+                  //console.log(submitButtonClicked);
                   submitButtonClicked = true;
                   console.log("timer","submit!");
                   submitCountDown=null;
@@ -428,13 +451,23 @@ function updateTime(counter, expiry) {
 
 function updateAddress(divaddr){
   setTimeout(function(){
-    let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
-    if(addr){
-      let address=addr.childNodes[1].innerText.split(":")[1];
-      address=address.replace(" 邮政编码","");
-      divaddr.textContent = "地址:"+address;
+    let itry = 3;
+    const queryloop = () => {
+      let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+      if(addr ){
+        if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
+        let address=addr.childNodes[1].innerText.split(":")[1];
+        address=address.replace(" 邮政编码","");
+        divaddr.textContent = "地址:"+address;
+      };
+      itry--;
+      if(itry<=1){
+        return;
+      }
+    }
     };
-  },3000);
+    queryloop();
+  },500);
 }
 
 saveUserNameList = function (){
@@ -460,12 +493,21 @@ function getUserList(){
       let userprofile = json.result;
       console.log(json);
 //      console.log(userprofile);
+      console.log(needCaptcha);
       if (json.captcha) {
-        createNotify("需要验证", {
-          body: "需要验证！",
-          icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-          requireInteraction: true
-        });
+        if(needCaptcha=="true"){
+          createNotify("需要验证", {
+            body: "需要验证！",
+            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+            requireInteraction: true
+          });
+        } else {
+          createNotify("需要验证", {
+            body: "需要验证！",
+            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+            requireInteraction: false
+          });
+        }
         return;
       }
       if(document.querySelector("div[class='wf-page-header']")) {
@@ -490,12 +532,27 @@ function getUserList(){
         }
           suser="<div id='dvuserlist'>"+suser+"</div>";
         }
+        let cbxcaptcha=localStorage.captchasetting;
+        console.log(cbxcaptcha);
+        let cap ="";
+        if(cbxcaptcha=="true") {
+          cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' checked=true onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
+        } else {
+          cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
+        }
+        $("wf-page-header").after(cap);
         $("wf-page-header").after(suser);
       }
     } catch (e) {
       console.log(e);
     }
   });
+}
+
+saveCaptchaSetting = function() {
+  let cbx = document.querySelector("input[id='idcaptcha']");
+  //      console.log(cbx.checked);
+  localStorage.setItem("captchasetting",cbx.checked);
 }
 
 startstopAuto = function() {
@@ -523,6 +580,7 @@ function getUser(){
       if(restext.result.socialProfile.email)
       {
         localStorage.setItem("currentUser",restext.result.socialProfile.email);
+        document.title = localStorage["currentUser"];
       }
       return restext.result.socialProfile.email;
     }
@@ -700,7 +758,7 @@ function commitScoreNew(portalData1,loc)
 {
   if(portalData1.nearbyPortals.find(p=>{return p.title==portalData1.title})){
     console.log("重复po");
-    createNotify(portalData1.title, {
+    createNotify("可能有重复po", {
       body: portalData1.nearbyPortals.find(p=>{return p.title==portalData1.title}).title,
       icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
       requireInteraction: true
@@ -1011,6 +1069,9 @@ function showReviewedReview()
             while(strarr.indexOf('""')>0){
               strarr = strarr.replace('""','"');
             }
+            while(strarr.indexOf('":","')>0){
+              strarr = strarr.replace('":","','":"","');
+            }
             //console.log(strarr);
             let stmparr = eval("(" + strarr + ")");
             if((userlist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail)){
@@ -1302,10 +1363,10 @@ class MessageNotice {
   stop() {
     this.alertwindow=undefined;
     if ( this.timer) {
-      this.timelist.forEach((item,index)=>{
+/*       this.timelist.forEach((item,index)=>{
         clearInterval(this.timer);
-      })
-      this.timer = undefined;
+      }) */
+//       this.timer = undefined;
       this.count = 0;
       this.timelist = [];
       document.title = this.title;
