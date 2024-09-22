@@ -10,29 +10,44 @@
 // ==/UserScript==
 
 let errNumber = 10;  //问题po，自动重试次数
+let mywin=window;
 
 setInterval(() => {
   console.log("检测是否错误");
   if(document.querySelector("app-review-error")) {
-    createNotify("错误", {
-      body: "需要重试！",
-      icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-      requireInteraction: false
-    });
     let errbtn = document.querySelector('button[class="wf-button wf-button--primary"]');
     console.log("errbtn",errbtn);
     console.log("errNumber",errNumber);
-    if(errbtn & errNumber>=0)
-    {
-      errNumber--;
-      console.log("error clicked!");
-      errbtn.click();
-    } else {
+    if(!errbtn){
       createNotify("错误", {
-        body: "重试："+errNumber+"次无法成功，需要人式干预",
+        body: "重新加载",
         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
         requireInteraction: true
       });
+      mywin.location.reload();
+      return;
+    }
+    if(errbtn)
+    {
+        if(errNumber>0){
+            createNotify("错误", {
+                body: "需要重试！",
+                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                requireInteraction: false
+            });
+            errNumber--;
+            console.log("error clicked!");
+            errbtn.click();
+        }
+    }
+      if(errNumber==0) {
+      createNotify("错误", {
+        body: "重试："+errNumber+"次无法成功，需要人工干预",
+        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+        requireInteraction: true
+      });
+//      mywin.location.reload();
+          clearInterval(this);
     }
   }
 },10000);
