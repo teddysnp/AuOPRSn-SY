@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSnPlus-SY
 // @namespace    http://tampermonkey.net/
-// @version      4.0.1
+// @version      4.0.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -12,7 +12,6 @@
 // ==/UserScript==
 
 //变量区
-//以下，发页到github时注释或删除
 let mywin = window;
 let gpausePortal=["银光闪闪发亮aa","乒乓球桌aaa","星摩尔广场","和平使命"];
 let gpausePortalString=["测试挪1","重复了!!!","测试挪3","↑往上挪一下↑"];
@@ -31,7 +30,12 @@ let missionlist=[["职工文体广场","北一路万达","true","编辑","","202
                  ["沈阳滑翔机制造厂","北一路万达","true","新增","","2024-09-12"],["仨轮子","北一路万达","true","编辑","","2024-09-09"],
                  ["粉嘟对象","北一路万达","true","编辑","","2024-09-12"],["黑鼻对象","北一路万达","true","编辑","","2024-09-09"]
                 ];  //黑鼻对象  粉嘟对象
-//以上，发页到github时注释或删除
+//名称、是否需要暂停干预、挪po方案
+//挪po方案为九宫格方式
+//   1  2  3
+//   4  5  6
+//   7  8  9
+let editGYMPosition = [["丛林里的梅花鹿","false","6"],["职工文体广场","false","9"]];
 let privatePortal = ["占位po"];
 let editGYMPhoto = ["重型皮带轮"];
 
@@ -380,7 +384,7 @@ function initTimer(container, expiry , portalData1) {
       } else {
         container.after(divall);
       }
-      if(getPortalStatus(portalData1)) autoReview = "false";  //需暂停的，
+      if(getPortalStatus(portalData1,loc)) autoReview = "false";  //需暂停的，
       showReviewedReview();
       let submitCountDown = null;
       if(Math.ceil((new Date().getTime() - expiry + reviewTime*60000) / 1000)>postPeriod[1]){
@@ -666,16 +670,21 @@ function commitScorePhoto(portalData1,loc){
 }
 //编辑po打分
 function commitScoreEdit(portalData1,loc){
-  //点地图中的第一个点
+    //点地图中的第一个点
     let icnt1 = 0;
     let optp = document.querySelector('agm-map');
     if (optp) {
         console.log("optp",optp);
         optp.scrollIntoView(true);
-        let opt1 = optp.querySelector('div[role="button"]');
-        console.log(opt1);
-        if(!opt1 ) {
-            setTimeout(function(){
+        let ccard = document.querySelector("wf-review-card[id='categorization-card']");
+        if(ccard){
+            ccard.scrollIntoView(true);
+            optp.scrollIntoView(true);
+        }
+        setTimeout(function(){
+            let opt1 = optp.querySelector('div[role="button"]');
+            console.log(opt1);
+            if(!opt1 ) {
                 opt1 = optp.querySelector('div[role="button"]');
                 console.log("setTimeout opt1",opt1);
                 console.log("before opt1 click",opt1);
@@ -683,7 +692,8 @@ function commitScoreEdit(portalData1,loc){
                     opt1.click();
                     console.log("map click!");
                 }
-            },1000);}
+            }
+        },1000);
     }
 
   //标题：点集合中的第一个选项
@@ -982,7 +992,7 @@ function commitScore(portalData1,loc)
 }
 
 //判断是否需暂停
-function getPortalStatus(portal){
+function getPortalStatus(portal,loc){
   if (gpausePortal.indexOf(portal.title)>=0)
   {
     createNotify(portal.title, {
@@ -992,7 +1002,7 @@ function getPortalStatus(portal){
     });
   } else
   {
-    if( (portal.type=="EDIT") & (getLocation(portal)=="池中") )
+    if( (portal.type=="EDIT") & (loc=="池中") )
     {
       createNotify(portal.title, {
         body: "池中挪po，请注意",
