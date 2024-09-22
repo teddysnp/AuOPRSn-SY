@@ -670,32 +670,6 @@
     }
     //编辑po打分
     function commitScoreEdit(portalData1,loc){
-        //点地图中的第一个点
-        let icnt1 = 0;
-        let optp = document.querySelector('agm-map');
-        if (optp) {
-            console.log("optp",optp);
-            optp.scrollIntoView(true);
-            let ccard = document.querySelector("wf-review-card[id='categorization-card']");
-            if(ccard){
-                ccard.scrollIntoView(true);
-                optp.scrollIntoView(true);
-            }
-            setTimeout(function(){
-                let opt1 = optp.querySelector('div[role="button"]');
-                console.log(opt1);
-                if(!opt1 ) {
-                    opt1 = optp.querySelector('div[role="button"]');
-                    console.log("setTimeout opt1",opt1);
-                    console.log("before opt1 click",opt1);
-                    if (opt1) {
-                        opt1.click();
-                        console.log("map click!");
-                    }
-                }
-            },1000);
-        }
-
         //标题：点集合中的第一个选项
         let icnt2 = 0;
         let optp2 = document.querySelector('app-select-title-edit mat-radio-button');
@@ -752,13 +726,39 @@
         {
             ret = "瞎选一个";
         }
-        //滚回顶部
+
+        //点地图中的第一个点
+        let icnt1 = 0;
+        let optp = document.querySelector('agm-map');
+        if (optp) {
+//            console.log("optp",optp);
+            optp.scrollIntoView(true);
+            setTimeout(function(){
+              let ccard = document.querySelector("wf-review-card[id='categorization-card']");
+              if(ccard){
+                ccard.scrollIntoView(true);
+              }
+              let opt1 = optp.querySelector('div[role="button"]');
+//              console.log("opt1",opt1);
+              if(!opt1 ) {
+                opt1 = optp.querySelector('div[role="button"]');
+              }
+              if (opt1) {
+                opt1.click();
+                console.log("map click!");
+              }
+            },1000);
+        }
+
+      //滚回顶部
+      setTimeout(function(){
         var conpan = document.querySelector('mat-sidenav-content[class="mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100"]');
         if(conpan)
         {
-            conpan.scrollTo({top:0,left:0,behavior:'smooth'});
+          conpan.scrollTo({top:0,left:0,behavior:'smooth'});
         }
-        return ret;
+      },1000);
+      return ret;
     }
     //新po打分
     function commitScoreNew(portalData1,loc)
