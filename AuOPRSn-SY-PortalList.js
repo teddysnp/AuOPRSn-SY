@@ -10,7 +10,7 @@
 // ==/UserScript==
 
 let errNumber = 10;  //问题po，自动重试次数
-let mywin=window;
+//let mywin=window;
 
 setInterval(() => {
   console.log("检测是否错误");
