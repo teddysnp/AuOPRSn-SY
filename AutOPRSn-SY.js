@@ -25,7 +25,7 @@ let mission ={  //名称,位置,开始,类型,已审,时间
   dt: ""
 };
 let missionlist=[["职工文体广场","北一路万达","true","编辑","","2024-09-09"],
-                 ["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-12"],["机械城堡","北一路万达","true","新增","","2024-09-09"],
+                 ["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-12"],["机械城堡","北一路万达","false","新增","","2024-09-09"],
                  ["海盗船","北一路万达","false","新增","","2024-09-12"],["和平使命","北一路万达","true","新增","","2024-09-09"],
                  ["虎头狐尾","北一路万达","true","新增","","2024-09-09"],
                  ["沈阳滑翔机制造厂","北一路万达","true","新增","","2024-09-12"],["仨轮子","北一路万达","true","编辑","","2024-09-09"],
@@ -667,27 +667,24 @@ function commitScorePhoto(portalData1,loc){
 //编辑po打分
 function commitScoreEdit(portalData1,loc){
   //点地图中的第一个点
-  let icnt1 = 0;
-  let optp = document.querySelector('agm-map');
-  if (optp) {
-    optp.scrollIntoView(true);
-    let opt1 = optp.querySelector('div[role="button"]');
-    //              console.log(opt1);
-    while(!opt1) {
-      setTimeout(function(){
-        opt1 = optp.querySelector('div[role="button"]');
-        //                  if (opt1) { break;}
-        //                  console.log(opt1);
-      },1000);
-      icnt1++;
-      if (icnt1>10) { break;}
+    let icnt1 = 0;
+    let optp = document.querySelector('agm-map');
+    if (optp) {
+        console.log("optp",optp);
+        optp.scrollIntoView(true);
+        let opt1 = optp.querySelector('div[role="button"]');
+        console.log(opt1);
+        if(!opt1 ) {
+            setTimeout(function(){
+                opt1 = optp.querySelector('div[role="button"]');
+                console.log("setTimeout opt1",opt1);
+                console.log("before opt1 click",opt1);
+                if (opt1) {
+                    opt1.click();
+                    console.log("map click!");
+                }
+            },1000);}
     }
-    console.log(opt1);
-    if (opt1) {
-      opt1.click();
-      console.log("map click!");
-    }
-  }
 
   //标题：点集合中的第一个选项
   let icnt2 = 0;
