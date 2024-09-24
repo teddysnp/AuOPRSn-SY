@@ -31,11 +31,13 @@
             if(errbtn)
             {
                 if(errNumber>0){
+                    /*
                     createNotify("错误", {
                         body: "需要重试！",
                         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                         requireInteraction: false
                     });
+                    */
                     errNumber--;
                     console.log("error clicked!");
                     errbtn.click();
