@@ -418,12 +418,12 @@
                                         if(perr) {
 //                                            if(perr.textContent=" 略過 "){
                                             console.log("timer","cancel");
-                                            perr.click();
                                             createNotify("错误po", {
                                                 body: "忽略："+portalData.title,
                                                 icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                                                 requireInteraction: false
                                             });
+                                            perr.click();
 //                                            }
                                         }
                                     }
