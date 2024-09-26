@@ -42,6 +42,7 @@
     let expireTime = null;
     let reviewTime = 20;  //审po时间为20分钟
     let autoReview = null;
+    let editGYMAuto = "true";
     let postPeriod=[25,35];
     //let submitCountDown = null;
     let userID = null;
