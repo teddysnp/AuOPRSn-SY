@@ -5,6 +5,7 @@
 // @description  try to take over the world!
 // @author       You
 // @match        https://wayfarer.nianticlabs.com/*
+// @require      https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/refs/heads/main/AuOPR-Map-autoclick.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nianticlabs.com
 // @grant        none
 // ==/UserScript==
