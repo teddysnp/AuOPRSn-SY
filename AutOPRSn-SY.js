@@ -24,22 +24,19 @@
         dt: ""
     };
     let missionlist=[["职工文体广场","北一路万达","true","编辑","","2024-09-09",""],["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-12",""],
-                     ["海盗船","北一路万达","false","新增","","2024-09-12",""],["和平使命","北一路万达","true","新增","","2024-09-09","ok"],
+                     ["海盗船","北一路万达","true","新增","","2024-09-26",""],["和平使命","北一路万达","true","新增","","2024-09-09","ok"],
                      ["虎头狐尾","北一路万达","true","新增","","2024-09-09","ok"],
                      ["沈阳滑翔机制造厂","北一路万达","true","新增","","2024-09-12","ok"],["仨轮子","北一路万达","true","编辑","","2024-09-09",""],
                      ["粉嘟对象","北一路万达","true","编辑","","2024-09-12",""],["黑鼻对象","北一路万达","true","编辑","","2024-09-09",""],
                      ["劳劳工精神","北一路万达","true","新增","","2024-09-09","ok"],["摆烂的天使","北一路万达","true","新增","","2024-09-09","ok"],
-                     ["机械城堡","北一路万达","true","新增","","2024-09-09",""]
+                     ["机械城堡","北一路万达","true","新增","","2024-09-09","ok"]
                     ];  //黑鼻对象  粉嘟对象
 
     //1:名称、2:是否需要暂停干预、3:挪po方案
-    //挪po方案为九宫格方式
-    //   1  2  3
-    //   4  5  6
-    //   7  8  9
     let editGYMPosition = [["丛林里的梅花鹿","false","6"],["职工文体广场","false","9"]];
     let privatePortal = ["占位po"];
     let editGYMPhoto = ["重型皮带轮"];
+    let errPortal = ["b7a1c45e923048e0be225bbc264f9161"];
 
     let tryNumber = 10;
     let expireTime = null;
@@ -415,6 +412,22 @@
                         if(autoReview=="true"){
                             submitCountDown--;
                             if(submitCountDown<=0){  //倒计时0，提交
+                                if(portalData){
+                                    if(errPortal.indexOf(portalData.id)>=0){
+                                        let perr = document.querySelector('button[title=""]');
+                                        if(perr) {
+//                                            if(perr.textContent=" 略過 "){
+                                            console.log("timer","cancel");
+                                            perr.click();
+                                            createNotify("错误po", {
+                                                body: "忽略："+portalData.title,
+                                                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                                                requireInteraction: false
+                                            });
+//                                            }
+                                        }
+                                    }
+                                }
                                 let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
                                 if (p1){
                                     if(!submitButtonClicked){
