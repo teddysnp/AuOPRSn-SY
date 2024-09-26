@@ -1,11 +1,10 @@
 // ==UserScript==
 // @name         AuOPRSnPlus-ErrCheck-SY
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.0.2
 // @description  try to take over the world!
 // @author       You
 // @match        https://wayfarer.nianticlabs.com/*
-// @require      https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/refs/heads/main/AuOPR-Map-autoclick.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nianticlabs.com
 // @grant        none
 // ==/UserScript==
@@ -16,6 +15,14 @@
 
     setInterval(() => {
         console.log("检测是否错误");
+      console.log(document.querySelector("div[class='rc-doscaptcha-body']"));
+        if(document.querySelector("div[class='rc-doscaptcha-body']")){
+                createNotify("傻逼了", {
+                    body: "被当成机器人了，歇菜了",
+                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                    requireInteraction: true
+                });
+           }
         if(document.querySelector("app-review-error")) {
             let errbtn = document.querySelector('button[class="wf-button wf-button--primary"]');
             console.log("errbtn",errbtn);
@@ -32,7 +39,7 @@
             if(errbtn)
             {
                 if(errNumber>0){
-                    /*
+                  /*
                     createNotify("错误", {
                         body: "需要重试！",
                         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
