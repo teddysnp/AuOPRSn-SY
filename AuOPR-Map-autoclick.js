@@ -22,6 +22,7 @@
 //            console.log(url);
 //            console.log(method);
             if (url == '/api/v1/vault/review' && method == 'GET') {
+                ioutput="true";
                 this.addEventListener('load', injectTimer, false);
             }
             open.apply(this, arguments);
