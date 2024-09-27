@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSnPlus-SY
 // @namespace    http://tampermonkey.net/
-// @version      4.0.3
+// @version      4.0.5
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -23,17 +23,18 @@
         done: "",
         dt: ""
     };
-    let missionlist=[["职工文体广场","北一路万达","true","编辑","","2024-09-09",""],["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-12",""],
+    let missionlist=[["职工文体广场","北一路万达","true","编辑","","2024-09-09",""],
+                     ["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-12",""],["机械城堡","北一路万达","true","新增","","2024-09-09","ok"],
                      ["海盗船","北一路万达","true","新增","","2024-09-26",""],["和平使命","北一路万达","true","新增","","2024-09-09","ok"],
                      ["虎头狐尾","北一路万达","true","新增","","2024-09-09","ok"],
                      ["沈阳滑翔机制造厂","北一路万达","true","新增","","2024-09-12","ok"],["仨轮子","北一路万达","true","编辑","","2024-09-09",""],
                      ["粉嘟对象","北一路万达","true","编辑","","2024-09-12",""],["黑鼻对象","北一路万达","true","编辑","","2024-09-09",""],
-                     ["劳劳工精神","北一路万达","true","新增","","2024-09-09","ok"],["摆烂的天使","北一路万达","true","新增","","2024-09-09","ok"],
-                     ["机械城堡","北一路万达","true","新增","","2024-09-09","ok"]
+                     ["劳劳工精神","北一路万达","true","新增","","2024-09-09","ok"],["摆烂的天使","北一路万达","true","新增","","2024-09-09","ok"]
                     ];  //黑鼻对象  粉嘟对象
 
     //1:名称、2:是否需要暂停干预、3:挪po方案
-    let editGYMPosition = [["丛林里的梅花鹿","false","6"],["职工文体广场","false","9"]];
+//    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["职工文体广场","false","2"],["仨轮子","false","12"],
+//                          ["粉嘟对象","false","11"],["黑鼻对象","false","11"]];
     let privatePortal = ["占位po"];
     let editGYMPhoto = ["重型皮带轮"];
     let errPortal = ["b7a1c45e923048e0be225bbc264f9161"];
@@ -146,6 +147,8 @@
             }
             if (url == '/api/v1/vault/review' && method == 'GET') {
                 scoreAlready = false ;
+                let seditGYM = localStorage.editGYMAuto;
+                if(editGYMAuto) {editGYMAuto=seditGYM};
                 this.addEventListener('load', injectTimer, false);
             }
             if (url == '/api/v1/vault/review' && method == 'POST') {
@@ -736,8 +739,10 @@
             if (loc=="池中"){
                 autoReview="false";
                 console.log("autoReview set false");
+                ret = "池中挪po";
+            } else {
+                ret = "瞎选一个";
             }
-            ret = "池中挪po";
         } else
         {
             ret = "瞎选一个";
@@ -763,7 +768,9 @@
                 opt1 = optp.querySelector('div[role="button"]');
               }
               if (opt1) {
-                opt1.click();
+                  if(editGYMAuto == "true") {
+//                      opt1.click();
+                  }
                 console.log("map click!");
               }
             },1000);
@@ -1143,11 +1150,19 @@
                     }
                 }
                 //任务完成，给出消息，决定是否暂停                      待开发
-                if(tmmiss2==""){ //Mission over
-                }
-                $(".wf-page-header__title.ng-star-inserted").replaceWith(
-                    "<font size=3><div class='userclass missionpo' id='missionpo'>【待完成】"+tmmiss2+"<p>【已完成】"+tmmiss1+"<p>【未进池】"+tmmiss3+"<p>【已通过】"+tmmiss4+"</div></font>"+
-                    "<font size=3><div class='userclasss latestpo' id='latestpo'>【已审po】"+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div>");
+              if(tmmiss2==""){ //Mission over
+              }
+              let appreview = document.querySelector("app-review");
+              if(appreview){
+                const dva=document.createElement("div");
+                dva.className="userclass missionpo";
+                dva.id="missionpo";
+                dva.textContent="";
+                appreview.insertBefore(dva,appreview.firstChild);
+                $(".userclass.missionpo").replaceWith(
+                  "<font size=3><div class='userclass missionpo' id='missionpo'>【待完成】"+tmmiss2+"<p>【已完成】"+tmmiss1+"<p>【未进池】"+tmmiss3+"<p>【已通过】"+tmmiss4+"</div></font>"+
+                  "<font size=3><div class='userclasss latestpo' id='latestpo'>【已审po】"+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div><p>");
+              }
             } ;
         } catch (e) {
             console.log("reviewShowErr",e);
