@@ -769,7 +769,7 @@
               }
               if (opt1) {
                   if(editGYMAuto == "true") {
-//                      opt1.click();
+                      opt1.click();
                   }
                 console.log("map click!");
               }
