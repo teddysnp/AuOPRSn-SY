@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         AuOPR-Map-autoclick-test
+// @name         AuOPR-Map-autoclick
 // @namespace    http://tampermonkey.net/
 // @version      1.0.2
 // @description  try to take over the world!
