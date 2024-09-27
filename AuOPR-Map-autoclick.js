@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         AuOPR-Map-autoclick
+// @name         AuOPR-Map-autoclick-test
 // @namespace    http://tampermonkey.net/
 // @version      1.0.2
 // @description  try to take over the world!
@@ -12,7 +12,8 @@
 // 1-9:左至右排列第几个  11:19:上至下排列第几个  10:最右一个  20:最下一个
 (function() {
     let ioutput = "true";
-    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["职工文体广场","false","2"],["万达贾飞碟","false","11"]];
+    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["职工文体广场","false","2"],["万达贾飞碟","false","11"],
+                           ["粉嘟对象","false","11"],["黑鼻对象","false","11"]];
     let portalData = null;
     let portalTitle = null;
 
