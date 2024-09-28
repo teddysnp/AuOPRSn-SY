@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSnPlus-SY
 // @namespace    http://tampermonkey.net/
-// @version      4.0.5
+// @version      4.0.6
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -13,8 +13,8 @@
 (function() {
     //变量区
     let mywin = window;
-    let gpausePortal=["白白的鹅","腾飞","无锡记忆——河边洗衣三少妇。","和平使命"];
-    let gpausePortalString=["重复了-白白的大鹅","重复了-马踏飞燕","重复了-洗刷刷","↑往上挪一下↑"];
+    let gpausePortal=["白白的鹅","腾飞","无锡记忆——河边洗衣三少妇。","Curved monument"];
+    let gpausePortalString=["重复了-白白的大鹅","重复了-马踏飞燕","重复了-洗刷刷","重复了"];
     let mission ={  //名称,位置,开始,类型,已审,时间
         name: "",
         location: "",
@@ -23,8 +23,8 @@
         done: "",
         dt: ""
     };
-    let missionlist=[["职工文体广场","北一路万达","true","编辑","","2024-09-09","ok"],
-                     ["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-20",""],["机械城堡","北一路万达","true","新增","","2024-09-09","ok"],
+    let missionlist=[["职工文体广场","北一路万达","true","编辑","","2024-09-09",""],
+                     ["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-12",""],["机械城堡","北一路万达","true","新增","","2024-09-09","ok"],
                      ["海盗船","北一路万达","true","新增","","2024-09-26","ok"],["和平使命","北一路万达","true","新增","","2024-09-09","ok"],
                      ["虎头狐尾","北一路万达","true","新增","","2024-09-09","ok"],["万达贾飞碟","北一路万达","true","编辑","","2024-09-14",""],
                      ["沈阳滑翔机制造厂","北一路万达","true","新增","","2024-09-12","ok"],["仨轮子","北一路万达","true","编辑","","2024-09-09",""],
@@ -366,7 +366,7 @@
                 divall.appendChild(spblank);
                 divall.appendChild(divaddscore);
 
-                updateAddress(divaddr);
+                if(portalData1.type=="NEW") {updateAddress(divaddr);}
                 switch(loc){
                     case "池中":
                         divloc.style="justify-content: flex-start;color:red";break;
@@ -768,6 +768,7 @@
                 opt1 = optp.querySelector('div[role="button"]');
               }
               if (opt1) {
+                  console.log("editGYMAuto",editGYMAuto);
                   if(editGYMAuto == "true") {
                       opt1.click();
                   }
