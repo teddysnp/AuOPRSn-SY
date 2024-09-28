@@ -37,7 +37,7 @@
 //                          ["粉嘟对象","false","11"],["黑鼻对象","false","11"]];
     let privatePortal = ["占位po"];
     let editGYMPhoto = ["重型皮带轮"];
-    let errPortal = ["b7a1c45e923048e0be225bbc264f9161"];
+    let errPortal = ["b7a1c45e923048e0be225bbc264f9161","08196910e908e2613194624f7c04a46e"];
 
     let tryNumber = 10;
     let expireTime = null;
