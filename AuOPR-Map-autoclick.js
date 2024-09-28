@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AuOPR-Map-autoclick
+// @name         AuOPR-Map-autoclick-test
 // @namespace    http://tampermonkey.net/
-// @version      1.0.2
+// @version      1.0.3
 // @description  try to take over the world!
 // @author       You
 // @match        https://wayfarer.nianticlabs.com/*
@@ -14,8 +14,11 @@
     let ioutput = "true";
     let editGYMPosition = [["丛林里的梅花鹿","false","10"],["职工文体广场","false","2"],["万达贾飞碟","false","11"],
                            ["粉嘟对象","false","11"],["黑鼻对象","false","11"]];
+    let editGYMAuto = "false";
     let portalData = null;
     let portalTitle = null;
+
+    localStorage.setItem("editGYMAuto",editGYMAuto);
 
     (function (open) {
         XMLHttpRequest.prototype.open = function (method, url) {
@@ -89,6 +92,8 @@
                                     //left: 65px; top: -135px;
                                     if(ptbtn.getAttribute('style').indexOf("left: "+resdata.left +"px; top: "+resdata.top)>=0){
                                         console.log("选中",ptbtn);
+                                        let idscore = document.querySelector("span[id='idscore']");
+                                        if(idscore) idscore.textContent = editgym[2];
                                         ptbtn.click();
                                         ioutput=false;
                                         return;
