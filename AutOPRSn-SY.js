@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSnPlus-SY
 // @namespace    http://tampermonkey.net/
-// @version      4.0.6
+// @version      4.0.6-b
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -148,7 +148,7 @@
             if (url == '/api/v1/vault/review' && method == 'GET') {
                 scoreAlready = false ;
                 let seditGYM = localStorage.editGYMAuto;
-                if(editGYMAuto) {editGYMAuto=seditGYM};
+                if(seditGYM) {editGYMAuto=seditGYM};
                 this.addEventListener('load', injectTimer, false);
             }
             if (url == '/api/v1/vault/review' && method == 'POST') {
