@@ -93,7 +93,12 @@
                                     if(ptbtn.getAttribute('style').indexOf("left: "+resdata.left +"px; top: "+resdata.top)>=0){
                                         console.log("选中",ptbtn);
                                         let idscore = document.querySelector("span[id='idscore']");
-                                        if(idscore) idscore.textContent = editgym[2];
+                                        if(idscore) {
+                                            setTimeout(function(){
+                                                let idscore = document.querySelector("span[id='idscore']");
+                                                idscore.textContent = editgym[2];
+                                            },1000);
+                                        }
                                         ptbtn.click();
                                         ioutput=false;
                                         return;
