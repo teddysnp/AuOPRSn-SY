@@ -23,6 +23,11 @@
 
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let cookie = localStorage.cfcookie;
+    if(cookie) {
+      console.log("cookie",cookie.substring(0,10));
+    } else {
+      console.log("no cookie");
+    }
 
     function gmrequest(pmethod,purl,pid,pdata){
         switch(pmethod){
