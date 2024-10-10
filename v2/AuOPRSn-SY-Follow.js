@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.1
+// @version      1.1-b
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -175,8 +175,9 @@
 //        let sid="05a6bef32a01cc9e39c967677e18763f";
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/" +id +".json")
         .then(res=>{
-            console.log("res",res);
+//            console.log("res",res);
             if(!res) { cloudReviewData = null;return;}
+            if(res.indexOf("<!DOCTYPE html>")>=0){cloudReviewData = null;return;}
             let creviewdata = null;
             if(res.substring(0,1)=="[") {
                 console.log("searching review record：",JSON.parse(JSON.parse(res)[0]));
