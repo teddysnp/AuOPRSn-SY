@@ -229,9 +229,9 @@
                 setTimeout(function(){
                     for(let i=0;i<=appcard.length-1;i++){
                         if(document.querySelector('#'+appcard[i])) {
-                            let appcard = document.querySelector('#'+appcard[i]);
-                            if(appcard.querySelectorAll("button")){
-                                let tmpbtn=appcard.querySelectorAll("button")[1];
+                            let bappcard = document.querySelector('#'+appcard[i]);
+                            if(bappcard.querySelectorAll("button")){
+                                let tmpbtn=bappcard.querySelectorAll("button")[1];
                                 if(tmpbtn.className.indexOf("is-selected")<0){
                                     tmpbtn.click();
                                 }
