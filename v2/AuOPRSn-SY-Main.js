@@ -13,7 +13,7 @@
 (function() {
     //变量区
     let mywin = window;
-    let gpausePortal=["白白的鹅","腾飞","无锡记忆——河边洗衣三少妇。","Curved monument11"];
+    let gpausePortal=["白白的鹅111","腾飞111","无锡记忆——河边洗衣三少妇111","Curved monument11"];
     let gpausePortalString=["重复了-白白的大鹅","重复了-马踏飞燕","重复了-洗刷刷","重复了"];
     let mission ={  //名称,位置,开始,类型,已审,时间
         name: "",
