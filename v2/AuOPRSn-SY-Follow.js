@@ -175,10 +175,7 @@
         //        console.log(id);
 //        let sid="05a6bef32a01cc9e39c967677e18763f";
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/" +id +".json")
-        .then(err=>{
-            console.log("未找到审核记录:"+id);
-        },
-              res=>{
+        .then(res=>{
             console.log("res",res);
             if(!res) { cloudReviewData = null;return;}
             let creviewdata = null;
@@ -370,13 +367,16 @@
                             setTimeout(function(){
                                 let accd = document.querySelector('#accurate-and-high-quality-card');
                                 if(accd) {
-                                    if(accd.querySelectorAll('button'))
-                                    { //
-                                        let tmpbtns = acc[2];
-                                        if(tmpbtns.className!="wf-button thumbs-button wf-button--icon is-selected") {
-                                            tmpbtns.click();
-                                        }
-                                    }
+                                    setTimeout(function(){
+                                        if(accd.querySelectorAll('button'))
+                                        { //
+//                                            console.log(accd);
+                                            let tmpbtns = accd.querySelectorAll('button')[2];
+//                                            console.log(tmpbtns);
+                                            if(tmpbtns.className!="wf-button thumbs-button wf-button--icon is-selected") {
+                                                tmpbtns.click();
+                                            }
+                                        }},500);
                                 }},500);
                             setTimeout(function(){
                                 setTimeout(function(){
@@ -398,7 +398,11 @@
                     }
                 }
             }
-        })
+        },
+              err=>{
+            console.log("未找到审核记录:"+id);
+        }
+             )
     }
     function savePostData(data,icloud){
         console.log("检查是否需要上传审核数据...");
