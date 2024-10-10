@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         AuOPRSnPlus-SY
+// @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
 // @version      4.1
 // @description  try to take over the world!
