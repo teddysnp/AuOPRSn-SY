@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.1
+// @version      1.1.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -109,10 +109,6 @@
                         let iautolabel = document.querySelector("p[id='idautolabel']");
                         let tmpdata = JSON.parse(data[0]);
 //                        console.log("olddata",data);
-                        if (iautolabel.textContent == "手动"){
-                            savePostData(JSON.parse(data),0);
-                            //                        console.log("data",JSON.parse(data));
-                        }
                         //console.log("cloudReviewData",cloudReviewData);
                         if(cloudReviewData!=null) {
                             if(cloudReviewData.newLocation) {
@@ -127,6 +123,10 @@
                                 console.log("newdata",data);
                                 console.log("挪至新位置：",JSON.parse(data[0]).newLocation);
                             }
+                        }
+                        if (iautolabel.textContent == "手动"){
+                            savePostData(JSON.parse(data),0);
+                            //                        console.log("data",JSON.parse(data));
                         }
                         //console.log("tmpdata",tmpdata);
                         return send.apply(_this,data);
