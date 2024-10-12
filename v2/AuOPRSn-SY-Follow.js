@@ -23,11 +23,7 @@
 
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let cookie = localStorage.cfcookie;
-    if(cookie) {
-      console.log("cookie",cookie.substring(0,10));
-    } else {
-      console.log("no cookie");
-    }
+    let useremail = "";
 
     function gmrequest(pmethod,purl,pid,pdata){
         switch(pmethod){
@@ -99,8 +95,11 @@
             if(url.indexOf("pub-e7310217ff404668a05fcf978090e8ca.r2.dev")>=0){
 //                this.addEventListener('load', getData, false);
             }
+            if (url == '/api/v1/vault/properties' && method == 'GET') {
+                this.addEventListener('load', getUser, false);
+            }
             if (url == '/api/v1/vault/review' && method == 'GET') {
-                this.addEventListener('load', injectTimer, false);
+                this.addEventListener('load', injectLoadData, false);
             }
             if (url == '/api/v1/vault/review' && method == 'POST') {
                 let send = this.send;
@@ -114,7 +113,7 @@
                             savePostData(JSON.parse(data),0);
                             //                        console.log("data",JSON.parse(data));
                         }
-                        console.log("cloudReviewData",cloudReviewData);
+                        //console.log("cloudReviewData",cloudReviewData);
                         if(cloudReviewData!=null) {
                             if(cloudReviewData.newLocation) {
                                 let lll=cloudReviewData.newLocation;
@@ -126,9 +125,10 @@
                                 tmpdata.newLocation = sss;
                                 data[0] = JSON.stringify(tmpdata);
                                 console.log("newdata",data);
+                                console.log("挪至新位置：",JSON.parse(data[0]).newLocation);
                             }
                         }
-                        console.log("tmpdata",tmpdata);
+                        //console.log("tmpdata",tmpdata);
                         return send.apply(_this,data);
                     } catch(e) {
                         //console.log(e);
@@ -153,7 +153,22 @@
     }).catch(e => {
         console.log('Promise', e)});
 
-    function injectTimer() {
+    function getUser(){
+        const resp = U_XMLHttpRequest("GET","https://wayfarer.nianticlabs.com/api/v1/vault/properties")
+        resp.then
+        (res=>{
+            if(res){
+                let restext = JSON.parse(res);
+                if(restext.result.socialProfile.email)
+                {
+                    useremail = restext.result.socialProfile.email;
+                }
+                return restext.result.socialProfile.email;
+            }
+        });
+    }
+
+    function injectLoadData() {
         awaitElement(() => document.querySelector('wf-logo'))
             .then((ref) => {
             try {
@@ -166,7 +181,7 @@
                 portalData = json.result;
                 console.log(portalData);
 //                if(!portalData.id || portalData.id==null) return;
-                loadReviewData(portalData.id);
+                loadReviewData(portalData);
 //                let testid = "74908645df72e5da08ebd13be138275c";
 //                loadReviewData(testid);
             } catch (e) {
@@ -175,32 +190,56 @@
         });
     }
 
-    function loadReviewData(id){
+    function loadReviewData(portalData){
         //        console.log(id);
 //        let sid="05a6bef32a01cc9e39c967677e18763f";
+        console.log("email",useremail);
+        let tmptext = '';
+        let id=portalData.id;
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/" +id +".json")
         .then(res=>{
 //            console.log("res",res);
-            if(!res) { cloudReviewData = null;return;}
-            if(res.indexOf("<!DOCTYPE html>")>=0){cloudReviewData = null;return;}
+            if(!res) {
+                cloudReviewData = null;
+                setTimeout(function(){
+                    let ilabel = document.getElementById("iduserlabel");
+                    if(ilabel) ilabel.textContent = "未找到网络审核记录";
+                },1000);
+                return;
+            }
+            if(res.indexOf("<!DOCTYPE html>")>=0){
+                cloudReviewData = null;
+                setTimeout(function(){
+                    let ilabel = document.getElementById("iduserlabel");
+                    if(ilabel) ilabel.textContent = "未找到网络审核记录";
+                },1000);
+                return;
+            }
             let creviewdata = null;
+            let localpd = [];
+            if(localStorage.getItem(useremail+"follow")) localpd = JSON.parse(localStorage.getItem(useremail+"follow"));
+            let tmppd="";let tmpfollow={id:null,title:null,lat:null,lng:null,review:null};
+            let title=portalData.title;let lat=portalData.lat;let lng=portalData.lng;
             if(res.substring(0,1)=="[") {
-                console.log("searching review record：",JSON.parse(JSON.parse(res)[0]));
+//                console.log("searching review record：",JSON.parse(JSON.parse(res)[0]));
                 creviewdata = JSON.parse(JSON.parse(res)[0]);   //网络审核记录
             } else {
-                console.log("searching review record：",JSON.parse(res));
+//                console.log("searching review record：",JSON.parse(res));
                 creviewdata = JSON.parse(res);   //网络审核记录
             }
             cloudReviewData = creviewdata ;
             //              let creviewdata = JSON.parse(localStorage.getItem(id));  //本地审核记录
             if(creviewdata==null) { return; }
             console.log("cloudReviewData",cloudReviewData);
-            console.log("找到审核记录",creviewdata);
+//            console.log("找到审核记录",creviewdata);
             let rdata = creviewdata;
             //              let rdata = eval("(" + creviewdata[creviewdata.length - 1] + ")");
-            console.log(rdata);
+//            console.log(rdata);
             //rejectReasons 是个数组
+            tmpfollow.id=id;tmpfollow.title=title;tmpfollow.lat=lat;tmpfollow.lng=lng;
             if(rdata.duplicate){
+                tmptext = "照抄网络审核：重复";
+                tmpfollow.review="重复："+creviewdata.duplicateOf;
                 let nbportal = portalData.nearbyPortals;
                 console.log("审核记录：重复！");
                 console.log(nbportal);
@@ -230,6 +269,13 @@
                     },1000);
                 }
             } else if(rdata.quality) {
+                if(rdata.newLocation) {
+                    tmptext = "照抄网络审核：五星+挪po";
+                    tmpfollow.review = "五星+挪:" + rdata.newLocation;
+                } else {
+                    tmptext = "照抄网络审核：五星";
+                    tmpfollow.review="五星";
+                }
                 console.log("审核记录：五星");
                 const appcard=["appropriate-card","safe-card","accurate-and-high-quality-card","permanent-location-card","socialize-card","exercise-card","explore-card"];
                 setTimeout(function(){
@@ -323,6 +369,8 @@
                     idscore.textContent = "YYYYYYY";
                 },3000);
             } else if(rdata.rejectReasons){
+                tmptext = "照抄网络审核：否决";
+                tmpfollow.review="否决:"+rdata.rejectReasons;
                 console.log("审核记录拒",rdata.rejectReasons);
                 for(let i=0;i<rdata.rejectReasons.length;i++){
                     if(rdata.rejectReasons[i]=="PRIVATE" || rdata.rejectReasons[i]=="INAPPROPRIATE" || rdata.rejectReasons[i]=="SCHOOL" ||
@@ -403,6 +451,17 @@
                     }
                 }
             }
+            if(localpd.length==0){
+                localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
+            } else {
+                localpd.push(tmpfollow);
+                localStorage.setItem(useremail+"follow",JSON.stringify(localpd));
+            }
+            setTimeout(function(){
+                let ilabel = document.getElementById("iduserlabel");
+                if(ilabel) ilabel.textContent = tmptext;
+//                console.log("iduserlabel",ilabel);
+            },1000);
         },
               err=>{
             console.log("未找到审核记录:"+id);
@@ -412,27 +471,42 @@
     function savePostData(data,icloud){
         console.log("检查是否需要上传审核数据...");
 //        console.log(data);
+        let localpd = [];
+        if(localStorage.getItem(useremail+"upload")) localpd = JSON.parse(localStorage.getItem(useremail+"upload"));
+        let tmppd="";let tmpupload={id:null,title:null,lat:null,lng:null,review:null};
+        tmpupload.id=data.id;
+        if(data.id=portalData.id){
+            tmpupload.title=portalData.title;tmpupload.lat=portalData.lat;tmpupload.lng=portalData.lng;
+        }
         if(data.type=="NEW"){
             let isave =0;
 //            console.log("duplicate",data.duplicate);
 //            console.log("rejectReasons",data.rejectReasons);
             if(data.duplicate || data.rejectReasons ){
 //                console.log("duplicate or rejectReasons");
+                if(data.duplicate) tmpupload.review="重复:"+data.duplicate; else tmpupload.review="否决:" + data.rejectReasons;
                 isave=1;
             };
 //            console.log("data.cultural",data.cultural);
             if(data.cultural){
                 if(data.cultural==5 & data.exercise==5 & data.location==5 & data.quality==5 & data.safety==5 & data.socialize==5 & data.uniqueness==5){
 //                    console.log("five stars!");
+                    tmpupload.review = "五星";
                     isave=1;
                 }
             }
-            if(data.newLocation) {isave=1};
+            if(data.newLocation) {tmpupload.review = tmpupload.review+":挪"+data.newLocation; isave=1};
             if(isave==1){
                 try{
                     console.log("saving...");
                     if(icloud==0){
                         if(cookie) {
+                            if(localpd.length==0){
+                                localStorage.setItem(useremail+"upload","["+JSON.stringify(tmpupload)+"]");
+                            } else {
+                                localpd.push(tmpupload);
+                                localStorage.setItem(useremail+"upload",JSON.stringify(localpd));
+                            }
                             gmrequest("PUT",surl,data.id,JSON.stringify(data));
                         }
                     } else {
