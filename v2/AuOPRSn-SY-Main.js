@@ -13,7 +13,7 @@
 (function() {
     //变量区
     let mywin = window;
-    let gpausePortal=["白白的鹅111","腾飞111","无锡记忆——河边洗衣三少妇111","Curved monument11"];
+    let gpausePortal=["白白的鹅111","腾飞111","无锡记忆——河边洗衣三少妇11。","Curved monument11"];
     let gpausePortalString=["重复了-白白的大鹅","重复了-马踏飞燕","重复了-洗刷刷","重复了"];
     let mission ={  //名称,位置,开始,类型,已审,时间
         name: "",
@@ -612,14 +612,15 @@
                     return;
                 }
                 if(document.querySelector("div[class='wf-page-header']")) {
-                    let userlist = JSON.parse(localStorage.userList);
+                    let userlist = [];
+                    if(localStorage.userList) {userlist = JSON.parse(localStorage.userList)};
                     let suser="";
                     if(userlist){
                         let localuserlist=localStorage[userEmail+"user"];
                         if(!localuserlist) localuserlist="";
                         suser+="<div><span>当前用户："+userEmail+"</span>　　<button type='button' style='background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:30px;border-radius:10px;'"+
                             "onclick=saveUserNameList()>保存</button><div><p>";
-                        for(let i=0;i<userlist.length;i++){
+                        for(let i=0;i<userlist.length - 1;i++){
                             if(userlist[i].indexOf("@") == -1) {
                                 if(localuserlist.indexOf(userlist[i])>=0){
                                     suser+="<input type='checkbox' class='cbxusername' checked='checked' id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
@@ -907,7 +908,7 @@
                 createNotify("可能有重复po", {
                     body: portalData1.nearbyPortals.find(p=>{return p.title==portalData1.title}).title,
                     icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                    requireInteraction: true
+                    requireInteraction: false
                 });  //这两个判断应该重复了，需测试确认，也许下面这个不可靠，因为地图不加载
                 if (document.querySelector("[alt='"+portalData1.title+"']")) {
                     document.querySelector("[alt='"+portalData1.title+"']").click();
@@ -1359,14 +1360,49 @@
                 //      userEmail=getUser();  //会引起promise错误
             }
             let cbxmiss = localStorage["cbxmission"];
-            $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>"+
-                                                                     "<div><font size=5>skey:"+
-                                                                     "<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
-                                                                     "<button class='wf-button' onclick=saveKey()>保存</button></font></div>"+
-                                                                     "<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>");
-            $(".showcase-gallery").replaceWith("<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div>"+
-                                               "<div id='missionPortal1'></div><br><div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"+
-                                               "<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>");
+            $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>"
+                                                                     //+"<div><font size=5>skey:"+
+                                                                     //"<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
+                                                                     //"<button class='wf-button' onclick=saveKey()>保存</button></font></div>"+
+                                                                     //"<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>"
+                                                                    );
+            $(".showcase-gallery").replaceWith(
+                 "<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
+                 +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
+                 +"<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div>"
+                 +"<div id='missionPortal1'></div><br><div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
+                 +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
+            );
+
+            let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:10%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
+            let sfdetail = "";
+            let slocalfollow = [];
+            if(localStorage.getItem(userEmail+"follow")) slocalfollow = JSON.parse(localStorage.getItem(userEmail+"follow"));
+            console.log(slocalfollow);
+            if(slocalfollow.length>0){
+                sfdetail+="<tbody>";
+                console.log(slocalfollow[0]);
+                for (let i=0;i<=slocalfollow.length - 1;i++){
+                    sfdetail+="<tr><td>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>"+slocalfollow[i].review+"</td></tr>";
+                }
+                sfdetail+="</tbody></table>";
+            }
+            $("#idfollow").replaceWith(sftitle+sfdetail);
+
+            let sutitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:10%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>审核情况</th></thead>";
+            let sudetail = "";
+            let slocalupload = [];
+            if(localStorage.getItem(userEmail+"upload")) slocalupload = JSON.parse(localStorage.getItem(userEmail+"upload"));
+            console.log(slocalupload);
+            if(slocalupload.length>0){
+                sudetail+="<tbody>";
+                for (let i=0;i<=slocalupload.length - 1;i++){
+                    sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+slocalupload[i].review+"</td></tr>";
+                }
+                sudetail+="</tbody></table>";
+            }
+            $("#idupload").replaceWith(sutitle+sudetail);
+
             if(cbxmiss){
                 if(cbxmiss=="true"){
                     let obj = document.getElementById("cbxmission");
