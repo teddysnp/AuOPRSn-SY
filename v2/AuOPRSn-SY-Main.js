@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.1
+// @version      4.1.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1073,7 +1073,7 @@
             if(document.querySelector('#exercise-card')) {
                 let appcard = document.querySelector('#exercise-card');
                 if(appcard.querySelectorAll("button")){
-                    let tmpbtn=appcard.querySelectorAll("button")[3];
+                    let tmpbtn=appcard.querySelectorAll("button")[2];
                     if(tmpbtn.className.indexOf("is-selected")<0){
                         tmpbtn.click();
                     }
@@ -1085,7 +1085,7 @@
             if(document.querySelector('#exercise-card')) {
                 let appcard = document.querySelector('#exercise-card');
                 if(appcard.querySelectorAll("button")){
-                    let tmpbtn=appcard.querySelectorAll("button")[2];
+                    let tmpbtn=appcard.querySelectorAll("button")[3];
                     if(tmpbtn.className.indexOf("is-selected")<0){
                         tmpbtn.click();
                     }
@@ -1110,7 +1110,7 @@
             if(document.querySelector('#explore-card')) {
                 let appcard = document.querySelector('#explore-card');
                 if(appcard.querySelectorAll("button")){
-                    let tmpbtn=appcard.querySelectorAll("button")[3];
+                    let tmpbtn=appcard.querySelectorAll("button")[2];
                     if(tmpbtn.className.indexOf("is-selected")<0){
                         tmpbtn.click();
                     }
@@ -1122,7 +1122,7 @@
             if(document.querySelector('#explore-card')) {
                 let appcard = document.querySelector('#explore-card');
                 if(appcard.querySelectorAll("button")){
-                    let tmpbtn=appcard.querySelectorAll("button")[2];
+                    let tmpbtn=appcard.querySelectorAll("button")[3];
                     if(tmpbtn.className.indexOf("is-selected")<0){
                         tmpbtn.click();
                     }
@@ -1374,7 +1374,7 @@
                  +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
             );
 
-            let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:10%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
+            let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
             let sfdetail = "";
             let slocalfollow = [];
             if(localStorage.getItem(userEmail+"follow")) slocalfollow = JSON.parse(localStorage.getItem(userEmail+"follow"));
@@ -1389,7 +1389,7 @@
             }
             $("#idfollow").replaceWith(sftitle+sfdetail);
 
-            let sutitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:10%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>审核情况</th></thead>";
+            let sutitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>审核情况</th></thead>";
             let sudetail = "";
             let slocalupload = [];
             if(localStorage.getItem(userEmail+"upload")) slocalupload = JSON.parse(localStorage.getItem(userEmail+"upload"));
