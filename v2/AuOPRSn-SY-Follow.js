@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.1.1
+// @version      1.1.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -452,9 +452,12 @@
                 }
             }
             if(localpd.length==0){
+                console.log("saving local follow 1");
                 localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
             } else {
+                console.log("saving local follow n");
                 localpd.push(tmpfollow);
+                console.log(localpd);
                 localStorage.setItem(useremail+"follow",JSON.stringify(localpd));
             }
             setTimeout(function(){
