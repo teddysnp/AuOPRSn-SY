@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.1.2
+// @version      1.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -24,6 +24,7 @@
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let cookie = localStorage.cfcookie;
     let useremail = "";
+    let tmpfollow={id:null,title:null,lat:null,lng:null,review:null};
 
     function gmrequest(pmethod,purl,pid,pdata){
         switch(pmethod){
@@ -124,6 +125,22 @@
                                 console.log("挪至新位置：",JSON.parse(data[0]).newLocation);
                             }
                         }
+
+                        console.log("查看是否跟po，保存至本地",tmpfollow);
+                        if(tmpfollow.id!=null){
+                            let localpd1 = [];
+                            if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
+                            if(localpd1.length==0){
+                                console.log("saving local follow 1");
+                                localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
+                            } else {
+                                console.log("saving local follow n");
+                                localpd1.push(tmpfollow);
+                                console.log(localpd1);
+                                localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
+                            }
+                        }
+
                         if (iautolabel.textContent == "手动"){
                             savePostData(JSON.parse(data),0);
                             //                        console.log("data",JSON.parse(data));
@@ -196,6 +213,7 @@
         console.log("email",useremail);
         let tmptext = '';
         let id=portalData.id;
+        tmpfollow.id = null;
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/" +id +".json")
         .then(res=>{
 //            console.log("res",res);
@@ -216,9 +234,6 @@
                 return;
             }
             let creviewdata = null;
-            let localpd = [];
-            if(localStorage.getItem(useremail+"follow")) localpd = JSON.parse(localStorage.getItem(useremail+"follow"));
-            let tmppd="";let tmpfollow={id:null,title:null,lat:null,lng:null,review:null};
             let title=portalData.title;let lat=portalData.lat;let lng=portalData.lng;
             if(res.substring(0,1)=="[") {
 //                console.log("searching review record：",JSON.parse(JSON.parse(res)[0]));
@@ -290,81 +305,6 @@
                             }
                         }
                     }
-                    /*                      if(document.querySelector('#appropriate-card')) {
-                          let appcard = document.querySelector('#appropriate-card');
-                          if(appcard.querySelectorAll("button")){
-                              let tmpbtn=appcard.querySelectorAll("button")[1];
-                              if(tmpbtn.className.indexOf("is-selected")<0){
-                                  tmpbtn.click();
-                              }
-                          }
-                      }
-                      if(document.querySelector('#safe-card')) {
-                          let appcard = document.querySelector('#safe-card');
-                          if(appcard.querySelectorAll("button")){
-                              let tmpbtn=appcard.querySelectorAll("button")[1];
-                              if(tmpbtn.className.indexOf("is-selected")<0){
-                                  tmpbtn.click();
-                              }
-                          }
-                      }
-                      if(document.querySelector('#accurate-and-high-quality-card')) {
-                          let appcard = document.querySelector('#accurate-and-high-quality-card');
-                          if(appcard.querySelectorAll("button")){
-                              let tmpbtn=appcard.querySelectorAll("button")[1];
-                              if(tmpbtn.className.indexOf("is-selected")<0){
-                                  tmpbtn.click();
-                              }
-                          }
-                      }
-                      if(document.querySelector('#permanent-location-card')) {
-                          let appcard = document.querySelector('#permanent-location-card');
-                          if(appcard.querySelectorAll("button")){
-                              let tmpbtn=appcard.querySelectorAll("button")[1];
-                              if(tmpbtn.className.indexOf("is-selected")<0){
-                                  tmpbtn.click();
-                              }
-                          }
-                      }
-                      if(document.querySelector('#socialize-card')) {
-                          let appcard = document.querySelector('#socialize-card');
-                          if(appcard.querySelectorAll("button")){
-                              let tmpbtn=appcard.querySelectorAll("button")[1];
-                              if(tmpbtn.className.indexOf("is-selected")<0){
-                                  tmpbtn.click();
-                              }
-                          }
-                      }
-                      if(document.querySelector('#exercise-card')) {
-                          let appcard = document.querySelector('#exercise-card');
-                          if(appcard.querySelectorAll("button")){
-                              let tmpbtn=appcard.querySelectorAll("button")[1];
-                              if(tmpbtn.className.indexOf("is-selected")<0){
-                                  tmpbtn.click();
-                              }
-                          }
-                      }
-                      if(document.querySelector('#explore-card')) {
-                          let appcard = document.querySelector('#explore-card');
-                          if(appcard.querySelectorAll("button")){
-                              let tmpbtn=appcard.querySelectorAll("button")[1];
-                              if(tmpbtn.className.indexOf("is-selected")<0){
-                                  tmpbtn.click();
-                              }
-                          }
-                      }
-*/
-                    /*                      if(document.querySelector('#safe-card').querySelectorAll("mat-icon")[1].parentNode.className=="wf-button thumbs-button wf-button--icon is-selected"){
-                      } else {
-                          if(document.querySelector('#safe-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0])
-                          { //
-                              document.querySelector('#safe-card').querySelectorAll('button[class="wf-button thumbs-button wf-button--icon"]')[0].click();
-                          }
-                          if(document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]'))
-                          { // 与Warfarer Review脚本冲突，因为此脚本修改了class值
-                              document.querySelector('#safe-card').querySelector('button[class="wf-button thumbs-button wf-button--icon wfkr2-touched wfkr2-eds-btn-key wfkr2-eds-btn-key-pad wfkr2-eds-key-bracket-1"]').click();
-                          }
-                      }*/
                     let idscore = document.querySelector("span[id='idscore']");
                     idscore.textContent = "YYYYYYY";
                 },3000);
@@ -451,15 +391,6 @@
                     }
                 }
             }
-            if(localpd.length==0){
-                console.log("saving local follow 1");
-                localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
-            } else {
-                console.log("saving local follow n");
-                localpd.push(tmpfollow);
-                console.log(localpd);
-                localStorage.setItem(useremail+"follow",JSON.stringify(localpd));
-            }
             setTimeout(function(){
                 let ilabel = document.getElementById("iduserlabel");
                 if(ilabel) ilabel.textContent = tmptext;
@@ -476,8 +407,9 @@
 //        console.log(data);
         let localpd = [];
         if(localStorage.getItem(useremail+"upload")) localpd = JSON.parse(localStorage.getItem(useremail+"upload"));
-        let tmppd="";let tmpupload={id:null,title:null,lat:null,lng:null,review:null};
+        let tmpupload={id:null,title:null,lat:null,lng:null,review:null};
         tmpupload.id=data.id;
+
         if(data.id=portalData.id){
             tmpupload.title=portalData.title;tmpupload.lat=portalData.lat;tmpupload.lng=portalData.lng;
         }
@@ -487,7 +419,7 @@
 //            console.log("rejectReasons",data.rejectReasons);
             if(data.duplicate || data.rejectReasons ){
 //                console.log("duplicate or rejectReasons");
-                if(data.duplicate) tmpupload.review="重复:"+data.duplicate; else tmpupload.review="否决:" + data.rejectReasons;
+                if(data.duplicate) tmpupload.review="重复:"+data.duplicateOf; else tmpupload.review="否决:" + data.rejectReasons;
                 isave=1;
             };
 //            console.log("data.cultural",data.cultural);
