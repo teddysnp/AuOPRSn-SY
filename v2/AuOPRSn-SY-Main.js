@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.1.1
+// @version      4.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -61,6 +61,7 @@
     let portalData = null;
     let private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[42.2828685,125.738134,3408,5517],[41.755547,123.288777,940,1140],[41.81979911, 123.25708028,910,920],[41.810820,123.376373,547,1036]];
     let timer = null;
+    let ttm = null;
     let skey="";
 
     let needCaptcha = false;
@@ -154,6 +155,10 @@
                 if(seditGYM) {editGYMAuto=seditGYM};
                 let sreviewPortalAuto = localStorage.reviewPortalAuto;
                 if(sreviewPortalAuto) {reviewPortalAuto=localStorage.reviewPortalAuto};
+                //mywin.clearInterval(ttm);
+                //ttm = null;
+                //mywin.clearInterval(timer);
+                //timer=null;
                 this.addEventListener('load', injectTimer, false);
             }
             if (url == '/api/v1/vault/review' && method == 'POST') {
@@ -252,15 +257,17 @@
                 document.getElementById("title-description-card").setAttribute("class","card");
             }
             document.querySelector("h2[class='wf-page-header__title ng-star-inserted']").replaceWith("");
+            let liddvall = document.getElementById("iddvall");
             let ltimerlabel2 = document.getElementById("idltimerlabel");
-            console.log("initTimer",ltimerlabel2);
-            if(ltimerlabel2 == null){  //标签不存在则创建
+            let countdown = document.getElementById("idcountdown");
+            //console.log("countdown",countdown);
+            if(countdown == null){  //标签不存在则创建
                 let loc = "";
                 loc =getLocation(portalData1);
                 //共注入五部份 divall为总 dvauto dv divuser divcountdown divaddrscore
                 const divall=document.createElement("div");
                 divall.id="iddvall";
-                divall.style="width:80%;font-size:16px";
+                divall.style="width:80%;font-size:16px;";
                 divall.className="clusertop";
                 const spblank=document.createElement("span");
                 spblank.textContent="　　";
@@ -295,7 +302,7 @@
                 ltimerlabel2 = document.createElement('p');
                 ltimerlabel2.id = "idtimerdata";
                 ltimerlabel2.classList.add("clptimerdata");
-                ltimerlabel2.textContent = '开始: ';
+                //ltimerlabel2.textContent = '开始: ';
 
                 div1.appendChild(ltimerlabel1);
                 div1.appendChild(ltimerlabel2);
@@ -321,21 +328,23 @@
 
                 //divcountdown = countdownlabel + countdown
                 //增加提交倒计时
-                const divcountdown=document.createElement("div");
+                let divcountdown=document.createElement("div");
                 divcountdown.style="width:10%;font-size:14px";
                 divcountdown.className="clusertop1";
                 //增加提交倒计时label
-                const countdownlabel = document.createElement('p');
+                let countdownlabel = document.createElement('p');
                 countdownlabel.className = 'clcountdownlabel';
                 countdownlabel.id = "idcountdownlabel";
                 countdownlabel.textContent = '提交 ';
                 divcountdown.appendChild(countdownlabel);
                 //增加提交倒计时标签
-                const countdown = document.createElement('p');
+                countdown = document.createElement('p');
                 countdown.className = 'clcountdown';
                 countdown.id = "idcountdown";
-                countdown.textContent = '';
+                //countdown.textContent = '';
+                //countdown.style.display = 'block';
                 divcountdown.appendChild(countdown);
+                //console.log(countdown);
 
                 //divaddscore = divaddr + divlocscore( divloc +divblank)
                 //增加地址、池中本地外地、打分标签
@@ -396,8 +405,10 @@
                 let pnode = document.querySelector("div[class='wayfarerrtmr']");
                 //console.log(pnode);
                 if(pnode) {
+                    //console.log(pnode.parentNode);
                     pnode.parentNode.after(divall);
                 } else {
+                    //console.log(container);
                     container.after(divall);
                 }
                 if(getPortalStatus(portalData1,loc)) autoReview = "false";  //需暂停的，
@@ -411,12 +422,33 @@
                 //      getSubmitButtonClick();
                 //      mywin.location.reload("#iddvall");
                 //      setTimeout(function(){$("#iddvall").load(location.href+" #iddvall");},0);
-                console.log(timer);
+                //console.log(timer);
                 //更新计时器
 //                timer = null;
-                if(!timer) { timer = mywin.setInterval(() => {
-                    setTimeout(function(){countdown.textContent = Math.ceil(submitCountDown);},0);
-                    updateTime(ltimerlabel2, expiry);
+                countdown.textContent = Math.ceil(submitCountDown);
+
+                //if(ttm==null) {
+                //console.log("ttm:",ttm);
+                    ttm = mywin.setInterval(() => {
+                        if(autoReview=="true"){
+                            dvautolabel.textContent = '自动';
+                        } else {
+                            dvautolabel.textContent = '手动';
+                        }
+                    },1000);
+               //}
+                if(timer==null) { timer = mywin.setInterval(() => {
+                    countdown.textContent = Math.ceil(submitCountDown);
+                    //不重新取一下，切换页面后不更新，非常神奇
+                    let sss = document.getElementById("idcountdown");
+                    if(sss) {
+                        sss.textContent = Math.ceil(submitCountDown);
+                    }
+                    let ltd = document.getElementById("idtimerdata");
+                    if(ltd) updateTime(ltd, expiry);
+                    //updateTime(ltimerlabel2, expiry);
+                    //console.log(submitCountDown);
+                    let ss1=document.getElementById('appropriate-card');
                     if (document.getElementById('appropriate-card') || document.querySelector('app-review-edit') || document.querySelector('app-review-photo'))
                     {
                         //          console.log(scoreAlready);
@@ -429,9 +461,13 @@
                         //          console.log(countdown);
                         //          console.log(submitCountDown);
                         if(autoReview=="true"){
-                            submitCountDown--;
                             if(submitCountDown<=0){  //倒计时0，提交
                                 if(portalData){
+                                    setTimeout(function(){
+                                        clearInterval(ttm);
+                                        mywin.clearInterval(ttm);
+                                        ttm=null;
+                                    },10);
                                     //错误po 忽略
                                     if(errPortal.indexOf(portalData.id)>=0){
                                         let perr = document.querySelector('button[title=""]');
@@ -517,6 +553,7 @@
                                     }
                                 }
                             }
+                            submitCountDown--;
                             dvautolabel.textContent = '自动';
                         } else
                         {
@@ -524,7 +561,7 @@
                         }
                     }
                 }, 1000);} else {
-                    updateTime(ltimerlabel2, expiry);
+                    //updateTime(ltimerlabel2, expiry);
                 }
             } else {
             }
@@ -1378,11 +1415,11 @@
             let sfdetail = "";
             let slocalfollow = [];
             if(localStorage.getItem(userEmail+"follow")) slocalfollow = JSON.parse(localStorage.getItem(userEmail+"follow"));
-            console.log(slocalfollow);
+            //console.log(slocalfollow);
             if(slocalfollow.length>0){
                 sfdetail+="<tbody>";
-                console.log(slocalfollow[0]);
-                for (let i=0;i<=slocalfollow.length - 1;i++){
+                //console.log(slocalfollow[0]);
+                for (let i=slocalfollow.length - 1;i>=0;i--){
                     sfdetail+="<tr><td>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>"+slocalfollow[i].review+"</td></tr>";
                 }
                 sfdetail+="</tbody></table>";
@@ -1393,10 +1430,10 @@
             let sudetail = "";
             let slocalupload = [];
             if(localStorage.getItem(userEmail+"upload")) slocalupload = JSON.parse(localStorage.getItem(userEmail+"upload"));
-            console.log(slocalupload);
+            //console.log(slocalupload);
             if(slocalupload.length>0){
                 sudetail+="<tbody>";
-                for (let i=0;i<=slocalupload.length - 1;i++){
+                for (let i=slocalupload.length - 1;i>=0;i--){
                     sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+slocalupload[i].review+"</td></tr>";
                 }
                 sudetail+="</tbody></table>";
