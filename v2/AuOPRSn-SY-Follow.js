@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.2
+// @version      1.3.0
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=nianticlabs.com
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
@@ -15,8 +14,8 @@
 
     let autoreview = null;
     let portalData = null;
-    let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確"];
-    let rejcbxengstr = ["PHOTO_BAD_BLURRY","PHOTO_FACE","PHOTO_PLATE","PHOTO_BAD","TEXT_BAD_TITLE"];
+    let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確","方向"];
+    let rejcbxengstr = ["PHOTO_BAD_BLURRY","PHOTO_FACE","PHOTO_PLATE","PHOTO_BAD","TEXT_BAD_TITLE","PHOTO_DIR"];
     let reviewPortalAuto ="false";
     let cloudReviewData = null;
     localStorage.setItem("reviewPortalAuto",reviewPortalAuto);
@@ -249,7 +248,7 @@
 //            console.log("找到审核记录",creviewdata);
             let rdata = creviewdata;
             //              let rdata = eval("(" + creviewdata[creviewdata.length - 1] + ")");
-//            console.log(rdata);
+            console.log("rdata",rdata);
             //rejectReasons 是个数组
             tmpfollow.id=id;tmpfollow.title=title;tmpfollow.lat=lat;tmpfollow.lng=lng;
             if(rdata.duplicate){
@@ -356,6 +355,7 @@
                     }
                     else {
                         if(rejcbxengstr.indexOf(rdata.rejectReasons[i])>=0) {
+                            console.log("准确拒",rdata.rejectReasons);
                             let dcbxstr = rejcbxchnstr[rejcbxengstr.indexOf(rdata.rejectReasons[i])];
                             setTimeout(function(){
                                 let accd = document.querySelector('#accurate-and-high-quality-card');
