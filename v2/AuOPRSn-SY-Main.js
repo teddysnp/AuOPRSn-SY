@@ -23,15 +23,14 @@
         done: "",
         dt: ""
     };
-    let missiondisplay = "false";
-    let missionlist=[["职工文体广场","北一路万达","true","编辑","","2024-09-09","ok"],
-                     ["丛林里的梅花鹿","北一路万达","true","编辑","","2024-09-12","ok"],["机械城堡","北一路万达","true","新增","","2024-09-09","ok"],
-                     ["海盗船","北一路万达","true","新增","","2024-09-26","ok"],["和平使命","北一路万达","true","新增","","2024-09-09","ok"],
-                     ["虎头狐尾","北一路万达","true","新增","","2024-09-09","ok"],["万达贾飞碟","北一路万达","true","编辑","","2024-09-14","ok"],
-                     ["沈阳滑翔机制造厂","北一路万达","true","新增","","2024-09-12","ok"],["仨轮子","北一路万达","true","编辑","","2024-09-09","ok"],
-                     ["粉嘟对象","北一路万达","true","编辑","","2024-09-12","ok"],["黑鼻对象","北一路万达","true","编辑","","2024-09-09","ok"],
-                     ["劳劳工精神","北一路万达","true","新增","","2024-09-09","ok"],["摆烂的天使","北一路万达","true","新增","","2024-09-09","ok"]
-                    ];  //黑鼻对象  粉嘟对象
+    let missiondisplay = "true";
+    let missionlist=[["敲鼓人","北一路万达","true","新增","","2024-10-10",""],
+                     ["荷花象鼓","北一路万达","true","新增","","2024-10-10",""],["新时代共享职工之家","北一路万达","true","新增","","2024-10-10","ok"],
+                     ["猫雷","北一路万达","true","新增","","2024-10-10",""],["两只能","北一路万达","false","新增","","2024-10-10",""],
+                     ["乒乒乓乓","北一路万达","false","新增","","2024-10-10",""],["饭后消食中心","北一路万达","true","编辑","","2024-10-10",""],
+                     ["柯尼麒麟","北一路万达","true","新增","","2024-10-10",""],["园区平面图","北一路万达","true","编辑","","2024-10-10","ok"],
+                     ["超级大桶","北一路万达","true","编辑","","2024-10-10",""],["丽美如意象","北一路万达","false","编辑","","2024-10-10",""]
+                    ];
 
     //1:名称、2:是否需要暂停干预、3:挪po方案
 //    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["职工文体广场","false","2"],["仨轮子","false","12"],
@@ -930,7 +929,7 @@
     function commitScoreNew(portalData1,loc)
     {
         let creviewdata = JSON.parse(localStorage.getItem(portalData1.id));
-        if(creviewdata!=null){
+        /*if(creviewdata!=null){
             let rdata = eval("(" + creviewdata[creviewdata.length - 1] + ")");
             if(rdata.rejectReasons || rdata.duplicate ){
                 createNotify("找到审核记录："+portalData1.title, {
@@ -939,23 +938,30 @@
                     requireInteraction: false
                 });
             }
-        } else {
-            if(portalData1.nearbyPortals.find(p=>{return p.title==portalData1.title})){
-                console.log("重复po");
-                createNotify("可能有重复po", {
-                    body: portalData1.nearbyPortals.find(p=>{return p.title==portalData1.title}).title,
-                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                    requireInteraction: false
-                });  //这两个判断应该重复了，需测试确认，也许下面这个不可靠，因为地图不加载
-                if (document.querySelector("[alt='"+portalData1.title+"']")) {
-                    document.querySelector("[alt='"+portalData1.title+"']").click();
+        } else {*/
+        if(portalData1.nearbyPortals.find(p=>{return p.title==portalData1.title})){
+            setTimeout(function(){
+                if( !document.querySelector("app-appropriate-rejection-flow-modal") & !document.querySelector("app-safe-rejection-flow-modal") &
+                   !document.querySelector("app-accuracy-rejection-flow-modal") & !document.querySelector("app-location-permanent-rejection-flow-modal") &
+                   !document.querySelector("app-confirm-duplicate-modal")) {
+                    console.log("重复po");
+                    createNotify("可能有重复po", {
+                        body: portalData1.nearbyPortals.find(p=>{return p.title==portalData1.title}).title,
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                        requireInteraction: true
+                    });
+                    //这两个判断应该重复了，需测试确认，也许下面这个不可靠，因为地图不加载
+                    if (document.querySelector("[alt='"+portalData1.title+"']")) {
+                        document.querySelector("[alt='"+portalData1.title+"']").click();
+                    }
+                    if(reviewPortalAuto == "true") {
+                        autoReview = "false";
+                    }
                 }
-                if(reviewPortalAuto == "true") {
-                    autoReview = "false";
-                }
-            }
+            },1000);
+            //}
         }
-        //    if(portalData1.indexOf())
+    //    if(portalData1.indexOf())
         let iscore = "";
         const optpmap = document.querySelector("nia-map");
         if (optpmap) {
