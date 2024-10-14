@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.3.0
+// @version      1.3.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -24,6 +24,7 @@
     let cookie = localStorage.cfcookie;
     let useremail = "";
     let tmpfollow={id:null,title:null,lat:null,lng:null,review:null};
+    let isUserClick = false ;
 
     function gmrequest(pmethod,purl,pid,pdata){
         switch(pmethod){
@@ -140,9 +141,17 @@
                             }
                         }
 
+                        setTimeout(function(){
+                            if(isUserClick) {
+                                //console.log("手工点击",isUserClick);
+                            } else {
+                                //console.log("自动点击",isUserClick);
+                            }
+                        },1000);
+
                         if (iautolabel.textContent == "手动"){
+                            //console.log("data",JSON.parse(data));
                             savePostData(JSON.parse(data),0);
-                            //                        console.log("data",JSON.parse(data));
                         }
                         //console.log("tmpdata",tmpdata);
                         return send.apply(_this,data);
@@ -184,10 +193,98 @@
         });
     }
 
+    //监听人工还是自动点击，暂停开发
+    function injectButtonListener(){
+        awaitElement(() => document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]'))
+            .then((ref) => {
+
+            let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+            if(p1) {
+                p1.onclick = function(event){
+                    isUserClick = event.isTrusted;
+                    //console.log("Get Clicked!",event);
+                }
+            }
+
+            //重复 用于监听是否用户手动或人工点击，但重复这太麻烦，暂停
+            /*            let dupbut = document.querySelector("div[role='dialog']").querySelector("button[wftype='primary'");
+            if(dupbut){
+                dupbut.onclick = function(event){
+                    setTimeout(function(){
+                        let supbtn = document.querySelector("mat-dialog-container");
+                        if(supbtn) {
+                            let supcommit= supbtn.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                            //                if(supcommit) {supcommit.click();}
+                            if (supcommit) {
+                                supcommit.onclick = function(event){
+                                    isUserClick = event.isTrusted;
+                                }
+                            }
+                            console.log("duplicated!");
+                        }
+                    },1000);
+                }
+            }
+*/
+
+            //适当按钮监听
+            setTimeout(function(){
+                let rej1 = document.querySelector("app-appropriate-rejection-flow-modal");
+                if(rej1){
+                    let rejbutton = rej1.querySelector('button[wftype="primary"]');
+                    if (rejbutton) {
+                        rejbutton.onclick = function(event){
+                            isUserClick = event.isTrusted;
+                        }
+                    }
+                }
+            },1000)
+        });
+
+        //安全按钮监听
+        setTimeout(function(){
+            let rej1 = document.querySelector("app-safe-rejection-flow-modal");
+            if(rej1) {
+                let rejbutton = rej1.querySelector('button[wftype="primary"]');
+                if (rejbutton) {
+                    rejbutton.onclick = function(event){
+                        isUserClick = event.isTrusted;
+                    }
+                }
+            }
+        },1000);
+        //准确按钮监听
+        setTimeout(function(){
+            let rej1 = document.querySelector("app-accuracy-rejection-flow-modal");
+            if(rej1) {
+                let rejbutton = rej1.querySelector('button[wftype="primary"]');
+                if (rejbutton) {
+                    rejbutton.onclick = function(event){
+                        isUserClick = event.isTrusted;
+                    }
+                }
+            }
+        },1000);
+        //永久按钮监听
+        setTimeout(function(){
+            let rej1 = document.querySelector("app-location-permanent-rejection-flow-modal");
+            if(rej1){
+                let rejbutton = rej1.querySelector('button[wftype="primary"]');
+                if (rejbutton) {
+                    rejbutton.onclick = function(event){
+                        isUserClick = event.isTrusted;
+                    }
+                }
+            }
+        },1000);
+
+    }
+
     function injectLoadData() {
         awaitElement(() => document.querySelector('wf-logo'))
             .then((ref) => {
             try {
+                //injectButtonListener();
                 const response = this.response;
                 const json = JSON.parse(response);
                 if (!json) return;
@@ -274,11 +371,6 @@
                             if(dupbut){
                                 dupbut.click();
                             }
-                            setTimeout(function(){
-                                let supcommit = document.querySelector("mat-dialog-container").querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
-                                //                if(supcommit) {supcommit.click();}
-                                console.log("duplicated!");
-                            },1000);
                         },1000);
                     },1000);
                 }
@@ -335,14 +427,14 @@
                             }
                         },1000);
                     } else if (rdata.rejectReasons[0] == "SAFETY") {
-                        setTimeout(function(){
+                        //setTimeout(function(){
                             if(document.querySelector('#safe-card').querySelectorAll('button')[2])
                             { //
                                 if(document.querySelector('#safe-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
                                     document.querySelector('#safe-card').querySelectorAll('button')[2].click();
                                 }
                             }
-                        },1000);
+                        //},1000);
                     } else if (rdata.rejectReasons[0] == "TEMPORARY") {
                         setTimeout(function(){
                             if(document.querySelector('#permanent-location-card').querySelectorAll('button')[2])
@@ -357,7 +449,7 @@
                         if(rejcbxengstr.indexOf(rdata.rejectReasons[i])>=0) {
                             console.log("准确拒",rdata.rejectReasons);
                             let dcbxstr = rejcbxchnstr[rejcbxengstr.indexOf(rdata.rejectReasons[i])];
-                            setTimeout(function(){
+                            //setTimeout(function(){
                                 let accd = document.querySelector('#accurate-and-high-quality-card');
                                 if(accd) {
                                     setTimeout(function(){
@@ -370,8 +462,9 @@
                                                 tmpbtns.click();
                                             }
                                         }},500);
-                                }},500);
-                            setTimeout(function(){
+                                }
+                            //},500);
+                            //setTimeout(function(){
                                 setTimeout(function(){
                                     let spanarr = document.querySelectorAll("span[class='mat-checkbox-label']");
                                     //console.log(dcbxstr);
@@ -386,7 +479,7 @@
                                         }
                                     });
                                 },1000);
-                            },1000);
+                            //},1000);
                         }
                     }
                 }
@@ -421,9 +514,7 @@
 //                console.log("duplicate or rejectReasons");
                 if(data.duplicate) tmpupload.review="重复:"+data.duplicateOf; else tmpupload.review="否决:" + data.rejectReasons;
                 isave=1;
-            };
-//            console.log("data.cultural",data.cultural);
-            if(data.cultural){
+            } else if(data.cultural){
                 if(data.cultural==5 & data.exercise==5 & data.location==5 & data.quality==5 & data.safety==5 & data.socialize==5 & data.uniqueness==5){
 //                    console.log("five stars!");
                     tmpupload.review = "五星";
