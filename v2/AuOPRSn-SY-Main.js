@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.2
+// @version      4.3
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -24,13 +24,14 @@
         dt: ""
     };
     let missiondisplay = "true";
-    let missionlist=[["敲鼓人","北一路万达","true","新增","","2024-10-10",""],
+    let missionlist=[];
+    /*[["敲鼓人","北一路万达","true","新增","","2024-10-10",""],
                      ["荷花象鼓","北一路万达","true","新增","","2024-10-10",""],["新时代共享职工之家","北一路万达","true","新增","","2024-10-10","ok"],
                      ["猫雷","北一路万达","true","新增","","2024-10-10",""],["两只能","北一路万达","false","新增","","2024-10-10",""],
                      ["乒乒乓乓","北一路万达","false","新增","","2024-10-10",""],["饭后消食中心","北一路万达","true","编辑","","2024-10-10",""],
                      ["柯尼麒麟","北一路万达","true","新增","","2024-10-10",""],["园区平面图","北一路万达","true","编辑","","2024-10-10","ok"],
                      ["超级大桶","北一路万达","true","编辑","","2024-10-10",""],["丽美如意象","北一路万达","false","编辑","","2024-10-10",""]
-                    ];
+                    ];*/
 
     //1:名称、2:是否需要暂停干预、3:挪po方案
 //    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["职工文体广场","false","2"],["仨轮子","false","12"],
@@ -67,6 +68,8 @@
     if(localStorage.captchasetting){
         needCaptcha = localStorage.captchasetting;
     }
+    let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
+    let cookie = localStorage.cfcookie;
 
     //首次运行显示警告
     let iWarning=0;
@@ -82,38 +85,75 @@
         localStorage.setItem("Warning",1);
     }
 
-    //function errorReload(){
-    /* setInterval(() => {
-    console.log("检测是否错误");
-    if(document.querySelector("app-review-error")) {
-        createNotify("错误", {
-            body: "需要重试！",
-            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-            requireInteraction: false
-        });
-        let errbtn = document.querySelector('button[class="wf-button wf-button--primary"]');
-        console.log("errbtn",errbtn);
-        console.log("errNumber",errNumber);
-        if(errbtn & errNumber>=0)
-        {
-            errNumber--;
-            console.log("error clicked!");
-            errbtn.click();
-        } else {
-            createNotify("错误", {
-                body: "重试："+errNumber+"次无法成功，需要人式干预",
-                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                requireInteraction: true
-            });
+    function gmrequest(pmethod,purl,pid,pdata){
+        switch(pmethod){
+            case "PUT":
+//                return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method:     "PUT",
+                    url:        purl+pid+".json",
+                    data:       pdata,
+                    anonymous:  true,
+                    cookie:     cookie,
+                    headers: {
+                        "Content-Type": "application/json",
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
+                    },
+                    onload: function(res){
+                        console.log(res)
+                        if(res.status === 200){
+                            console.log('审核记录上传成功:'+pid)
+                        }else{
+                            console.log('审核记录上传失败:'+pid)
+                        }
+                    },
+                    onerror : function(err){
+                        console.log('审核记录上传错误:'+pid)
+                        console.log(err)
+                    }
+//                    onload: resolve,
+//                    onerror: reject
+                });
+//                                                        });
+            case "GET":
+            default:
         }
     }
-},10000); */
-    //}
+
+    window.onload = function() {
+        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/missionlist.json")
+        .then(res=>{
+            console.log("res",res);
+            if(!res) {
+                setTimeout(function(){
+                    console.log("onload","未找到任务列表");
+                },1000);
+                return;
+            }
+            let miss = JSON.parse(res)[0];
+            if(miss){
+                let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/"+miss.title+".json";
+                console.log(title);
+                let resp1 = U_XMLHttpRequest("GET",title)
+                .then(res=>{
+                    console.log("res",res);
+                    if(!res) {
+                        setTimeout(function(){
+                            console.log("onload","未找到任务列表");
+                        },1000);
+                        return;
+                    }
+                    missionlist =  eval("(" + res + ")");
+                });
+            }
+        });
+    }
 
     function U_XMLHttpRequest(method, url) {
         return new Promise((res, err) => {
             const xhr = new XMLHttpRequest();
             xhr.open(method, url, true);
+            xhr.setRequestHeader("If-Modified-Since" ,"0");
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
@@ -411,7 +451,7 @@
                     container.after(divall);
                 }
                 if(getPortalStatus(portalData1,loc)) autoReview = "false";  //需暂停的，
-                showReviewedReview();
+                //showReviewedReview();
                 let submitCountDown = null;
                 if(Math.ceil((new Date().getTime() - expiry + reviewTime*60000) / 1000)>postPeriod[1]){
                     submitCountDown = 10;
@@ -452,7 +492,9 @@
                     {
                         //          console.log(scoreAlready);
                         if (!scoreAlready){
-                            showReviewedReview();
+                            setTimeout(function(){
+                                showReviewedReview();
+                            },1000);
                             let score = commitScore(portalData1,loc);
                             divscore.textContent = "打分："+score;
                             scoreAlready = true;
