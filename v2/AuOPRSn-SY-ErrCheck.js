@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-ErrCheck
 // @namespace    AuOPR
-// @version      1.1
+// @version      1.2-b
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -31,7 +31,7 @@
                 createNotify("错误", {
                     body: "重新加载",
                     icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                    requireInteraction: true
+                    requireInteraction: false
                 });
                 mywin.location.reload();
                 return;
