@@ -1000,7 +1000,7 @@
                         autoReview = "false";
                     }
                 }
-            },1000);
+            },2000);
             //}
         }
     //    if(portalData1.indexOf())
