@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.3
+// @version      4.4.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -204,15 +204,27 @@
                 let send = this.send;
                 let _this = this;
                 this.send = function (...data) {
-                    //          console.log(data);
-                    //        clearInterval(timer);
+                    //console.log(data);
+                    //clearInterval(timer);
                     mywin.clearInterval(timer);
                     timer = null;
-                    //        console.log(portalData);
+                    //console.log(portalData);
                     saveReviewtoLocal(portalData,data);
-                    //        submitCountDown = null;
+                    //submitCountDown = null;
                     return send.apply(_this,data);
-                    //                  saveReviewData(data);
+                    //saveReviewData(data);
+                }
+            }
+            //https://wayfarer.nianticlabs.com/api/v1/vault/review/skip  //7e221f605682750b87a54d393063b9c5
+            if (url == '/api/v1/vault/review/skip' && method == 'POST'){
+                let send = this.send;
+                let _this = this;
+                this.send = function (...data) {
+                    console.log("skip",data);
+                    mywin.clearInterval(timer);
+                    timer = null;
+                    console.log("skip",portalData);
+                    return send.apply(_this,data);
                 }
             }
             if (url == '/api/v1/vault/profile' && method == 'GET') {
@@ -981,28 +993,6 @@
                 });
             }
         } else {*/
-        if(portalData1.nearbyPortals.find(p=>{return p.title==portalData1.title})){
-            setTimeout(function(){
-                if( !document.querySelector("app-appropriate-rejection-flow-modal") & !document.querySelector("app-safe-rejection-flow-modal") &
-                   !document.querySelector("app-accuracy-rejection-flow-modal") & !document.querySelector("app-location-permanent-rejection-flow-modal") &
-                   !document.querySelector("app-confirm-duplicate-modal")) {
-                    console.log("重复po");
-                    createNotify("可能有重复po", {
-                        body: portalData1.nearbyPortals.find(p=>{return p.title==portalData1.title}).title,
-                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                        requireInteraction: true
-                    });
-                    //这两个判断应该重复了，需测试确认，也许下面这个不可靠，因为地图不加载
-                    if (document.querySelector("[alt='"+portalData1.title+"']")) {
-                        document.querySelector("[alt='"+portalData1.title+"']").click();
-                    }
-                    if(reviewPortalAuto == "true") {
-                        autoReview = "false";
-                    }
-                }
-            },2000);
-            //}
-        }
     //    if(portalData1.indexOf())
         let iscore = "";
         const optpmap = document.querySelector("nia-map");
@@ -1658,22 +1648,13 @@
         //显示消息
         function notify($title, $options) {
             var notification = new Notification($title, $options);
-            //    console.log(notification);
             notification.onshow = function (event) {
-                //      console.log("show : ", event);
             };
             notification.onclose = function (event) {
-                //      console.log("close : ", event);
             };
             notification.onclick = function (event) {
-                //      console.log("click : ", event);
-                //      console.log("notify:title:"+title);
                 notification.close();
                 mywin.focus();
-                //      console.log("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
-                //      checkImgExists("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png").then(res =>{
-                //        mywin.open("https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+title+".png");
-                //      },err=>{console.log("Image not found!");});
             };
         }
     }
