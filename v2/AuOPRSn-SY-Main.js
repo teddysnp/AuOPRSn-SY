@@ -123,7 +123,8 @@
     window.onload = function() {
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/missionlist.json")
         .then(res=>{
-            console.log("res",res);
+            console.log("读取网络任务");
+            //console.log("res",res);
             if(!res) {
                 setTimeout(function(){
                     console.log("onload","未找到任务列表");
@@ -133,10 +134,10 @@
             let miss = JSON.parse(res)[0];
             if(miss){
                 let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/"+miss.title+".json";
-                console.log(title);
+                console.log(miss.title);
                 let resp1 = U_XMLHttpRequest("GET",title)
                 .then(res=>{
-                    console.log("res",res);
+                    //console.log("res",res);
                     if(!res) {
                         setTimeout(function(){
                             console.log("onload","未找到任务列表");
@@ -268,7 +269,7 @@
                 autoReview = localStorage.autoReview;
                 portalData = json.result;
                 //console.log(json);
-                console.log("injectTimer:needCaptcha",needCaptcha);
+                //console.log("injectTimer:needCaptcha",needCaptcha);
                 if (json.captcha) {
                     if(needCaptcha=="true"){
                         createNotify("需要验证", {
@@ -1005,7 +1006,7 @@
         if (loc=="本地"){iram2=Math.floor(Math.random()*100);iram1=0;}     //本地，随机数1-100 90% 5/6/7必选一个，选中10%no/90%dont know
         //外地 随机1-100 90% 5/6/7必选一个，选中10%no/90%dont know; 30%选中第二个，选中10%no/90%dont know
         if (loc=="外地"){iram3=Math.floor(Math.random()*100);iram2=Math.floor(Math.random()*100);iram1=Math.floor(Math.random()*100);}
-        console.log("loc : "+loc+" iram1 : "+iram1 + " iram2 : "+iram2 + " iram3 : "+iram3);
+        //console.log("loc : "+loc+" iram1 : "+iram1 + " iram2 : "+iram2 + " iram3 : "+iram3);
         //适当1
         if (iram1>0 & iram1<4){
             if(document.querySelector('#appropriate-card')) {
@@ -1385,12 +1386,11 @@
                 for (let j=0;j<tmpmissionlist.length;j++){
                    if(tmpmissionlist[j][6]=="ok"){
                         tmmiss4+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                   } else if (tmpmissionlist[j][2]=="false"){
-                        tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                    }
-                    else if(tmpmissionlist[j][4]=="✓" || tmpmissionlist[j][4]=="true"){
+                    } else if(tmpmissionlist[j][4]=="✓" || tmpmissionlist[j][4]=="true"){
                         tmmiss1+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
                         //                    tmmiss1+="["+tmpmissionlist[j][0]+"]";
+                   } else if (tmpmissionlist[j][2]=="false"){
+                        tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
                     } else {
                         tmmiss2+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
                         //                    tmmiss2+="["+tmpmissionlist[j][0]+"]";
@@ -1442,10 +1442,10 @@
                                                                      //"<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>"
                                                                     );
             $(".showcase-gallery").replaceWith(
-                 "<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
+                 "<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div>"
+                 +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
                  +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
-                 +"<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div>"
-                 +"<div id='missionPortal1'></div><br><div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
+                 +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
                  +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
             );
 
