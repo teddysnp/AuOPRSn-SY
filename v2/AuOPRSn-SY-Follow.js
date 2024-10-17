@@ -150,7 +150,13 @@
                         },1000);
 
                         let iautolabel = document.querySelector("p[id='idautolabel']");
-                        if (iautolabel.textContent == "手动"){
+                        let rd1=cloudReviewData;if(rd1) {rd1.acceptCategories=null;rd1.rejectCategories=null;}
+                        let rd2=JSON.parse(data);if(rd2) {rd2.acceptCategories=null;rd2.rejectCategories=null;}
+                        let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
+                        //console.log("cloudReviewData",rs1);
+                        //console.log("reviewData",rs2);
+                        console.log("是否和网络一致",rs1==rs2);
+                        if (iautolabel.textContent == "手动" & rs1!=rs2){
                             //console.log("data",JSON.parse(data));
                             savePostData(JSON.parse(data),0,false);
                         }
@@ -184,7 +190,7 @@
                     let iautolabel = document.querySelector("p[id='idautolabel']");
                     if (iautolabel.textContent == "手动"){
                         //console.log("data",JSON.parse(data));
-                        savePostData(JSON.parse(data),2,true);
+                        savePostData(portalData,JSON.parse(data),2,true);
                     }
 
                     console.log("skip",data);
@@ -325,38 +331,7 @@
                 portalData = json.result;
                 console.log(portalData);
 //                if(!portalData.id || portalData.id==null) return;
-                let iret = loadReviewData(portalData);
-                console.log(iret);
-                if(iret == null & portalData.type=="NEW") {
-                    if(portalData.nearbyPortals.find(p=>{return p.title==portalData.title})){
-                        setTimeout(function(){
-                            let iauto = document.getElementById("idautolabel");
-                            console.log(iauto);
-                            if (iauto)
-                            {
-                                if (iauto.textContent == "自动"){
-                                    let ibtn = document.getElementById("btnauto");
-                                    console.log(ibtn);
-                                    if (ibtn) {
-                                        ibtn.click();
-                                    }
-                                }
-                            }
-                            console.log("重复po");
-                            console.log("duplicate dialog",document.querySelector("app-confirm-duplicate-modal"));
-                            createNotify("可能有重复po", {
-                                body: portalData.nearbyPortals.find(p=>{return p.title==portalData.title}).title,
-                                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                                requireInteraction: true
-                            });
-                            //这两个判断应该重复了，需测试确认，也许下面这个不可靠，因为地图不加载
-                            if (document.querySelector("[alt='"+portalData.title+"']")) {
-                                document.querySelector("[alt='"+portalData.title+"']").click();
-                            }
-                        },500);
-                        //}
-                    }
-                }
+                loadReviewData(portalData);
 //                let testid = "74908645df72e5da08ebd13be138275c";
 //                loadReviewData(testid);
             } catch (e) {
@@ -365,12 +340,43 @@
         });
     }
 
-    function loadReviewData(portalData){
+    function isDuplicate(pData){
+        if(pData.nearbyPortals.find(p=>{return p.title==pData.title})){
+            setTimeout(function(){
+                let iauto = document.getElementById("idautolabel");
+                console.log(iauto);
+                if (iauto)
+                {
+                    if (iauto.textContent == "自动"){
+                        let ibtn = document.getElementById("btnauto");
+                        console.log(ibtn);
+                        if (ibtn) {
+                            ibtn.click();
+                        }
+                    }
+                }
+                console.log("重复po");
+                console.log("duplicate dialog",document.querySelector("app-confirm-duplicate-modal"));
+                createNotify("可能有重复po", {
+                    body: pData.nearbyPortals.find(p=>{return p.title==pData.title}).title,
+                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                    requireInteraction: true
+                });
+                //这两个判断应该重复了，需测试确认，也许下面这个不可靠，因为地图不加载
+                if (document.querySelector("[alt='"+pData.title+"']")) {
+                    document.querySelector("[alt='"+pData.title+"']").click();
+                }
+            },500);
+            //}
+        }
+    }
+
+    function loadReviewData(pdata){
         //        console.log(id);
 //        let sid="05a6bef32a01cc9e39c967677e18763f";
         console.log("email",useremail);
         let tmptext = '';
-        let id=portalData.id;
+        let id=pdata.id;
         tmpfollow.id = null; tmpfollow.title = null; tmpfollow.lat = null; tmpfollow.lng = null; tmpfollow.review = null;
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/" +id +".json")
         .then(res=>{
@@ -381,6 +387,7 @@
                     let ilabel = document.getElementById("iduserlabel");
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
                 },1000);
+                isDuplicate(pdata);
                 return null;
             }
             if(res.indexOf("<!DOCTYPE html>")>=0){
@@ -389,10 +396,11 @@
                     let ilabel = document.getElementById("iduserlabel");
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
                 },1000);
+                isDuplicate(pdata);
                 return null;
             }
             let creviewdata = null;
-            let title=portalData.title;let lat=portalData.lat;let lng=portalData.lng;
+            let title=pdata.title;let lat=pdata.lat;let lng=pdata.lng;
             if(res.substring(0,1)=="[") {
 //                console.log("searching review record：",JSON.parse(JSON.parse(res)[0]));
                 creviewdata = JSON.parse(JSON.parse(res)[0]);   //网络审核记录
@@ -411,7 +419,7 @@
             //rejectReasons 是个数组
             tmpfollow.id=id;tmpfollow.title=title;tmpfollow.lat=lat;tmpfollow.lng=lng;
             if(rdata.skip){
-                if(portalData.skip){
+                if(pdata.skip){
                     tmptext = "照抄网络审核：略过";
                     let perr = document.querySelector('button[title=""]');
                     if(perr) {
@@ -423,7 +431,7 @@
                 } else {
                     console.log("错误","此号不能再略过");
                     createNotify("错误po", {
-                        body: "网络审核是略过，但此号已经不能再略过，需人工干预！"+portalData.title,
+                        body: "网络审核是略过，但此号已经不能再略过，需人工干预！"+pdata.title,
                         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                         requireInteraction: true
                     });
@@ -431,7 +439,7 @@
             } else if(rdata.duplicate){
                 tmptext = "照抄网络审核：重复";
                 tmpfollow.review="重复："+creviewdata.duplicateOf;
-                let nbportal = portalData.nearbyPortals;
+                let nbportal = pdata.nearbyPortals;
                 console.log("审核记录：重复！");
                 console.log(nbportal);
                 //let testdupid="513b37393fb04a8e95281c81513c6ecc.16";
@@ -569,6 +577,7 @@
                 if(ilabel) ilabel.textContent = tmptext;
 //                console.log("iduserlabel",ilabel);
             },1000);
+            console.log("return true");
             return true;
         },
               err=>{
@@ -578,7 +587,7 @@
              )
         return null;
     }
-    function savePostData(rdata,icloud,iskip){
+    function savePostData(pdata,rdata,icloud,iskip){
         let data = rdata ;
         console.log("检查是否需要上传审核数据...");
 //        console.log(data);
@@ -587,9 +596,9 @@
         let tmpupload={id:null,title:null,lat:null,lng:null,review:null};
         tmpupload.id=data.id;
 
-        if(data.id=portalData.id){
-            tmpupload.title=portalData.title;tmpupload.lat=portalData.lat;tmpupload.lng=portalData.lng;
-        }
+        if(data.id=pdata.id){
+            tmpupload.title=pdata.title;tmpupload.lat=pdata.lat;tmpupload.lng=pdata.lng;
+        }pdata
         let isave =0;
         data.skip = false ;
         if(iskip){
@@ -607,6 +616,10 @@
 //                    console.log("five stars!");
                     tmpupload.review = "五星";
                     isave=1;
+                } else {
+                    if(pdata.nearbyPortals.find(p=>{return p.title==pdata.title})){
+                        isave=1;
+                    }
                 }
             }
             if(data.newLocation) {tmpupload.review = tmpupload.review+":挪"+data.newLocation; isave=1};
