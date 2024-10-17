@@ -598,7 +598,7 @@
 
         if(data.id=pdata.id){
             tmpupload.title=pdata.title;tmpupload.lat=pdata.lat;tmpupload.lng=pdata.lng;
-        }pdata
+        }
         let isave =0;
         data.skip = false ;
         if(iskip){
