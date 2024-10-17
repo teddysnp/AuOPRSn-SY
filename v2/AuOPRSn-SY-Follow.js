@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.3.3
+// @version      1.3.4
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -626,6 +626,7 @@
         } else if(data.type=="EDIT"){
         } else if(data.type=="PHOTO"){
         }
+        console.log("isave",isave);
         if(isave==1){
             try{
                 console.log("saving...");
