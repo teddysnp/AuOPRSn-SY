@@ -158,7 +158,7 @@
                         console.log("是否和网络一致",rs1==rs2);
                         if (iautolabel.textContent == "手动" & rs1!=rs2){
                             //console.log("data",JSON.parse(data));
-                            savePostData(JSON.parse(data),0,false);
+                            savePostData(portalData,JSON.parse(data),0,false);
                         }
                         //console.log("tmpdata",tmpdata);
                         return send.apply(_this,data);
