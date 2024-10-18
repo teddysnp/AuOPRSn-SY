@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.4.3
+// @version      4.4.4
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -45,7 +45,6 @@
     let expireTime = null;
     let reviewTime = 20;  //审po时间为20分钟
     let autoReview = null;
-    let bNextAuto = "true";
     let reviewPortalAuto = "true";
     let editGYMAuto = "true";
     let postPeriod=[25,35];
@@ -65,6 +64,10 @@
     let ttm = null;
     let skey="";
 
+    let bNextAuto = true;
+    if(localStorage.bnextauto) {
+        bNextAuto = localStorage.bnextauto;
+    }
     let needCaptcha = false;
     if(localStorage.captchasetting){
         needCaptcha = localStorage.captchasetting;
@@ -225,7 +228,7 @@
                     mywin.clearInterval(timer);
                     timer = null;
                     //console.log(portalData);
-                    if(bNextAuto == "true"){
+                    if(bNextAuto){
                         autoReview = "true";
                         localStorage.setItem("autoReview", autoReview );
                     }
@@ -243,7 +246,7 @@
                     console.log("skip",data);
                     mywin.clearInterval(timer);
                     timer = null;
-                    if(bNextAuto == "true"){
+                    if(bNextAuto){
                         autoReview = "true";
                         localStorage.setItem("autoReview", autoReview );
                     }
@@ -749,6 +752,13 @@
                         }
                         suser="<div id='dvuserlist'>"+suser+"</div>";
                     }
+                    let bnext = "";
+                    console.log("bNextAuto",bNextAuto);
+                    if(bNextAuto){
+                        bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' checked=true onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
+                    } else {
+                        bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
+                    }
                     let cbxcaptcha=localStorage.captchasetting;
                     console.log(cbxcaptcha);
                     let cap ="";
@@ -760,6 +770,7 @@
                     let scookie="<p><div><button id='btncookie' style='background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:30px;border-radius:10px;' onclick='saveCookie()'>保存</button><input id='txtCookie' type='text' style='width:90%'></input></div></p>";
                     $("wf-page-header").after(scookie);
                     $("wf-page-header").after(cap);
+                    $("wf-page-header").after(bnext);
                     $("wf-page-header").after(suser);
                 }
             } catch (e) {
@@ -776,6 +787,12 @@
         localStorage.setItem("cfcookie",txtcookie);
     }
 
+    saveNextAutoSetting = function(){
+        let cbx = document.querySelector("input[id='idnextauto']");
+        //      console.log(cbx.checked);
+        bNextAuto = cbx.checked;
+        localStorage.setItem("bnextauto",cbx.checked);
+    }
     saveCaptchaSetting = function() {
         let cbx = document.querySelector("input[id='idcaptcha']");
         //      console.log(cbx.checked);
