@@ -122,7 +122,6 @@
     }
 
     mywin.onload = function() {
-        console.log(this.document.URL);
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/missionlist.json")
         .then(res=>{
             console.log("读取网络任务");
