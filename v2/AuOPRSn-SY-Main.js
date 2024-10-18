@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.4.1
+// @version      4.4.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -45,6 +45,7 @@
     let expireTime = null;
     let reviewTime = 20;  //审po时间为20分钟
     let autoReview = null;
+    let bNextAuto = "true";
     let reviewPortalAuto = "true";
     let editGYMAuto = "true";
     let postPeriod=[25,35];
@@ -120,7 +121,8 @@
         }
     }
 
-    window.onload = function() {
+    mywin.onload = function() {
+        console.log(this.document.URL);
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/missionlist.json")
         .then(res=>{
             console.log("读取网络任务");
@@ -210,6 +212,10 @@
                     mywin.clearInterval(timer);
                     timer = null;
                     //console.log(portalData);
+                    if(bNextAuto == "true"){
+                        autoReview = "true";
+                        localStorage.setItem("autoReview", autoReview );
+                    }
                     saveReviewtoLocal(portalData,data);
                     //submitCountDown = null;
                     return send.apply(_this,data);
@@ -224,6 +230,10 @@
                     console.log("skip",data);
                     mywin.clearInterval(timer);
                     timer = null;
+                    if(bNextAuto == "true"){
+                        autoReview = "true";
+                        localStorage.setItem("autoReview", autoReview );
+                    }
                     console.log("skip",portalData);
                     return send.apply(_this,data);
                 }
@@ -1511,6 +1521,11 @@
                             strarr = strarr.replace('":","','":"","');
                         }
                         stmparr = eval("(" + strarr + ")");
+                        if(stmparr.score.length==7){
+                            stmparr.score = stmparr.score.replace(/5/g,"Y");
+                            stmparr.score = stmparr.score.replace(/3/g,"D");
+                            stmparr.score = stmparr.score.replace(/1/g,"N");
+                        }
                         //                 console.log(JSON.parse(prpo[i]));
                         //                console.log(stmparr);
                         //          console.log(stmparr.title,stmparr.dt);
@@ -1576,6 +1591,11 @@
                     }
                     //        console.log(strarr);
                     stmparr = eval("(" + strarr + ")");
+                    if(stmparr.score.length==7){
+                        stmparr.score = stmparr.score.replace(/5/g,"Y");
+                        stmparr.score = stmparr.score.replace(/3/g,"D");
+                        stmparr.score = stmparr.score.replace(/1/g,"N");
+                    }
                     //console.log(JSON.parse(prpo[i]));
                     stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
                     if (prpo.length-1 - i > privatePortalDisplay2 ) {
