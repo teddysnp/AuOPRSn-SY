@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.4.2
+// @version      4.4.3
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -71,6 +71,8 @@
     }
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let cookie = localStorage.cfcookie;
+
+    const loginNotice = null;
 
     //首次运行显示警告
     let iWarning=0;
@@ -181,11 +183,23 @@
             if(url=="/api/v1/vault/loginconfig")
             {
                 console.log(url);
+                //不好使
+                /*
+                console.log("loginNotice1",loginNotice);
+                if(!loginNotice)
+                {
+                    console.log("loginNotice2",loginNotice);
+                    loginNotice = userNotice("登录", {
+                        body: "需要登录",
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                        requireInteraction: true});
+                }
+                console.log("loginNotice3",loginNotice);*/
                 if(!messageNotice.alertwindow){
                     createNotify("登录", {
                         body: "需要登录",
                         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                        requireInteraction: true
+                        requireInteraction: false
                     });
                     messageNotice.alertShow();
                 }
@@ -244,6 +258,7 @@
                 this.addEventListener('load', getUserList, false);
             }
             if (url == '/api/v1/vault/home' && method == 'GET') {
+                console.log(loginNotice);
                 this.addEventListener('load', showReviewedHome, false);
             }
             open.apply(this, arguments);
@@ -1676,6 +1691,23 @@
                 mywin.focus();
             };
         }
+    }
+
+    function userNotice($title, $options) {
+        console.log($title);
+        console.log($options);
+        let notification = new Notification($title, $options);
+        console.log(notification);
+        notification.onshow = function (event) {
+        };
+        notification.onclose = function (event) {
+        };
+        notification.onclick = function (event) {
+            notification.close();
+            mywin.focus();
+        };
+        console.log(notification);
+        return notification;
     }
 
     //标题闪烁，并记录是否已经有消息
