@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.3.4
+// @version      1.3.5
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -136,7 +136,7 @@
                             } else {
                                 console.log("saving local follow n");
                                 localpd1.push(tmpfollow);
-                                console.log(localpd1);
+                                //console.log(localpd1);
                                 localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
                             }
                         }
@@ -182,7 +182,7 @@
                         } else {
                             console.log("saving local follow n");
                             localpd1.push(tmpfollow);
-                            console.log(localpd1);
+                            //console.log(localpd1);
                             localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
                         }
                     }
@@ -378,6 +378,9 @@
         let tmptext = '';
         let id=pdata.id;
         tmpfollow.id = null; tmpfollow.title = null; tmpfollow.lat = null; tmpfollow.lng = null; tmpfollow.review = null;
+        if(pdata.type=="PHOTO" || pdata.type=="EDIT"){
+            return null;
+        }
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/" +id +".json")
         .then(res=>{
 //            console.log("res",res);
@@ -419,7 +422,7 @@
             //rejectReasons 是个数组
             tmpfollow.id=id;tmpfollow.title=title;tmpfollow.lat=lat;tmpfollow.lng=lng;
             if(rdata.skip){
-                if(pdata.skip){
+                if(pdata.canSkip){
                     tmptext = "照抄网络审核：略过";
                     let perr = document.querySelector('button[title=""]');
                     if(perr) {
@@ -463,30 +466,35 @@
                     },500);
                 }
             } else if(rdata.quality) {
-                if(rdata.newLocation) {
-                    tmptext = "照抄网络审核：五星+挪po";
-                    tmpfollow.review = "五星+挪:" + rdata.newLocation;
-                } else {
-                    tmptext = "照抄网络审核：五星";
-                    tmpfollow.review="五星";
-                }
-                console.log("审核记录：五星");
-                const appcard=["appropriate-card","safe-card","accurate-and-high-quality-card","permanent-location-card","socialize-card","exercise-card","explore-card"];
-                setTimeout(function(){
-                    for(let i=0;i<=appcard.length-1;i++){
-                        if(document.querySelector('#'+appcard[i])) {
-                            let bappcard = document.querySelector('#'+appcard[i]);
-                            if(bappcard.querySelectorAll("button")){
-                                let tmpbtn=bappcard.querySelectorAll("button")[1];
-                                if(tmpbtn.className.indexOf("is-selected")<0){
-                                    tmpbtn.click();
+                if(rdata.cultural==5 & rdata.exercise==5 & rdata.location==5 & rdata.quality==5 & rdata.safety==5 & rdata.socialize==5 & rdata.uniqueness==5){
+                    if(rdata.newLocation) {
+                        tmptext = "照抄网络审核：五星+挪po";
+                        tmpfollow.review = "五星+挪:" + rdata.newLocation;
+                    } else {
+                        tmptext = "照抄网络审核：五星";
+                        tmpfollow.review="五星";
+                    }
+                    console.log("审核记录：五星");
+                    const appcard=["appropriate-card","safe-card","accurate-and-high-quality-card","permanent-location-card","socialize-card","exercise-card","explore-card"];
+                    setTimeout(function(){
+                        for(let i=0;i<=appcard.length-1;i++){
+                            if(document.querySelector('#'+appcard[i])) {
+                                let bappcard = document.querySelector('#'+appcard[i]);
+                                if(bappcard.querySelectorAll("button")){
+                                    let tmpbtn=bappcard.querySelectorAll("button")[1];
+                                    if(tmpbtn.className.indexOf("is-selected")<0){
+                                        tmpbtn.click();
+                                    }
                                 }
                             }
                         }
-                    }
-                    let idscore = document.querySelector("span[id='idscore']");
-                    idscore.textContent = "YYYYYYY";
-                },3000);
+                        let idscore = document.querySelector("span[id='idscore']");
+                        idscore.textContent = "YYYYYYY";
+                    },3000);
+                } else {
+                    tmptext = "照抄网络审核：非重复";
+                    tmpfollow.review="正常非重复";
+                }
             } else if(rdata.rejectReasons){
                 tmptext = "照抄网络审核：否决";
                 tmpfollow.review="否决:"+rdata.rejectReasons;
@@ -496,7 +504,7 @@
                        rdata.rejectReasons[i]=="SENSITIVE" || rdata.rejectReasons[i]=="EMERGENCY" || rdata.rejectReasons[i]=="GENERIC"){
                         console.log("适当拒");
                         setTimeout(function(){
-                            console.log(document.querySelector('#appropriate-card'));
+                            //console.log(document.querySelector('#appropriate-card'));
                             if(document.querySelector('#appropriate-card').querySelectorAll('button')[2])
                             { //
                                 if(document.querySelector('#appropriate-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
@@ -504,10 +512,10 @@
                                 }
                                 setTimeout(function(){
                                     let icbx = document.querySelector("input[value='"+rdata.rejectReasons[i]+"']");
-                                    console.log("icbx",icbx);
+                                    //console.log("icbx",icbx);
                                     if(icbx) {
                                         //let ic = document.getElementById(document.querySelector("input[value='GENERIC']").getAttribute("id"));
-                                        console.log(icbx);
+                                        //console.log(icbx);
                                         //setTimeout(function(){ic.checked = true;},500);
                                         icbx.parentNode.click();
                                     }
@@ -590,7 +598,8 @@
     function savePostData(pdata,rdata,icloud,iskip){
         let data = rdata ;
         console.log("检查是否需要上传审核数据...");
-//        console.log(data);
+        console.log(data);
+        console.log(iskip);
         let localpd = [];
         if(localStorage.getItem(useremail+"upload")) localpd = JSON.parse(localStorage.getItem(useremail+"upload"));
         let tmpupload={id:null,title:null,lat:null,lng:null,review:null};
@@ -603,6 +612,7 @@
         data.skip = false ;
         if(iskip){
             tmpupload.review="skip";
+            isave=1;
             data.skip = true;
         } else if(data.type=="NEW"){
 //            console.log("duplicate",data.duplicate);
@@ -630,7 +640,7 @@
         if(isave==1){
             try{
                 console.log("saving...");
-                if(icloud==0){
+                if(icloud==0 || icloud==2){
                     if(cookie) {
                         if(localpd.length==0){
                             localStorage.setItem(useremail+"upload","["+JSON.stringify(tmpupload)+"]");
