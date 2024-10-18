@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.3.5
+// @version      1.3.6
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -42,7 +42,7 @@
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
                     },
                     onload: function(res){
-                        console.log(res)
+                        //console.log(res)
                         if(res.status === 200){
                             console.log('审核记录上传成功:'+pid)
                         }else{
@@ -70,7 +70,7 @@
             xhr.open(method, url, true);
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
-                    console.log(xhr.status);
+                    //console.log(xhr.status);
                     if (xhr.status === 200) {
                         res(xhr.responseText);
                     } else if(xhr.status === 404){
@@ -374,7 +374,7 @@
     function loadReviewData(pdata){
         //        console.log(id);
 //        let sid="05a6bef32a01cc9e39c967677e18763f";
-        console.log("email",useremail);
+        //console.log("email",useremail);
         let tmptext = '';
         let id=pdata.id;
         tmpfollow.id = null; tmpfollow.title = null; tmpfollow.lat = null; tmpfollow.lng = null; tmpfollow.review = null;
@@ -424,12 +424,13 @@
             if(rdata.skip){
                 if(pdata.canSkip){
                     tmptext = "照抄网络审核：略过";
+                    tmpfollow.review="skip";
                     let perr = document.querySelector('button[title=""]');
                     if(perr) {
-                        //if(perr.textContent=" 略過 "){
-                        console.log("略过","略过按钮被点击");
-                        //perr.click();
-                        //}
+                        if(perr.textContent=" 略過 "){
+                            console.log("略过","略过按钮被点击");
+                            perr.click();
+                        }
                     }
                 } else {
                     console.log("错误","此号不能再略过");
@@ -598,8 +599,8 @@
     function savePostData(pdata,rdata,icloud,iskip){
         let data = rdata ;
         console.log("检查是否需要上传审核数据...");
-        console.log(data);
-        console.log(iskip);
+        //console.log(data);
+        //console.log(iskip);
         let localpd = [];
         if(localStorage.getItem(useremail+"upload")) localpd = JSON.parse(localStorage.getItem(useremail+"upload"));
         let tmpupload={id:null,title:null,lat:null,lng:null,review:null};
