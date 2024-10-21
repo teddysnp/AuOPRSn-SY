@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.3.7
+// @version      1.3.8
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -431,7 +431,7 @@
                             console.log("略过","略过按钮被点击");
                             setTimeout(function(){
                                 perr.click();
-                            },3000);
+                            },5000);
                         }
                     }
                 } else {
