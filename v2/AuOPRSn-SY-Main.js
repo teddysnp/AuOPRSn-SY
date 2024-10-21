@@ -23,7 +23,7 @@
         done: "",
         dt: ""
     };
-    let missiondisplay = "true";
+    let missiondisplay = "false";
     let missionlist=[];
     /*[["敲鼓人","北一路万达","true","新增","","2024-10-10",""],
                      ["荷花象鼓","北一路万达","true","新增","","2024-10-10",""],["新时代共享职工之家","北一路万达","true","新增","","2024-10-10","ok"],
@@ -150,6 +150,7 @@
                         },1000);
                         return;
                     }
+                    localStorage.setItem("currentmission",res);
                     missionlist =  eval("(" + res + ")");
                 });
             }
@@ -414,7 +415,11 @@
                 let countdownlabel = document.createElement('p');
                 countdownlabel.className = 'clcountdownlabel';
                 countdownlabel.id = "idcountdownlabel";
-                countdownlabel.textContent = '提交 ';
+                if(cookie) {
+                    countdownlabel.textContent = '可上传';
+                } else {
+                    countdownlabel.textContent = '无权限';
+                }
                 divcountdown.appendChild(countdownlabel);
                 //增加提交倒计时标签
                 countdown = document.createElement('p');
