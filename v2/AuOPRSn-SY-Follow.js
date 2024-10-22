@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.3.8
+// @version      1.3.9
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -27,6 +27,17 @@
     let isUserClick = false ;
     let mywin = window;
 
+    listenLinkClick();
+    //监听页面点击，获取是否人工点击
+    function listenLinkClick(){
+        document.body.addEventListener("click",function(event){
+            //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
+            //console.log("isTrusted",event.isTrusted);
+            isUserClick = event.isTrusted;
+        });
+    }
+
+    //上传json审核至cloudflare
     function gmrequest(pmethod,purl,pid,pdata){
         switch(pmethod){
             case "PUT":
@@ -111,6 +122,7 @@
                         let tmpdata = JSON.parse(data[0]);
 //                        console.log("olddata",data);
                         //console.log("cloudReviewData",cloudReviewData);
+                        //NEW+挪po,直接用网络审核结果覆盖data
                         if(cloudReviewData!=null) {
                             if(cloudReviewData.newLocation) {
                                 let lll=cloudReviewData.newLocation;
@@ -126,6 +138,7 @@
                             }
                         }
 
+                        //跟po，保存记录至本地：用户名+follow
                         console.log("查看是否跟po，保存至本地",tmpfollow);
                         if(tmpfollow.id!=null){
                             let localpd1 = [];
@@ -141,14 +154,6 @@
                             }
                         }
 
-                        setTimeout(function(){
-                            if(isUserClick) {
-                                //console.log("手工点击",isUserClick);
-                            } else {
-                                //console.log("自动点击",isUserClick);
-                            }
-                        },1000);
-
                         let iautolabel = document.querySelector("p[id='idautolabel']");
                         let rd1=cloudReviewData;if(rd1) {rd1.acceptCategories=null;rd1.rejectCategories=null;}
                         let rd2=JSON.parse(data);if(rd2) {rd2.acceptCategories=null;rd2.rejectCategories=null;}
@@ -156,9 +161,17 @@
                         //console.log("cloudReviewData",rs1);
                         //console.log("reviewData",rs2);
                         console.log("是否和网络一致",rs1==rs2);
+                        setTimeout(function(){
+                            if(isUserClick & rs1!=rs2) {
+                                console.log("上传",isUserClick);
+                                savePostData(portalData,JSON.parse(data),0,false);
+                            } else {
+                                console.log("不上传",isUserClick);
+                            }
+                        },1000);
                         if (iautolabel.textContent == "手动" & rs1!=rs2){
                             //console.log("data",JSON.parse(data));
-                            savePostData(portalData,JSON.parse(data),0,false);
+                            //savePostData(portalData,JSON.parse(data),0,false);
                         }
                         //console.log("tmpdata",tmpdata);
                         return send.apply(_this,data);
@@ -230,98 +243,10 @@
         });
     }
 
-    //监听人工还是自动点击，暂停开发
-    function injectButtonListener(){
-        awaitElement(() => document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]'))
-            .then((ref) => {
-
-            let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
-            if(p1) {
-                p1.onclick = function(event){
-                    isUserClick = event.isTrusted;
-                    //console.log("Get Clicked!",event);
-                }
-            }
-
-            //重复 用于监听是否用户手动或人工点击，但重复这太麻烦，暂停
-            /*            let dupbut = document.querySelector("div[role='dialog']").querySelector("button[wftype='primary'");
-            if(dupbut){
-                dupbut.onclick = function(event){
-                    setTimeout(function(){
-                        let supbtn = document.querySelector("mat-dialog-container");
-                        if(supbtn) {
-                            let supcommit= supbtn.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
-                            //                if(supcommit) {supcommit.click();}
-                            if (supcommit) {
-                                supcommit.onclick = function(event){
-                                    isUserClick = event.isTrusted;
-                                }
-                            }
-                            console.log("duplicated!");
-                        }
-                    },1000);
-                }
-            }
-*/
-
-            //适当按钮监听
-            setTimeout(function(){
-                let rej1 = document.querySelector("app-appropriate-rejection-flow-modal");
-                if(rej1){
-                    let rejbutton = rej1.querySelector('button[wftype="primary"]');
-                    if (rejbutton) {
-                        rejbutton.onclick = function(event){
-                            isUserClick = event.isTrusted;
-                        }
-                    }
-                }
-            },1000)
-        });
-
-        //安全按钮监听
-        setTimeout(function(){
-            let rej1 = document.querySelector("app-safe-rejection-flow-modal");
-            if(rej1) {
-                let rejbutton = rej1.querySelector('button[wftype="primary"]');
-                if (rejbutton) {
-                    rejbutton.onclick = function(event){
-                        isUserClick = event.isTrusted;
-                    }
-                }
-            }
-        },1000);
-        //准确按钮监听
-        setTimeout(function(){
-            let rej1 = document.querySelector("app-accuracy-rejection-flow-modal");
-            if(rej1) {
-                let rejbutton = rej1.querySelector('button[wftype="primary"]');
-                if (rejbutton) {
-                    rejbutton.onclick = function(event){
-                        isUserClick = event.isTrusted;
-                    }
-                }
-            }
-        },1000);
-        //永久按钮监听
-        setTimeout(function(){
-            let rej1 = document.querySelector("app-location-permanent-rejection-flow-modal");
-            if(rej1){
-                let rejbutton = rej1.querySelector('button[wftype="primary"]');
-                if (rejbutton) {
-                    rejbutton.onclick = function(event){
-                        isUserClick = event.isTrusted;
-                    }
-                }
-            }
-        },1000);
-
-    }
-
     function injectLoadData() {
         awaitElement(() => document.querySelector('wf-logo'))
             .then((ref) => {
             try {
-                //injectButtonListener();
                 const response = this.response;
                 const json = JSON.parse(response);
                 if (!json) return;
@@ -340,18 +265,22 @@
         });
     }
 
+    //根据标题名有重合，给提示是否重复，并加60秒倒计时
     function isDuplicate(pData){
         if(pData.nearbyPortals.find(p=>{return p.title==pData.title})){
             setTimeout(function(){
                 let iauto = document.getElementById("idautolabel");
                 console.log(iauto);
+                let sc = document.getElementById("idcountdown");
+                sc.textContent = sc.textContext + "+60";
                 if (iauto)
                 {
                     if (iauto.textContent == "自动"){
                         let ibtn = document.getElementById("btnauto");
                         console.log(ibtn);
                         if (ibtn) {
-                            ibtn.click();
+                            //可能重复po后，改手动(不再改手动)
+                            //ibtn.click();
                         }
                     }
                 }
@@ -360,7 +289,7 @@
                 createNotify("可能有重复po", {
                     body: pData.nearbyPortals.find(p=>{return p.title==pData.title}).title,
                     icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                    requireInteraction: true
+                    requireInteraction: false
                 });
                 //这两个判断应该重复了，需测试确认，也许下面这个不可靠，因为地图不加载
                 if (document.querySelector("[alt='"+pData.title+"']")) {
@@ -390,6 +319,7 @@
                     let ilabel = document.getElementById("iduserlabel");
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
                 },1000);
+                //未找到网络审核时，去判断是否有重复可能
                 isDuplicate(pdata);
                 return null;
             }
@@ -399,6 +329,7 @@
                     let ilabel = document.getElementById("iduserlabel");
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
                 },1000);
+                //未找到网络审核时，去判断是否有重复可能
                 isDuplicate(pdata);
                 return null;
             }
@@ -447,15 +378,15 @@
                 tmpfollow.review="重复："+creviewdata.duplicateOf;
                 let nbportal = pdata.nearbyPortals;
                 console.log("审核记录：重复！");
-                console.log(nbportal);
+                //console.log(nbportal);
                 //let testdupid="513b37393fb04a8e95281c81513c6ecc.16";
                 //console.log(nbportal.find(p=>{return p.guid==rdata.duplicateOf}));
                 if(nbportal.find(p=>{return p.guid==rdata.duplicateOf})){
                     //console.log((nbportal.find(p=>{return p.guid==rdata.duplicateOf})).title);
                     let dbtitle = (nbportal.find(p=>{return p.guid==rdata.duplicateOf})).title;
-                    console.log(dbtitle);
+                    //console.log(dbtitle);
                     setTimeout(function(){
-                        console.log(document.querySelector("[alt='"+dbtitle+"']"));
+                        //console.log(document.querySelector("[alt='"+dbtitle+"']"));
                         if (document.querySelector("[alt='"+dbtitle+"']")) {
                             document.querySelector("[alt='"+dbtitle+"']").click();
 
@@ -598,6 +529,8 @@
              )
         return null;
     }
+
+    //判断是否需要上传审核至云端，及保存至本地：用户+upload
     function savePostData(pdata,rdata,icloud,iskip){
         let data = rdata ;
         console.log("检查是否需要上传审核数据...");
@@ -645,15 +578,18 @@
                 console.log("saving...");
                 if(icloud==0 || icloud==2){
                     if(cookie) {
+                        //保存至本地
                         if(localpd.length==0){
                             localStorage.setItem(useremail+"upload","["+JSON.stringify(tmpupload)+"]");
                         } else {
                             localpd.push(tmpupload);
                             localStorage.setItem(useremail+"upload",JSON.stringify(localpd));
                         }
+                        //上传至云端
                         gmrequest("PUT",surl,data.id,JSON.stringify(data));
                     }
                 } else {
+                    //保存审核记录至本地：以下未调试
                     let creviewlist =[];
                     creviewlist= JSON.parse(localStorage.reviewList);
                     if(creviewlist==null) {creviewlist = []};
@@ -675,6 +611,7 @@
             }
         }
     }
+
     //格式化日期函数
     function formatDate(date, fmt)
     {
