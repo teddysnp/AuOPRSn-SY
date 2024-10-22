@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.4.5
+// @version      4.4.6
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -373,10 +373,10 @@
 
                 //dv = div1 = ltimerlabel1 + ltimerlabel2
                 const dv=document.createElement("div");
-                dv.style="width:10%;font-size:16px";
+                dv.style="width:10%;font-size:16px;";
                 dv.className="clusertop1";
                 const div1=document.createElement("div");
-                div1.className = 'cldivtimer';
+                div1.className = 'txtcenter';
                 const ltimerlabel1 = document.createElement('p');
                 ltimerlabel1.id = "idltimerlabel";
                 ltimerlabel1.textContent = '计时: ';
@@ -388,6 +388,34 @@
                 div1.appendChild(ltimerlabel1);
                 div1.appendChild(ltimerlabel2);
                 dv.appendChild(div1);
+
+                //divcountdown = countdownlabel + countdown
+                //增加提交倒计时
+                let divcountdown=document.createElement("div");
+                divcountdown.style="width:10%;font-size:14px";
+                divcountdown.className="txtcenter";
+                //增加提交倒计时label
+                let countuplabel = document.createElement('span');
+                countuplabel.className = 'cluplabel';
+                countuplabel.style="color:#999d9c;";
+                countuplabel.id = "iduplabel";
+                countuplabel.textContent = '↑';
+                //增加提交倒计时label
+                let countdownlabel = document.createElement('span');
+                countdownlabel.className = 'clcountdownlabel';
+                countdownlabel.id = "idcountdownlabel";
+                countdownlabel.style="color:#999d9c;";
+                countdownlabel.textContent = '↓';
+                divcountdown.appendChild(countuplabel);
+                divcountdown.appendChild(countdownlabel);
+                //增加提交倒计时标签
+                countdown = document.createElement('p');
+                countdown.className = 'clcountdown';
+                countdown.id = "idcountdown";
+                //countdown.textContent = '';
+                //countdown.style.display = 'block';
+                divcountdown.appendChild(countdown);
+                //console.log(countdown);
 
                 //divuser = userlabel+uname
                 const divuser=document.createElement("div");
@@ -406,30 +434,6 @@
                 uname.textContent = '';
                 uname.textContent = userEmail;
                 divuser.appendChild(uname);
-
-                //divcountdown = countdownlabel + countdown
-                //增加提交倒计时
-                let divcountdown=document.createElement("div");
-                divcountdown.style="width:10%;font-size:14px";
-                divcountdown.className="clusertop1";
-                //增加提交倒计时label
-                let countdownlabel = document.createElement('p');
-                countdownlabel.className = 'clcountdownlabel';
-                countdownlabel.id = "idcountdownlabel";
-                if(cookie) {
-                    countdownlabel.textContent = '可上传';
-                } else {
-                    countdownlabel.textContent = '无权限';
-                }
-                divcountdown.appendChild(countdownlabel);
-                //增加提交倒计时标签
-                countdown = document.createElement('p');
-                countdown.className = 'clcountdown';
-                countdown.id = "idcountdown";
-                //countdown.textContent = '';
-                //countdown.style.display = 'block';
-                divcountdown.appendChild(countdown);
-                //console.log(countdown);
 
                 //divaddscore = divaddr + divlocscore( divloc +divblank)
                 //增加地址、池中本地外地、打分标签
@@ -1694,7 +1698,6 @@
     (function() {
         const css = `
           .clusertop {
-              color: #333;
               margin-left: 2em;
               padding-top: 0.3em;
               text-align: left;
