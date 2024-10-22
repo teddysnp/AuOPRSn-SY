@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.3.9
+// @version      1.4
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -39,6 +39,7 @@
 
     //上传json审核至cloudflare
     function gmrequest(pmethod,purl,pid,pdata){
+        cookie = localStorage.cfcookie;
         switch(pmethod){
             case "PUT":
 //                return new Promise((resolve, reject) => {
@@ -53,14 +54,23 @@
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
                     },
                     onload: function(res){
-                        //console.log(res)
+                        console.log("postjson",res)
                         if(res.status === 200){
+                            //修改首页上传显示
+                            let iup = document.getElementById("iduplabel");
+                            //绿：1d953f
+                            iup.style="font-weight:bold;color:#1d953f";
                             console.log('审核记录上传成功:'+pid)
                         }else{
+                            let iup = document.getElementById("iduplabel");
+                            iup.style="font-weight:bold;color:red";
                             console.log('审核记录上传失败:'+pid)
                         }
                     },
                     onerror : function(err){
+                        //修改首页上传显示
+                        let iup = document.getElementById("iduplabel");
+                        iup.style="font-weight:bold;color:red";
                         console.log('审核记录上传错误:'+pid)
                         console.log(err)
                     }
@@ -312,8 +322,27 @@
         }
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/" +id +".json")
         .then(res=>{
-//            console.log("res",res);
+            //console.log("getjson",res);
             if(!res) {
+                //修改首页下载显示
+                console.log("getjsonerr");
+                cloudReviewData = null;
+                setTimeout(function(){
+                    let ilabel = document.getElementById("iduserlabel");
+                    if(ilabel) ilabel.textContent = "未找到网络审核记录";
+                    let idown = document.getElementById("idcountdownlabel");
+                    idown.style="font-weight:bold;color:red";
+                },1000);
+                //未找到网络审核时，去判断是否有重复可能
+                isDuplicate(pdata);
+                return null;
+            }
+            if(res.indexOf("Error 404")>=0) {
+                //修改首页下载显示
+                let idown = document.getElementById("idcountdownlabel");
+                //中黄：ffe600
+                idown.style="font-weight:bold;color:#ffe600";
+                console.log("未找到json");
                 cloudReviewData = null;
                 setTimeout(function(){
                     let ilabel = document.getElementById("iduserlabel");
@@ -342,6 +371,8 @@
 //                console.log("searching review record：",JSON.parse(res));
                 creviewdata = JSON.parse(res);   //网络审核记录
             }
+            let idown = document.getElementById("idcountdownlabel");
+            idown.style="font-weight:bold;color:#1d953f";
             cloudReviewData = creviewdata ;
             //              let creviewdata = JSON.parse(localStorage.getItem(id));  //本地审核记录
             if(creviewdata==null) { return null; }
