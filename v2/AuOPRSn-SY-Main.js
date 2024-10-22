@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.4.4
+// @version      4.4.5
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -150,6 +150,7 @@
                         },1000);
                         return;
                     }
+                    localStorage.setItem("currentmissiontitle",miss.title);
                     localStorage.setItem("currentmission",res);
                     missionlist =  eval("(" + res + ")");
                 });
@@ -522,6 +523,11 @@
                     },1000);
                //}
                 if(timer==null) { timer = mywin.setInterval(() => {
+                    if(countdown.textContent.indexOf("+")>0){
+                        const ss=countdown.textContent;
+                        const iright=parseInt(ss.substring(ss.indexOf("+")+1,ss.length));
+                        submitCountDown += iright;
+                    }
                     countdown.textContent = Math.ceil(submitCountDown);
                     //不重新取一下，切换页面后不更新，非常神奇
                     let sss = document.getElementById("idcountdown");
@@ -672,6 +678,43 @@
     }
 
     function updateAddress(divaddr){
+        setTimeout(function(){
+                let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+                if(addr ){
+                    if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
+                        let address=addr.childNodes[1].innerText.split(":")[1];
+                        address=address.replace(" 邮政编码","");
+                        divaddr.textContent = "地址:"+address;
+                        return;
+                    }
+                    setTimeout(function(){
+                        let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+                        if(addr ){
+                            if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
+                                let address=addr.childNodes[1].innerText.split(":")[1];
+                                address=address.replace(" 邮政编码","");
+                                divaddr.textContent = "地址:"+address;
+                                console.log("第二次取地址");
+                                return;
+                            }
+                            setTimeout(function(){
+                                let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+                                if(addr ){
+                                    if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
+                                        let address=addr.childNodes[1].innerText.split(":")[1];
+                                        address=address.replace(" 邮政编码","");
+                                        divaddr.textContent = "地址:"+address;
+                                        console.log("第三次取地址");
+                                        return;
+                                    }
+                                }
+                            },1000);
+                        }
+                    },1000);
+                }
+        },500);
+    }
+    function updateAddress1(divaddr){
         setTimeout(function(){
             let itry = 3;
             const queryloop = () => {
@@ -836,7 +879,7 @@
         });
     }
 
-    //保存审po记录到本地
+    //保存审po记录到本地：review1,review2
     function saveReviewtoLocal(pageData,data) {
         let localreview = [];
         let tmpstorage = null ;
@@ -1771,7 +1814,6 @@
             }
         }
     }
-
     const messageNotice = new MessageNotice();
 
     //格式化日期函数
