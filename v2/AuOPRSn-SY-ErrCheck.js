@@ -28,11 +28,12 @@
             console.log("errbtn",errbtn);
             console.log("errNumber",errNumber);
             if(!errbtn){
-                createNotify("错误", {
+                console.log("错误！重新加载reload...");
+                /*createNotify("错误", {
                     body: "重新加载",
                     icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
                     requireInteraction: false
-                });
+                });*/
                 mywin.location.reload();
                 return;
             }
