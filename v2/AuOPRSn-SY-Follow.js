@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4
+// @version      1.4.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -59,18 +59,18 @@
                             //修改首页上传显示
                             let iup = document.getElementById("iduplabel");
                             //绿：1d953f
-                            iup.style="font-weight:bold;color:#1d953f";
+                            if(iup) iup.style="font-weight:bold;color:#1d953f";
                             console.log('审核记录上传成功:'+pid)
                         }else{
                             let iup = document.getElementById("iduplabel");
-                            iup.style="font-weight:bold;color:red";
+                            if(iup) iup.style="font-weight:bold;color:red";
                             console.log('审核记录上传失败:'+pid)
                         }
                     },
                     onerror : function(err){
                         //修改首页上传显示
                         let iup = document.getElementById("iduplabel");
-                        iup.style="font-weight:bold;color:red";
+                        if(iup) iup.style="font-weight:bold;color:red";
                         console.log('审核记录上传错误:'+pid)
                         console.log(err)
                     }
@@ -331,7 +331,7 @@
                     let ilabel = document.getElementById("iduserlabel");
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
                     let idown = document.getElementById("idcountdownlabel");
-                    idown.style="font-weight:bold;color:red";
+                    if(idown) idown.style="font-weight:bold;color:red";
                 },1000);
                 //未找到网络审核时，去判断是否有重复可能
                 isDuplicate(pdata);
@@ -341,7 +341,7 @@
                 //修改首页下载显示
                 let idown = document.getElementById("idcountdownlabel");
                 //中黄：ffe600
-                idown.style="font-weight:bold;color:#ffe600";
+                if(idown) idown.style="font-weight:bold;color:#ffe600";
                 console.log("未找到json");
                 cloudReviewData = null;
                 setTimeout(function(){
@@ -372,7 +372,7 @@
                 creviewdata = JSON.parse(res);   //网络审核记录
             }
             let idown = document.getElementById("idcountdownlabel");
-            idown.style="font-weight:bold;color:#1d953f";
+            if(idown) idown.style="font-weight:bold;color:#1d953f";
             cloudReviewData = creviewdata ;
             //              let creviewdata = JSON.parse(localStorage.getItem(id));  //本地审核记录
             if(creviewdata==null) { return null; }
