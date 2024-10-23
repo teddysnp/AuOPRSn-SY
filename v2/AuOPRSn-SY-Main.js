@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.4.7
+// @version      4.4.8
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -392,29 +392,29 @@
                 //divcountdown = countdownlabel + countdown
                 //增加提交倒计时
                 let divcountdown=document.createElement("div");
-                divcountdown.style="width:10%;font-size:16px";
+                divcountdown.style="width:10%;font-size:14px";
                 divcountdown.className="txtcenter";
                 //增加提交倒计时label
                 let dvupdown = document.createElement("div");
-                dvupdown.style="width:10%;font-size:18px";
+                dvupdown.style="width:10%;font-size:20px";
                 dvupdown.className="txtcenter";
                 let countuplabel = document.createElement('span');
                 countuplabel.className = 'cluplabel';
-                countuplabel.style="color:#999d9c;";
+                countuplabel.style="color:#d9d6c3;";
                 countuplabel.id = "iduplabel";
                 countuplabel.textContent = '↑';
                 //增加提交倒计时label
                 let countdownlabel = document.createElement('span');
                 countdownlabel.className = 'clcountdownlabel';
                 countdownlabel.id = "idcountdownlabel";
-                countdownlabel.style="color:#999d9c;";
+                countdownlabel.style="color:#d9d6c3;";
                 countdownlabel.textContent = '↓';
                 dvupdown.appendChild(countuplabel);
                 dvupdown.appendChild(countdownlabel);
                 divcountdown.appendChild(dvupdown);
                 //增加提交倒计时标签
                 let dvcdown = document.createElement("div");
-                dvcdown.style="width:100%;font-size:18px;display:flex;justify-content:flex-center;";
+                dvcdown.style="width:100%;font-size:16px;display:flex;justify-content:flex-center;";
                 dvcdown.className="txtcenter";
                 let dvcdown1 = document.createElement("div");
                 dvcdown1.style="width:5%";
