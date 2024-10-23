@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4.1
+// @version      1.4.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -56,9 +56,8 @@
                     onload: function(res){
                         console.log("postjson",res)
                         if(res.status === 200){
-                            //修改首页上传显示
+                            //修改首页上传显示  绿：1d953f
                             let iup = document.getElementById("iduplabel");
-                            //绿：1d953f
                             if(iup) iup.style="font-weight:bold;color:#1d953f";
                             console.log('审核记录上传成功:'+pid)
                         }else{
@@ -213,7 +212,13 @@
                     let iautolabel = document.querySelector("p[id='idautolabel']");
                     if (iautolabel.textContent == "手动"){
                         //console.log("data",JSON.parse(data));
-                        savePostData(portalData,JSON.parse(data),2,true);
+                        let ic =0;
+                        if(cloudReviewData){
+                            if (cloudReviewData.skip) ic=1; else ic=0;
+                        } else {
+                            ic=0;
+                        }
+                        savePostData(portalData,JSON.parse(data),ic,true);
                     }
 
                     console.log("skip",data);
@@ -577,7 +582,7 @@
         }
         let isave =0;
         data.skip = false ;
-        if(iskip){
+        if(iskip & icloud==0){
             tmpupload.review="skip";
             isave=1;
             data.skip = true;
@@ -640,6 +645,9 @@
             } catch(e){
                 console.log(e);
             }
+        } else {
+            let iup = document.getElementById("iduplabel");
+            if(iup) iup.style="font-weight:bold;color:#f6f5ec";
         }
     }
 
