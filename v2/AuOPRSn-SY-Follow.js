@@ -646,8 +646,8 @@
                 console.log(e);
             }
         } else {
-            let iup = document.getElementById("iduplabel");
-            if(iup) iup.style="font-weight:bold;color:#f6f5ec";
+            //let iup = document.getElementById("iduplabel");
+            //if(iup) iup.style="font-weight:bold;color:#f6f5ec";
         }
     }
 
