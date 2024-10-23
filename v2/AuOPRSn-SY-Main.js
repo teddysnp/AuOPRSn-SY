@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.4.6
+// @version      4.4.7
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -392,9 +392,12 @@
                 //divcountdown = countdownlabel + countdown
                 //增加提交倒计时
                 let divcountdown=document.createElement("div");
-                divcountdown.style="width:10%;font-size:14px";
+                divcountdown.style="width:10%;font-size:16px";
                 divcountdown.className="txtcenter";
                 //增加提交倒计时label
+                let dvupdown = document.createElement("div");
+                dvupdown.style="width:10%;font-size:18px";
+                dvupdown.className="txtcenter";
                 let countuplabel = document.createElement('span');
                 countuplabel.className = 'cluplabel';
                 countuplabel.style="color:#999d9c;";
@@ -406,15 +409,32 @@
                 countdownlabel.id = "idcountdownlabel";
                 countdownlabel.style="color:#999d9c;";
                 countdownlabel.textContent = '↓';
-                divcountdown.appendChild(countuplabel);
-                divcountdown.appendChild(countdownlabel);
+                dvupdown.appendChild(countuplabel);
+                dvupdown.appendChild(countdownlabel);
+                divcountdown.appendChild(dvupdown);
                 //增加提交倒计时标签
-                countdown = document.createElement('p');
-                countdown.className = 'clcountdown';
+                let dvcdown = document.createElement("div");
+                dvcdown.style="width:100%;font-size:18px;display:flex;justify-content:flex-center;";
+                dvcdown.className="txtcenter";
+                let dvcdown1 = document.createElement("div");
+                dvcdown1.style="width:5%";
+                dvcdown1.className="txtcenter";
+                let dvcdown2 = document.createElement("div");
+                dvcdown2.style="width:33%";
+                dvcdown2.className="txtcenter";
+                let dvcdown3 = document.createElement("div");
+                dvcdown3.style="width:33%";
+                dvcdown3.className="txtcenter";
+                countdown = document.createElement('span');
+                countdown.className = 'txtcenter';
                 countdown.id = "idcountdown";
+                dvcdown2.appendChild(countdown);
+                dvcdown.appendChild(dvcdown1);
+                dvcdown.appendChild(dvcdown2);
+                dvcdown.appendChild(dvcdown3);
                 //countdown.textContent = '';
-                //countdown.style.display = 'block';
-                divcountdown.appendChild(countdown);
+                //countdown.style.display = 'justify-content: center;';
+                divcountdown.appendChild(dvcdown);
                 //console.log(countdown);
 
                 //divuser = userlabel+uname
@@ -819,8 +839,8 @@
                     } else {
                         cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
                     }
-                    let scookie="<p><div><button id='btncookie' style='background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:30px;border-radius:10px;' onclick='saveCookie()'>保存</button><input id='txtCookie' type='text' style='width:90%'></input></div></p>";
-                    $("wf-page-header").after(scookie);
+                    //let scookie="<p><div><button id='btncookie' style='background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:30px;border-radius:10px;' onclick='saveCookie()'>保存</button><input id='txtCookie' type='text' style='width:90%'></input></div></p>";
+                    //$("wf-page-header").after(scookie);
                     $("wf-page-header").after(cap);
                     $("wf-page-header").after(bnext);
                     $("wf-page-header").after(suser);
@@ -1706,6 +1726,7 @@
               float: left;
           }
           .txtcenter {
+            margin-left: 0em;
             text-align : center;
           }
         `;
