@@ -14,7 +14,7 @@
     let ioutput = "true";
     let editGYMPosition = [["丛林里的梅花鹿","false","10"],["职工文体广场","false","2"],["万达贾飞碟","false","11"],
                            ["粉嘟对象","false","11"],["黑鼻对象","false","11"]];
-    let editGYMAuto = "false";
+    let editGYMAuto = "true";
     let portalData = null;
     let portalTitle = null;
 
@@ -70,7 +70,7 @@
 //                console.log("监听是否有挪po操作");
                 if(portalData){
                     if(portalData.type=="EDIT"){
-                        console.log("发现挪po申请");
+                        console.log("发现编辑po申请");
                         console.log("查找地图上的点");
                         let ptbutton = document.querySelectorAll('agm-map div[role="button"]');
                         let ptstruct = getbtnStruct(ptbutton);
