@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4.2
+// @version      1.4.3
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -25,6 +25,7 @@
     let useremail = "";
     let tmpfollow={id:null,title:null,lat:null,lng:null,review:null};
     let isUserClick = false ;
+    let iautoman = null;
     let mywin = window;
 
     listenLinkClick();
@@ -34,6 +35,32 @@
             //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
             //console.log("isTrusted",event.isTrusted);
             isUserClick = event.isTrusted;
+            if(event.isTrusted) {
+                //console.log(event);
+                let iauto = document.getElementById("idautolabel");
+                //console.log(iauto.textContent);
+                if(event.srcElement.innerText == "thumb_down" || event.srcElement.innerText == "標記為重複") {
+                    if (iauto.textContent == "自动") {
+                        iautoman = "自动";
+                        let ibtn = document.getElementById("btnauto");
+                        if (ibtn) {
+                            ibtn.click();
+                        }
+                    }
+                }
+                if(event.srcElement.innerText == "取消" || event.srcElement.innerText == "關閉") {
+                    if (iauto.textContent == "手动" ) {
+                        if(iautoman == "自动") {
+                            let ibtn = document.getElementById("btnauto");
+                            if (ibtn) {
+                                ibtn.click();
+                            }
+                        } else {
+                            iautoman = null;
+                        }
+                    }
+                }
+            }
         });
     }
 
@@ -436,6 +463,7 @@
                     },500);
                 }
             } else if(rdata.quality) {
+                console.log(rdata);
                 if(rdata.cultural==5 & rdata.exercise==5 & rdata.location==5 & rdata.quality==5 & rdata.safety==5 & rdata.socialize==5 & rdata.uniqueness==5){
                     if(rdata.newLocation) {
                         tmptext = "照抄网络审核：五星+挪po";
