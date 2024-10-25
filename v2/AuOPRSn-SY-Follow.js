@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4.3
+// @version      1.4.4
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -81,7 +81,7 @@
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
                     },
                     onload: function(res){
-                        console.log("postjson",res)
+                        //console.log("postjson",res)
                         if(res.status === 200){
                             //修改首页上传显示  绿：1d953f
                             let iup = document.getElementById("iduplabel");
