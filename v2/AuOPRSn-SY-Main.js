@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.5
+// @version      4.5.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -23,7 +23,7 @@
         done: "",
         dt: ""
     };
-    let missiondisplay = "true";
+    let missiondisplay = "false";
     let missionlist=[];
     /*[["敲鼓人","北一路万达","true","新增","","2024-10-10",""],
                      ["荷花象鼓","北一路万达","true","新增","","2024-10-10",""],["新时代共享职工之家","北一路万达","true","新增","","2024-10-10","ok"],
@@ -915,16 +915,18 @@
         let pdata = JSON.parse(data);
         console.log(pdata);
         if(pdata){
-            if(pdata.duplicate) {
-                sscore = "重复："+pdata.duplicateOf;
-            } else if (pdata.rejectReasons) {
-                sscore = "拒：" +pdata.rejectReasons;
+            if(pdata.type=="NEW"){
+                if(pdata.duplicate) {
+                    sscore = "重复："+pdata.duplicateOf;
+                } else if (pdata.rejectReasons) {
+                    sscore = "拒：" +pdata.rejectReasons;
+                } else {
+                    sscore = ":" + pdata.quality + pdata.safety + pdata.location + pdata.uniqueness + pdata.socialize + pdata.exercise + pdata.cultural;
+                    sscore = sscore.substring(1,sscore.length);
+                }
             } else {
-                sscore = ":" + pdata.quality + pdata.safety + pdata.location + pdata.uniqueness + pdata.socialize + pdata.exercise + pdata.cultural;
-                sscore = sscore.substring(1,sscore.length);
+                if(ssc) sscore=ssc.textContent;
             }
-        } else {
-            if(ssc) sscore=ssc.textContent;
         }
         try{
             //    console.log(pageData);
