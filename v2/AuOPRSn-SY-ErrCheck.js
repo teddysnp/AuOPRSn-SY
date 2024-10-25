@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-ErrCheck
 // @namespace    AuOPR
-// @version      1.2
+// @version      1.2.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
