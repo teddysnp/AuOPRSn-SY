@@ -11,10 +11,10 @@
 //挪po指南：
 // 1-9:左至右排列第几个  11:19:上至下排列第几个  10:最右一个  20:最下一个
 (function() {
-    let ioutput = "false";
-    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["职工文体广场","false","2"],["万达贾飞碟","false","11"],
+    let ioutput = "true";
+    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["步步高升","false","2"],["万达贾飞碟","false","11"],
                            ["粉嘟对象","false","11"],["黑鼻对象","false","11"]];
-    let editGYMAuto = "true";
+    let editGYMAuto = "false";
     let portalData = null;
     let portalTitle = null;
 
@@ -70,6 +70,10 @@
 //                console.log("监听是否有挪po操作");
                 if(portalData){
                     if(portalData.type=="EDIT"){
+                        let iauto = document.getElementById("idautolabel");
+                        //console.log(iauto);
+                        let sc = document.getElementById("idcountdown");
+                        sc.textContent = sc.textContext + "+60";
                         console.log("发现编辑po申请");
                         console.log("查找地图上的点");
                         let ptbutton = document.querySelectorAll('agm-map div[role="button"]');
@@ -98,7 +102,15 @@
                                         if(idscore) {
                                             setTimeout(function(){
                                                 let idscore = document.querySelector("span[id='idscore']");
-                                                idscore.textContent = editgym[2];
+                                                if(editgym[2]<10){
+                                                    idscore.textContent = "左第"+editgym[2]+"个";
+                                                } else if(editgym[2]==10){
+                                                    idscore.textContent = "最右边";
+                                                } else if(editgym[2]<20){
+                                                    idscore.textContent = "上第"+(editgym[2]-10)+"个";
+                                                } else if(editgym[2]==20){
+                                                    idscore.textContent = "最下";
+                                                }
                                             },1000);
                                         }
                                         ptbtn.click();
