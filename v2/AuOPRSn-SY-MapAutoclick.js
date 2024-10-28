@@ -74,7 +74,7 @@
                         //console.log(iauto);
                         let sc = document.getElementById("idcountdown");
                         if(portalData.locationEdits){
-                            if(portalData.locationEdits[0].lat>=41.25 & portalData.locationEdits[0].lat<=44.1 & portalData.locationEdits[0].lng>=122.5 & portalData.locationEdits[0].lng<=126.3) sc.textContent = sc.textContext + "+60";
+                            if(portalData.locationEdits[0].lat>=41.25 & portalData.locationEdits[0].lat<=44.1 & portalData.locationEdits[0].lng>=122.5 & portalData.locationEdits[0].lng<=126.3) sc.textContent = sc.textContext + "+20";
                         }
                         console.log("发现编辑po申请");
                         console.log("查找地图上的点");
