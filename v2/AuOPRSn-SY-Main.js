@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.5.1
+// @version      4.5.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1045,7 +1045,7 @@
         let ret = null;
         if (autoReview=='true' ) {
             if (loc=="池中"){
-                autoReview="false";
+                if(editGYMAuto == "true") autoReview="false";
                 console.log("autoReview set false");
                 ret = "池中挪po";
             } else {
@@ -1392,11 +1392,21 @@
             {
                 if( (portal.type=="EDIT") & (loc=="池中") )
                 {
-                    createNotify(portal.title, {
-                        body: "池中挪po，请注意",
-                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                        requireInteraction: true
-                    });
+                    if(editGYMAuto == "true") {
+                        createNotify(portal.title, {
+                            body: "池中挪po，请注意",
+                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                            requireInteraction: true
+                        });
+                        return true;
+                    } else {
+                        createNotify(portal.title, {
+                            body: "池中挪po，自动选中",
+                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                            requireInteraction: false
+                        });
+                        return false;
+                    }
                 } else
                 {
                     return false;
