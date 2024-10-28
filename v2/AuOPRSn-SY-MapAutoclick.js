@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-MapAutoclick
 // @namespace    AuOPR
-// @version      1.1
+// @version      1.2
 // @description  try to take over the world!
 // @author       You
 // @match        https://wayfarer.nianticlabs.com/*
@@ -73,7 +73,9 @@
                         let iauto = document.getElementById("idautolabel");
                         //console.log(iauto);
                         let sc = document.getElementById("idcountdown");
-                        sc.textContent = sc.textContext + "+60";
+                        if(portalData.locationEdits){
+                            if(portalData.locationEdits[0].lat>=41.25 & portalData.locationEdits[0].lat<=44.1 & portalData.locationEdits[0].lng>=122.5 & portalData.locationEdits[0].lng<=126.3) sc.textContent = sc.textContext + "+60";
+                        }
                         console.log("发现编辑po申请");
                         console.log("查找地图上的点");
                         let ptbutton = document.querySelectorAll('agm-map div[role="button"]');
