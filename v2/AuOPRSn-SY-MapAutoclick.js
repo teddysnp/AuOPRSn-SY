@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-MapAutoclick
 // @namespace    AuOPR
-// @version      1.2
+// @version      1.3
 // @description  try to take over the world!
 // @author       You
 // @match        https://wayfarer.nianticlabs.com/*
