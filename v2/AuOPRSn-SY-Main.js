@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.5.5
+// @version      4.5.6
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -23,7 +23,7 @@
         done: "",
         dt: ""
     };
-    let missiondisplay = "false";
+    let missiondisplay = "true";
     let missionlist=[];
     /*[["敲鼓人","北一路万达","true","新增","","2024-10-10",""],
                      ["荷花象鼓","北一路万达","true","新增","","2024-10-10",""],["新时代共享职工之家","北一路万达","true","新增","","2024-10-10","ok"],
@@ -1610,7 +1610,11 @@
                 appreview.insertBefore(dva,appreview.firstChild);
                   if(missiondisplay == "true"){
                       $(".userclass.missionpo").replaceWith(
-                          "<font size=3><div class='userclass missionpo' id='missionpo'>【待完成】"+tmmiss2+"<p>【已完成】"+tmmiss1+"<p>【未进池】"+tmmiss3+"<p>【已终止】"+tmmiss4+"</div></font>"+
+                          "<font size=3><div class='userclass missionpo' id='missionpo'>【待完成】"+tmmiss2
+                          //+"<p>【已完成】"+tmmiss1
+                          //+"<p>【未进池】"+tmmiss3
+                          //+"<p>【已终止】"+tmmiss4
+                          +"</div></font>"+
                           "<font size=3><div class='userclasss latestpo' id='latestpo'>【已审po】"+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div><p>");
                   } else {
                       $(".userclass.missionpo").replaceWith(
