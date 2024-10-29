@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.5.6
+// @version      4.5.7
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -938,15 +938,64 @@
                 }
             }
             if(pname == null) {return;}
-            console.log("任务po，保存用户审核打卡...");
+
             if(portaldata.id){
-                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review."+portaldata.id+".json")
+                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review.mission.portallist.json")
+                .then(res=>{
+                    console.log("读取任务po列表");
+                    //console.log("res",res);
+                    if(!res) {
+                        setTimeout(function(){
+                            console.log("读取任务po列表","未找到任务po列表记录");
+                            //保存任务id :
+                            let susermark='[{"id":"' + portaldata.id +'",'
+                            +'"title":"' + portaldata.title +'",'
+                            + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
+                            +'"type":"'+portaldata.type+'",'
+                            +'"lat":'+portaldata.lat+','
+                            +'"lng":'+portaldata.lng+','
+                            +'"imageUrl":"'+portaldata.imageUrl+'",'
+                            +'"supportingImageUrl":"'+portaldata.supportingImageUrl+'",'
+                            +'"streetAddress":"'+portaldata.streetAddress+'"'
+                            + "}]";
+                            uploadFile("PUT","review.mission.portallist.json",susermark);
+                        },1000);
+                        return;
+                    } else {
+                        console.log("res",res);
+                        const dupload = JSON.parse(res);
+                        let isave=0;
+                        for(let i=0;i<dupload.length;i++){
+                            if(dupload[i].id == portaldata.id) {
+                                console.log("存过portal了");
+                                isave=1;
+                            }
+                        }
+                        if(isave==0){
+                            console.log(dupload);
+                            let dupdata = dupload ;
+                            //dupdata.push(dupload);
+                            let susermark={useremail:userEmail,title:portaldata.title,datatime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),type:portaldata.type,
+                                           lat:portaldata.lat,lng:portaldata.lng,imageUrl:portaldata.imageUrl,supportingImageUrl:portaldata.supportingImageUrl,streetAddress:portaldata.streetAddress};
+                            dupdata.push(susermark);
+                            console.log(dupdata);
+                            console.log(JSON.stringify(dupdata));
+                            uploadFile("PUT","review.mission.portallist.json",JSON.stringify(dupdata));
+                        }
+                    }
+                },err=>{
+                    console.log(err);
+                });
+
+                console.log("任务po，保存用户审核打卡...");
+                let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review."+portaldata.id+".json")
                 .then(res=>{
                     console.log("读取用户打卡");
                     //console.log("res",res);
                     if(!res) {
                         setTimeout(function(){
                             console.log("读取用户打卡","未找到用户打卡记录");
+                            //保存任务id :
                             let susermark='[{"useremail":"' + userEmail +'",'
                             + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
                             +'"performance":"' + performance +'"'
