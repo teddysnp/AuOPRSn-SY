@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.5.4
+// @version      4.5.5
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nianticlabs.com
-// @grant        none
+// @grant        GM_xmlhttpRequest
 // ==/UserScript==
 (function() {
     //变量区
@@ -52,6 +52,7 @@
     //let submitCountDown = null;
     let userID = null;
     let userEmail = null;
+    let performance = null;
     let submitButtonClicked = false;
     let scoreAlready = false;
     let saveportalcnt1 = 500;
@@ -91,13 +92,13 @@
         localStorage.setItem("Warning",1);
     }
 
-    function gmrequest(pmethod,purl,pid,pdata){
+    function uploadFile(pmethod,pfilename,pdata){
         switch(pmethod){
             case "PUT":
 //                return new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method:     "PUT",
-                    url:        purl+pid+".json",
+                    url:        surl+pfilename,
                     data:       pdata,
                     anonymous:  true,
                     cookie:     cookie,
@@ -108,13 +109,13 @@
                     onload: function(res){
                         console.log(res)
                         if(res.status === 200){
-                            console.log('审核记录上传成功:'+pid)
+                            console.log('上传成功')
                         }else{
-                            console.log('审核记录上传失败:'+pid)
+                            console.log('上传失败')
                         }
                     },
                     onerror : function(err){
-                        console.log('审核记录上传错误:'+pid)
+                        console.log('上传错误')
                         console.log(err)
                     }
 //                    onload: resolve,
@@ -294,6 +295,7 @@
                 } else
                     autoReview = localStorage.autoReview;
                 portalData = json.result;
+                uploadReviewMark(portalData);
                 //console.log("injectTimer:needCaptcha",needCaptcha);
                 if (json.captcha) {
                     if(needCaptcha=="true"){
@@ -687,7 +689,7 @@
                             }
                             if(autoReview=="true") {
                                 submitCountDown--;
-                                console.log("switch",autoReview);
+                                //console.log("switch",autoReview);
                                 dvautolabel.textContent = '自动';
                             }
                         } else
@@ -899,7 +901,7 @@
             autoReview ="true";
         }
         localStorage.setItem("autoReview", autoReview );
-        console.log("switch auto",autoReview);
+        //console.log("switch auto",autoReview);
     }
 
     getUser();
@@ -911,6 +913,7 @@
                 let restext = JSON.parse(res);
                 //        console.log(restext.result.socialProfile);
                 userEmail = restext.result.socialProfile.email;
+                performance = restext.result.performance ;
                 //        console.log(userEmail);
                 if(restext.result.socialProfile.email)
                 {
@@ -920,6 +923,61 @@
                 return restext.result.socialProfile.email;
             }
         });
+    }
+
+    //上传用户审po打卡至cloudflare
+    function uploadReviewMark(portaldata){
+        try{
+            if(!missionlist){ return;}
+            let pname = null;
+            for(let i=0;i<missionlist.length;i++){
+                if(missionlist[i][0] == portaldata.title) {
+                    if(Math.abs(missionlist[i][7]-portaldata.lat)<=0.001 & Math.abs(missionlist[i][8]-portaldata.lng)<=0.01) {
+                        pname = portaldata.title;
+                    }
+                }
+            }
+            if(pname == null) {return;}
+            console.log("任务po，保存用户审核打卡...");
+            if(portaldata.id){
+                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review."+portaldata.id+".json")
+                .then(res=>{
+                    console.log("读取用户打卡");
+                    //console.log("res",res);
+                    if(!res) {
+                        setTimeout(function(){
+                            console.log("读取用户打卡","未找到用户打卡记录");
+                            let susermark='[{"useremail":"' + userEmail +'",'
+                            + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
+                            +'"performance":"' + performance +'"'
+                            + "}]";
+                            uploadFile("PUT","review."+portaldata.id+".json",susermark);
+                        },1000);
+                        return;
+                    } else {
+                        const dupload = JSON.parse(res);
+                        for(let i=0;i<dupload.length;i++){
+                            if(dupload[i].useremail == userEmail) {
+                                console.log("存过打卡了");
+                                return;
+                            }
+                        }
+                        console.log(dupload);
+                        let dupdata = dupload ;
+                        //dupdata.push(dupload);
+                        let susermark={useremail:userEmail,datatime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),performance:performance};
+                        dupdata.push(susermark);
+                        console.log(dupdata);
+                        console.log(JSON.stringify(dupdata));
+                        uploadFile("PUT","review."+portaldata.id+".json",JSON.stringify(dupdata));
+                    }
+                },err=>{
+                    console.log(err);
+                });
+            }
+        } catch(e) {
+            console.log(e);
+        }
     }
 
     //保存审po记录到本地：review1,review2
