@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4.4
+// @version      1.4.5
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -330,7 +330,7 @@
                 console.log("duplicate dialog",document.querySelector("app-confirm-duplicate-modal"));
                 createNotify("可能有重复po", {
                     body: pData.nearbyPortals.find(p=>{return p.title==pData.title}).title,
-                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                     requireInteraction: false
                 });
                 //这两个判断应该重复了，需测试确认，也许下面这个不可靠，因为地图不加载
