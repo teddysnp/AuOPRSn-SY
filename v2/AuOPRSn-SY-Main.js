@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.5.3
+// @version      4.5.4
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -287,13 +287,13 @@
                 const response = this.response;
                 const json = JSON.parse(response);
                 if (!json) return;
+                console.log(json);
                 if(bNextAuto){
                     autoReview = "true";
                     localStorage.setItem("autoReview", autoReview );
                 } else
                     autoReview = localStorage.autoReview;
                 portalData = json.result;
-                //console.log(json);
                 //console.log("injectTimer:needCaptcha",needCaptcha);
                 if (json.captcha) {
                     if(needCaptcha=="true"){
@@ -535,6 +535,7 @@
                 //if(ttm==null) {
                 //console.log("ttm:",ttm);
                     ttm = mywin.setInterval(() => {
+                        //console.log("ttm",autoReview);
                         if(autoReview=="true"){
                             dvautolabel.textContent = '自动';
                         } else {
@@ -584,9 +585,14 @@
                                 icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                                 requireInteraction: false
                             });
-                            console.log(Math.ceil((expiry - new Date().getTime()) / 1000));
                         }
-                        if(autoReview=="true" || Math.ceil((expiry - new Date().getTime()) / 1000) < ilimit){
+                        //console.log(Math.ceil((expiry - new Date().getTime())) < ilimit);
+                        //console.log("autoReview",autoReview);
+                        if(( autoReview=="true") || ( autoReview=="false" & ( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit)) ){
+                            //console.log(( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit) );
+                            //console.log(Math.ceil((expiry - new Date().getTime()) / 1000));
+                            //console.log(ilimit);
+                            //console.log(false || false);
                             if(submitCountDown<=0){  //倒计时0，提交
                                 if(portalData){
                                     setTimeout(function(){
@@ -679,8 +685,11 @@
                                     }
                                 }
                             }
-                            submitCountDown--;
-                            dvautolabel.textContent = '自动';
+                            if(autoReview=="true") {
+                                submitCountDown--;
+                                console.log("switch",autoReview);
+                                dvautolabel.textContent = '自动';
+                            }
                         } else
                         {
                             dvautolabel.textContent = '手动';
@@ -890,7 +899,7 @@
             autoReview ="true";
         }
         localStorage.setItem("autoReview", autoReview );
-        //console.log(autoReview);
+        console.log("switch auto",autoReview);
     }
 
     getUser();
