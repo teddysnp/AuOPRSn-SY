@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.5.2
+// @version      4.5.3
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -46,8 +46,9 @@
     let reviewTime = 20;  //审po时间为20分钟
     let autoReview = null;
     let reviewPortalAuto = "true";
-    let editGYMAuto = "true";
+    let editGYMAuto = "true";//编辑po是否暂停:true-暂停;false-不暂停,false由MapAutoclick控制
     let postPeriod=[25,35];
+    let postTimeoutLimit = 60;//最后一分钟强制提交
     //let submitCountDown = null;
     let userID = null;
     let userEmail = null;
@@ -57,14 +58,13 @@
     let saveportalcnt2 = 200;
     let privatePortalDisplay1 = 50;  //首页列表中显示池中已审po数量
     let privatePortalDisplay2 = 50;  //首页列表中显示非池已审po数量
-    let recentPo = 10;
+    let recentPo = 10;//首页显示最近审过的池中po数量
     let portalData = null;
     let private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[42.2828685,125.738134,3408,5517],[41.755547,123.288777,940,1140],[41.81979911, 123.25708028,910,920],[41.810820,123.376373,547,1036]];
     let timer = null;
     let ttm = null;
-    let skey="";
 
-    let bNextAuto = true;
+    let bNextAuto = true;//下一个是否自动，由用户设置
     if(localStorage.bnextauto) {
         bNextAuto = localStorage.bnextauto;
     }
@@ -73,7 +73,7 @@
         needCaptcha = localStorage.captchasetting;
     }
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
-    let cookie = localStorage.cfcookie;
+    let cookie = localStorage.cfcookie;//上传权限
 
     const loginNotice = null;
 
@@ -85,7 +85,7 @@
     if (iWarning == 0) {
         createNotify("欢迎", {
             body: "请自行承担后果(包括被N社踢出)!",
-            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
             requireInteraction: false
         });
         localStorage.setItem("Warning",1);
@@ -203,7 +203,7 @@
                 if(!messageNotice.alertwindow){
                     createNotify("登录", {
                         body: "需要登录",
-                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                         requireInteraction: false
                     });
                     messageNotice.alertShow();
@@ -230,10 +230,6 @@
                     mywin.clearInterval(timer);
                     timer = null;
                     //console.log(portalData);
-                    if(bNextAuto){
-                        autoReview = "true";
-                        localStorage.setItem("autoReview", autoReview );
-                    }
                     saveReviewtoLocal(portalData,data);
                     //submitCountDown = null;
                     return send.apply(_this,data);
@@ -248,10 +244,6 @@
                     console.log("skip",data);
                     mywin.clearInterval(timer);
                     timer = null;
-                    if(bNextAuto){
-                        autoReview = "true";
-                        localStorage.setItem("autoReview", autoReview );
-                    }
                     console.log("skip",portalData);
                     return send.apply(_this,data);
                 }
@@ -295,7 +287,11 @@
                 const response = this.response;
                 const json = JSON.parse(response);
                 if (!json) return;
-                autoReview = localStorage.autoReview;
+                if(bNextAuto){
+                    autoReview = "true";
+                    localStorage.setItem("autoReview", autoReview );
+                } else
+                    autoReview = localStorage.autoReview;
                 portalData = json.result;
                 //console.log(json);
                 //console.log("injectTimer:needCaptcha",needCaptcha);
@@ -576,7 +572,21 @@
                         }
                         //          console.log(countdown);
                         //          console.log(submitCountDown);
-                        if(autoReview=="true"){
+                        let tmpautoReview = localStorage.autoReview; let ilimit = reviewTime * 60 +60 ;
+                        if(tmpautoReview) {
+                            if(tmpautoReview == "true") {
+                                ilimit = postTimeoutLimit;
+                            }
+                        }
+                        if(Math.ceil((expiry - new Date().getTime()) / 1000) < ilimit +10 & Math.ceil((expiry - new Date().getTime()) / 1000) >= ilimit +9) {
+                            createNotify("注意", {
+                                body: "将到截止时间，10秒后强制提交!",
+                                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                                requireInteraction: false
+                            });
+                            console.log(Math.ceil((expiry - new Date().getTime()) / 1000));
+                        }
+                        if(autoReview=="true" || Math.ceil((expiry - new Date().getTime()) / 1000) < ilimit){
                             if(submitCountDown<=0){  //倒计时0，提交
                                 if(portalData){
                                     setTimeout(function(){
@@ -1374,7 +1384,7 @@
             if(rdata.rejectReasons || rdata.duplicate ){
                 createNotify("找到审核记录："+portal.title, {
                     body: rdata.duplicate ?? rdata.rejectReasons,
-                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                     requireInteraction: false
                 });
             } else {
@@ -1385,7 +1395,7 @@
             {
                 createNotify(portal.title, {
                     body: gpausePortalString[gpausePortal.indexOf(portal.title)],
-                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                     requireInteraction: true
                 });
             } else
@@ -1395,14 +1405,14 @@
                     if(editGYMAuto == "true") {
                         createNotify(portal.title, {
                             body: "池中挪po，请注意",
-                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                             requireInteraction: true
                         });
                         return true;
                     } else {
                         createNotify(portal.title, {
                             body: "池中挪po，自动选中",
-                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warb.ico",
                             requireInteraction: false
                         });
                         return false;
@@ -1683,7 +1693,7 @@
                 //    console.log("privatePortal1",$("#privatePortal1"));
             }
             //       }
-        } catch(e){skey="";console.log(e);}
+        } catch(e){console.log(e);}
 
         prpo = JSON.parse(localStorage.getItem('Reviewed2'));
         //       console.log(prpo);
