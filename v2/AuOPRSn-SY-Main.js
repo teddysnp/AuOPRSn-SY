@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.5.7
+// @version      4.5.8
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -139,6 +139,7 @@
                 return;
             }
             let miss = JSON.parse(res)[0];
+            console.log(miss);
             if(miss){
                 let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/"+miss.title+".json";
                 console.log(miss.title);
@@ -151,7 +152,7 @@
                         },1000);
                         return;
                     }
-                    localStorage.setItem("currentmissiontitle",miss.title);
+                    localStorage.setItem("currentmissiontitle",JSON.stringify(miss));
                     localStorage.setItem("currentmission",res);
                     missionlist =  eval("(" + res + ")");
                 });
@@ -269,7 +270,7 @@
             const ref = get();
             if (ref) resolve(ref);
             else if (!triesLeft) reject();
-            else setTimeout(queryLoop, 100);
+            else setTimeout(queryLoop, 250);
             triesLeft--;
         }
         queryLoop();
@@ -975,7 +976,7 @@
                             console.log(dupload);
                             let dupdata = dupload ;
                             //dupdata.push(dupload);
-                            let susermark={useremail:userEmail,title:portaldata.title,datatime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),type:portaldata.type,
+                            let susermark={id:portaldata.id,title:portaldata.title,datatime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),type:portaldata.type,
                                            lat:portaldata.lat,lng:portaldata.lng,imageUrl:portaldata.imageUrl,supportingImageUrl:portaldata.supportingImageUrl,streetAddress:portaldata.streetAddress};
                             dupdata.push(susermark);
                             console.log(dupdata);
@@ -1579,10 +1580,13 @@
     {
         try{
             const retitle = document.getElementById("latestpo");
-            //    console.log("retitle",retitle);
+            //console.log("retitle",retitle);
             if( !retitle){
                 let tmpmissionlist = missionlist;
+                let miss1 = JSON.parse(localStorage.currentmissiontitle);
                 let prpo1 = JSON.parse(localStorage.getItem('Reviewed1'));
+                let prpo2 = JSON.parse(localStorage.getItem('Reviewed2'));
+                //console.log(prpo1.length);
                 //console.log(prpo1);
                 //console.log(prpo[0]);
                 let stmp =" ";
@@ -1590,8 +1594,8 @@
                 let icnt=0;
                 let userlist=localStorage[userEmail+"user"];
                 if(!userlist) userlist="";
+                //主要部分：生成-最近审的5个po / 任务po
                 if (prpo1!=null){
-                    //生成 ：最近审的5个po / 任务po
                     for(let i=prpo1.length-1;i>=0;i--){
                         let strarr = prpo1[i];
                         try {
@@ -1630,21 +1634,58 @@
                         }
                     }
                 }
+                if (prpo2!=null){
+                    for(let i=prpo2.length-1;i>=0;i--){
+                        let strarr = prpo2[i];
+                        try {
+                            while(strarr.indexOf("undefined")>0){
+                                strarr = strarr.replace("undefined","0");
+                            }
+                            while(strarr.indexOf('""')>0){
+                                strarr = strarr.replace('""','"');
+                            }
+                            while(strarr.indexOf('":","')>0){
+                                strarr = strarr.replace('":","','":"","');
+                            }
+                            //console.log(strarr);
+                            let stmparr = eval("(" + strarr + ")");
+                            if((userlist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail)){
+                                //任务  //0名称,1位置,2开始,3类型,4已审,5时间
+                                //console.log(tmpmissionlist);
+                                for(let k=0;k<tmpmissionlist.length;k++){
+                                    if(stmparr.title==tmpmissionlist[k][0]){
+                                        if(tmpmissionlist[k][3]!="true"){ //第一条匹配的
+                                            if(new Date(stmparr.dt) >= new Date(tmpmissionlist[k][5]+" 00:00:00")){ //进审po池子后审到的
+                                                tmpmissionlist[k][3]="true";tmpmissionlist[k][4]="true"; //标记已经找到;审过了
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } catch(e) {
+                            console.log(e);
+                        }
+                    }
+                }
                 //console.log(stmp);
                 //生成 ：三种任务po归类 ：待完成2|已完成|未进池|已终止4
                 //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
                 let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
                 for (let j=0;j<tmpmissionlist.length;j++){
-                   if(tmpmissionlist[j][6]=="ok"){
+                    if(tmpmissionlist[j][6]=="ok"){
                         tmmiss4+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                    } else if(tmpmissionlist[j][4]=="✓" || tmpmissionlist[j][4]=="true"){
+                    }
+                    else if(tmpmissionlist[j][4]=="✓" || tmpmissionlist[j][4]=="true"){
                         tmmiss1+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                        //                    tmmiss1+="["+tmpmissionlist[j][0]+"]";
-                   } else if (tmpmissionlist[j][2]=="false"){
+                        //tmmiss1+="["+tmpmissionlist[j][0]+"]";
+                    }
+                    else if (tmpmissionlist[j][2]=="✗" || tmpmissionlist[j][2]=="false"){
                         tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                    } else {
-                        tmmiss2+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                        //                    tmmiss2+="["+tmpmissionlist[j][0]+"]";
+                    }
+                    else {
+                        if(tmpmissionlist[j][9]!=userEmail)
+                            tmmiss2+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
+                        //tmmiss2+="["+tmpmissionlist[j][0]+"]";
                     }
                 }
                 //任务完成，给出消息，决定是否暂停                      待开发
@@ -1652,24 +1693,28 @@
               }
               let appreview = document.querySelector("app-review");
               if(appreview){
-                const dva=document.createElement("div");
-                dva.className="userclass missionpo";
-                dva.id="missionpo";
-                dva.textContent="";
-                appreview.insertBefore(dva,appreview.firstChild);
+                  const dva1=document.createElement("div");
+                  dva1.className="userclass missionpo";
+                  dva1.id="missionpo";
+                  dva1.textContent="";
+                  const dva2=document.createElement("div");
+                  dva2.className="userclass latestpo";
+                  dva2.id="latestpo";
+                  dva2.textContent="";
+                  appreview.insertBefore(dva2,appreview.firstChild);
+                  appreview.insertBefore(dva1,appreview.firstChild);
+                  //console.log("missionlist",missionlist);
                   if(missiondisplay == "true"){
-                      $(".userclass.missionpo").replaceWith(
-                          "<font size=3><div class='userclass missionpo' id='missionpo'>【待完成】"+tmmiss2
-                          //+"<p>【已完成】"+tmmiss1
-                          //+"<p>【未进池】"+tmmiss3
-                          //+"<p>【已终止】"+tmmiss4
-                          +"</div></font>"+
-                          "<font size=3><div class='userclasss latestpo' id='latestpo'>【已审po】"+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div><p>");
-                  } else {
-                      $(".userclass.missionpo").replaceWith(
-                          "<font size=3><div class='userclass missionpo' id='missionpo'></div></font>"+
-                          "<font size=3><div class='userclasss latestpo' id='latestpo'>【已审po】"+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div><p>");
+                      if(miss1.state == "going"){
+                          $(".userclass.missionpo").replaceWith(
+                              "<font size=3><div class='userclass missionpo' id='missionpo'>【待完成】"+tmmiss2
+                              //+"<p>【已完成】"+tmmiss1
+                              +"<p>【未进池】"+tmmiss3
+                              //+"<p>【已终止】"+tmmiss4
+                              +"</div></font>");
+                      }
                   }
+                  $(".userclass.latestpo").replaceWith("<font size=3><div class='userclasss latestpo' id='latestpo'>【已审po】"+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div><p>");
               }
             } ;
         } catch (e) {
@@ -1678,11 +1723,29 @@
     }
 
     //首页home显示用户审过的po
-    function showReviewedHome()
+    function showReviewedHome(){
+        console.log(missionlist);
+        if(missionlist.length==0) {
+            if(localStorage.currentmission) missionlist=JSON.parse(localStorage.currentmission);
+        }
+        $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>"
+                                                                 //+"<div><font size=5>skey:"+
+                                                                 //"<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
+                                                                 //"<button class='wf-button' onclick=saveKey()>保存</button></font></div>"+
+                                                                 //"<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>"
+                                                                );
+        $(".showcase-gallery").replaceWith(
+            "<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div>"
+            +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
+            +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
+            +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
+            +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
+        );
+        showReviewedHome1();
+    }
+    function showReviewedHome1()
     {
         try{
-            var strarr ="";
-            var stmparr=[];
             //在首页显示池内已审po的表格
             var prpo = [];
             if(!userEmail)
@@ -1690,19 +1753,6 @@
                 //      userEmail=getUser();  //会引起promise错误
             }
             let cbxmiss = localStorage["cbxmission"];
-            $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>"
-                                                                     //+"<div><font size=5>skey:"+
-                                                                     //"<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
-                                                                     //"<button class='wf-button' onclick=saveKey()>保存</button></font></div>"+
-                                                                     //"<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>"
-                                                                    );
-            $(".showcase-gallery").replaceWith(
-                 "<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div>"
-                 +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
-                 +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
-                 +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
-                 +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
-            );
 
             let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
             let sfdetail = "";
@@ -1741,19 +1791,22 @@
             }
             let smis="<table style='width:100%'><thead><tr><th style='width:20%'>名称</th><th style='width:10%'>通过</th><th style='width:20%'>位置</th><th style='width:10%'>类型</th><th style='width:10%'>开审</th><th style='width:10%'>已审</th><th style='width:25%'>时间</th></tr></thead>";
             let smistmp="";let sstmp="";let ssok="";
+            //console.log("start",missionlist);
             let missionlist1 = missionlist;
             let usernamelist=localStorage[userEmail+"user"];
             if (!usernamelist) usernamelist="";
             smistmp=smis+"<tbody>";
-            //           console.log(missionlist);
+            //console.log(missionlist);
 
             prpo = JSON.parse(localStorage.getItem('Reviewed1'));
-            //           console.log(prpo);
-            var stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th><th style='width:40%'>时间</th></tr></thead>";
+            //console.log(prpo);
+            let stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th><th style='width:40%'>时间</th></tr></thead>";
             if (prpo!=null){
+                let strarr ="";
+                let stmparr=[];
                 stmp+="<tbody>";
-                for(var i=prpo.length-1;i>=0;i--){
-                    //               console.log(prpo[i]);
+                for(let i=prpo.length-1;i>=0;i--){
+                    //console.log(prpo[i]);
                     strarr = prpo[i];
                     try {
                         while(strarr.indexOf("undefined")>0){
@@ -1771,27 +1824,25 @@
                             stmparr.score = stmparr.score.replace(/3/g,"D");
                             stmparr.score = stmparr.score.replace(/1/g,"N");
                         }
-                        //                 console.log(JSON.parse(prpo[i]));
-                        //                console.log(stmparr);
-                        //          console.log(stmparr.title,stmparr.dt);
-                      if (prpo.length-1 - i <= privatePortalDisplay1 ) {
-                        stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
-                      }
-                        //          console.log(usernamelist);console.log(stmparr.user);
+                        //console.log(JSON.parse(prpo[i]));
+                        //console.log(stmparr);
+                        //console.log(stmparr.title,stmparr.dt);
+                        if (prpo.length-1 - i <= privatePortalDisplay1 ) {
+                            stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
+                        }
+                        //console.log(usernamelist);console.log(stmparr.user);
                         if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
                             for(let k=0;k<missionlist1.length;k++){
                                 if (missionlist1[k][0]==stmparr.title){  //名称,通过，位置,开始,类型,已审,时间
                                     if(new Date(stmparr.dt)){
                                         if(new Date(missionlist1[k][5]) <= new Date(stmparr.dt)){
-                                            //                         console.log("missionlist1[k][0]:"+missionlist1[k][0]+" stmparr.title:"+stmparr.title);
-                                            missionlist1[k][1] =stmparr.lat+","+stmparr.lng;
+                                            //console.log("missionlist1[k][0]:"+missionlist1[k][0]+" stmparr.title:"+stmparr.title);
+                                            missionlist1[k][1] = stmparr.lat+","+stmparr.lng;
                                             missionlist1[k][3] = stmparr.type;
-                                            missionlist1[k][4] = "✓";
-                                            missionlist1[k][5] = stmparr.dt;
-                                        }} else {
-                                            missionlist1[k][4] = "✗";
-                                            missionlist1[k][5] = "";
+                                            missionlist1[k][5] = stmparr.dt;//审核时间
+                                            missionlist1[k][4] = "✓";//已审
                                         }
+                                    }
                                 }
                             }
                         }
@@ -1799,61 +1850,80 @@
                         console.log(err);
                     }
                 }
-                for(let k=0;k<missionlist1.length;k++){
-                    if (missionlist1[k][2]=="true") {sstmp="✓"} else {sstmp="✗";};
-                    if(missionlist1[k][6]=="ok"){ssok="✓"} else {ssok="";};
-                    smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td><td>"+ssok+"</td><td>"+missionlist1[k][1]+"</td><td>"+missionlist1[k][3]+"</td><td>"+sstmp+"</td><td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td></tr>";
-                }
-                smistmp+="</tbody></table>";
                 stmp+="</tbody></table>";
-                //    console.log("privatePortal1",$("#privatePortal1"));
-                $("#missionPortal1").replaceWith(smistmp);
+                //console.log("privatePortal1",$("#privatePortal1"));
                 $("#privatePortal1").replaceWith(stmp);
-                //      console.log("stmp",stmp);
-                //    console.log("privatePortal1",$("#privatePortal1"));
+                //console.log("stmp",stmp);
+                //console.log("privatePortal1",$("#privatePortal1"));
             }
             //       }
-        } catch(e){console.log(e);}
 
-        prpo = JSON.parse(localStorage.getItem('Reviewed2'));
-        //       console.log(prpo);
-        //       console.log(prpo[0]);
-        stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th><th style='width:40%'>时间</th></tr></thead>";
-        if (prpo!=null){
-            stmp+="<tbody>";
-            //           console.log(prpo.length);
-            for(i=prpo.length-1;i>=0;i--){
-                strarr = prpo[i];
-                try{
-                    while(strarr.indexOf("undefined")>0){
-                        strarr = strarr.replace("undefined","0");
+            let prpo2 = JSON.parse(localStorage.getItem('Reviewed2'));
+            //console.log(prpo2);
+            //console.log(prpo2[0]);
+            stmp = "<table style='width:100%'><thead><tr><th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th><th style='width:40%'>时间</th></tr></thead>";
+            if (prpo2!=null){
+                let strarr ="";
+                let stmparr=[];
+                stmp+="<tbody>";
+                //console.log(prpo2.length);
+                for(let i=prpo2.length-1;i>=0;i--){
+                    strarr = prpo2[i];
+                    try{
+                        while(strarr.indexOf("undefined")>0){
+                            strarr = strarr.replace("undefined","0");
+                        }
+                        while(strarr.indexOf('""')>0){
+                            strarr = strarr.replace('""','"');
+                        }
+                        while(strarr.indexOf('":","')>0){
+                            strarr = strarr.replace('":","','":"","');
+                        }
+                        //console.log(strarr);
+                        stmparr = eval("(" + strarr + ")");
+                        if(stmparr.score.length==7){
+                            stmparr.score = stmparr.score.replace(/5/g,"Y");
+                            stmparr.score = stmparr.score.replace(/3/g,"D");
+                            stmparr.score = stmparr.score.replace(/1/g,"N");
+                        }
+                        //console.log(JSON.parse(prpo2[i]));
+                        if (prpo2.length-1 - i <= privatePortalDisplay2 ) {
+                            stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
+                        }
+                        if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
+                            for(let k=0;k<missionlist1.length;k++){
+                                if (missionlist1[k][0]==stmparr.title){  //名称,通过，位置,开始,类型,已审,时间
+                                    //console.log(stmparr);
+                                    if(new Date(stmparr.dt)){
+                                        if(new Date(missionlist1[k][5]) <= new Date(stmparr.dt)){
+                                            //console.log("missionlist1[k][0]:"+missionlist1[k][0]+" stmparr.title:"+stmparr.title);
+                                            //console.log(stmparr);
+                                            missionlist1[k][1] =stmparr.lat+","+stmparr.lng;
+                                            missionlist1[k][3] = stmparr.type;
+                                            missionlist1[k][5] = stmparr.dt;
+                                            missionlist1[k][4] = "✓";//已审
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.log(err);
                     }
-                    while(strarr.indexOf('""')>0){
-                        strarr = strarr.replace('""','"');
-                    }
-                    while(strarr.indexOf('":","')>0){
-                        strarr = strarr.replace('":","','":"","');
-                    }
-                    //        console.log(strarr);
-                    stmparr = eval("(" + strarr + ")");
-                    if(stmparr.score.length==7){
-                        stmparr.score = stmparr.score.replace(/5/g,"Y");
-                        stmparr.score = stmparr.score.replace(/3/g,"D");
-                        stmparr.score = stmparr.score.replace(/1/g,"N");
-                    }
-                    //console.log(JSON.parse(prpo[i]));
-                    stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
-                    if (prpo.length-1 - i > privatePortalDisplay2 ) {
-                        break;
-                    }
-                } catch (err) {
-                    console.log(err);
                 }
+                stmp+="</tbody></table>";
+                $("#privatePortal2").replaceWith(stmp);
+                //console.log(prpo[0].title);
             }
-            stmp+="</tbody></table>";
-            $("#privatePortal2").replaceWith(stmp);
-            //       console.log(prpo[0].title);
-        }
+            for(let k=0;k<missionlist1.length;k++){
+                if(missionlist1[k][9] == userEmail){ missionlist1[k][4] = "O";}//自己
+                if (missionlist1[k][2]=="true") {missionlist1[k][2]="✓"} else {missionlist1[k][2]="✗";};//开审
+                if(missionlist1[k][6]=="ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
+                smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td><td>"+missionlist1[k][6]+"</td><td>"+missionlist1[k][1]+"</td><td>"+missionlist1[k][3]+"</td><td>"+missionlist1[k][2]+"</td><td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td></tr>";
+            }
+            smistmp+="</tbody></table>";
+            $("#missionPortal1").replaceWith(smistmp);
+        } catch(e){console.log(e);}
     }
 
     //css
