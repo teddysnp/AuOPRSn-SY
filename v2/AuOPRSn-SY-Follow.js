@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4.5
+// @version      1.4.6
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -517,9 +517,9 @@
                                         //setTimeout(function(){ic.checked = true;},500);
                                         icbx.parentNode.click();
                                     }
-                                },2000);
+                                },500);
                             }
-                        },1000);
+                        },500);
                     } else if (rdata.rejectReasons[0] == "SAFETY") {
                         //setTimeout(function(){
                             if(document.querySelector('#safe-card').querySelectorAll('button')[2])
@@ -537,7 +537,7 @@
                                     document.querySelector('#permanent-location-card').querySelectorAll('button')[2].click();
                                 }
                             }
-                        },1000);
+                        },500);
                     }
                     else {
                         if(rejcbxengstr.indexOf(rdata.rejectReasons[i])>=0) {
@@ -572,7 +572,7 @@
                                             }
                                         }
                                     });
-                                },1000);
+                                },500);
                             //},1000);
                         }
                     }
