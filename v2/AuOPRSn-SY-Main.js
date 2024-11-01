@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.5.9
+// @version      4.6
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -565,7 +565,7 @@
                     let ss1=document.getElementById('appropriate-card');
                     if (document.getElementById('appropriate-card') || document.querySelector('app-review-edit') || document.querySelector('app-review-photo'))
                     {
-                        //          console.log(scoreAlready);
+                        //console.log(scoreAlready);
                         if (!scoreAlready){
                             setTimeout(function(){
                                 showReviewedReview();
@@ -574,8 +574,8 @@
                             divscore.textContent = "打分："+score;
                             scoreAlready = true;
                         }
-                        //          console.log(countdown);
-                        //          console.log(submitCountDown);
+                        //console.log(countdown);
+                        //console.log(submitCountDown);
                         let tmpautoReview = localStorage.autoReview; let ilimit = reviewTime * 60 +60 ;
                         if(tmpautoReview) {
                             if(tmpautoReview == "true") {
@@ -621,20 +621,22 @@
                                         let isub = false;
                                         //适当拒
                                         let rej1 = document.querySelector("app-appropriate-rejection-flow-modal");
-                                        if(rej1) {
-                                            let rejbutton = rej1.querySelector('button[wftype="primary"]');
+                                        //console.log("rej1",rej1);
+                                        if(rej1) {//wf-button wf-split-button__main wf-button--primary
+                                            let rejbutton = rej1.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
                                             if (rejbutton) {
-                                                console.log("timer","适当性拒！");
+                                                console.log("timer submit","适当性拒！");
                                                 isub = true;
                                                 rejbutton.click();
                                             }
                                         }
                                         //安全拒
                                         let rej2 = document.querySelector("app-safe-rejection-flow-modal");
+                                        //console.log("rej2",rej2);
                                         if(rej2) {
-                                            let rejbutton = rej2.querySelector('button[wftype="primary"]');
+                                            let rejbutton = rej2.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
                                             if (rejbutton) {
-                                                console.log("timer","安全拒！");
+                                                console.log("timer submit","安全拒！");
                                                 isub = true;
                                                 rejbutton.click();
                                             }
@@ -642,7 +644,7 @@
                                         //准确拒
                                         let rej3 = document.querySelector("app-accuracy-rejection-flow-modal");
                                         if(rej3) {
-                                            let rejbutton = rej3.querySelector('button[wftype="primary"]');
+                                            let rejbutton = rej3.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
                                             if (rejbutton) {
                                                 console.log("timer","准确拒！");
                                                 isub = true;
@@ -652,7 +654,7 @@
                                         //永久拒
                                         let rej4 = document.querySelector("app-location-permanent-rejection-flow-modal");
                                         if(rej4) {
-                                            let rejbutton = rej4.querySelector('button[wftype="primary"]');
+                                            let rejbutton = rej4.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
                                             if (rejbutton) {
                                                 console.log("timer","永久拒！");
                                                 isub = true;
@@ -660,31 +662,33 @@
                                             }
                                         }
                                         //重复
-                                        if(!isub){
-                                            let supcommit = document.querySelector("app-confirm-duplicate-modal");
-                                            let supcommitbtn = null;
-                                            if(supcommit){
-                                                console.log(supcommit);
-                                                supcommitbtn = supcommit.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
-                                                if(supcommitbtn) {
-                                                    console.log("timer","duplicate clicked!");
-                                                    isub = true;
-                                                    supcommitbtn.click();
+                                        setTimeout(function(){
+                                            if(!isub){
+                                                let supcommit = document.querySelector("app-confirm-duplicate-modal");
+                                                let supcommitbtn = null;
+                                                if(supcommit){
+                                                    //console.log(supcommit);
+                                                    supcommitbtn = supcommit.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                                    if(supcommitbtn) {
+                                                        console.log("timer submit","duplicate clicked!");
+                                                        isub = true;
+                                                        supcommitbtn.click();
+                                                    }
                                                 }
-                                            }
-                                        }
-                                        if(!isub){
-                                            let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
-                                            if (p1){
-                                                if(!submitButtonClicked){
-                                                    //console.log(submitButtonClicked);
-                                                    submitButtonClicked = true;
-                                                    console.log("timer","submit!");
-                                                    submitCountDown=null;
-                                                    p1.click();
+                                            }},200);
+                                        setTimeout(function(){
+                                            if(!isub){
+                                                let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                                if (p1){
+                                                    if(!submitButtonClicked){
+                                                        //console.log(submitButtonClicked);
+                                                        submitButtonClicked = true;
+                                                        console.log("timer","submit!");
+                                                        submitCountDown=null;
+                                                        p1.click();
+                                                    }
                                                 }
-                                            }
-                                        }
+                                            }},200);
                                     }
                                 }
                             }
@@ -1894,7 +1898,7 @@
                 if(missionlist1[k][6]=="ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
                 smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td>"
                     +"<td>"+missionlist1[k][6]+"</td><td>"+missionlist1[k][1]+"</td>"
-                    +"<td><a href='https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review."+missionlist1[k][10]+".json' target='_blank'>"+missionlist1[k][3]+"<a></td>"
+                    +"<td><a href='https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/html.users.list.review.html?id="+missionlist1[k][10]+"' target='_blank'>"+missionlist1[k][3]+"<a></td>"
                     +"<td>"+missionlist1[k][2]+"</td>"
                     +"<td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td>"
                     +"</tr>";
