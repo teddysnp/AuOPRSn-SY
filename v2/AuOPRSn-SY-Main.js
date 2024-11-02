@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.6.2
+// @version      4.6.3
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1920,6 +1920,14 @@
             let id = event.srcElement.attributes['tagname'].textContent;
             let us = event.srcElement.attributes['us'].textContent;
             let userEmailList = [];
+            let idUserEmail1 = document.getElementById("idUserEmail");
+            if(idUserEmail1.style.display=="none") {
+                let sss = event.srcElement;
+                sss.textContent = sss.textContent + "↓";
+            } else {
+                let sss = event.srcElement;
+                sss.textContent = sss.textContent.replace(/↓/g,"");
+            }
             if(us=="us1") {
                 userEmailList = JSON.parse(JSON.stringify(userEmailList1));
             } else if(us=="us2") {
@@ -1945,10 +1953,19 @@
                             if(res.indexOf(userEmailList[i])>=0) {
                                 //console.log(res);
                                 //console.log(userEmailList[i]);
-                                stmp+="<div class='sqok'>"+userEmailList[i].replace(".com","")+"</div>";
+                                if(userEmailList[i]==userEmail){
+                                    stmp+="<div class='sqselfok'>"+userEmailList[i].replace(".com","")+"</div>";
+                                } else {
+                                    stmp+="<div class='sqok'>"+userEmailList[i].replace(".com","")+"</div>";
+                                }
                             } else {
-                                stmp+="<div class='sqno'>"+userEmailList[i].replace(".com","")+"</div>";
+                                if(userEmailList[i]==userEmail){
+                                    stmp+="<div class='sqselfno'>"+userEmailList[i].replace(".com","")+"</div>";
+                                } else {
+                                    stmp+="<div class='sqno'>"+userEmailList[i].replace(".com","")+"</div>";
+                                }
                             }
+
                             if((i+1)%5==0) {
                                 stmp+="</div><p><div style='padding-top:1em;display: flex;'>";
                             }
@@ -2127,30 +2144,54 @@
             margin-left: 0em;
             text-align : center;
           }
-.container {
-   display: flex;
-    justify-content: space-around;
-    align-items: center;
-    height: 100vh;
-}
-.sqno {
+          .container {
+              display: flex;
+              justify-content: space-around;
+              align-items: center;
+              height: 100vh;
+          }
+          .sqno {
               margin-left: 2em;
               padding-top: 1em;
-    width: 250px;
-    height: 50px;
-    font-size:18px;
-    background-color: #cccccc;
-}
-.sqok {
+              width: 250px;
+              height: 50px;
+              font-size:18px;
+              background-color: #cccccc;
+          }
+          .sqok {
               margin-left: 2em;
               padding-top: 1em;
-    width: 250px;
-    height: 50px;
-    font-size:18px;
-    color: #ffe600;
-    background-color: #007947;
-}
-`;
+              width: 250px;
+              height: 50px;
+              font-size:18px;
+              color: #ffe600;
+              background-color: #007947;
+          }
+          .sqselfno {
+              margin-left: 2em;
+              padding-top: 1em;
+              width: 250px;
+              height: 50px;
+              borderStyle:solid;
+              borderWidth:2px;
+              bordercolor:#f58220;
+              font-size:18px;
+              color:#f58220;
+              background-color: #cccccc;
+          }
+          .sqselfok {
+              margin-left: 2em;
+              padding-top: 1em;
+              width: 250px;
+              height: 50px;
+              borderStyle:solid;
+              borderWidth:2px;
+              bordercolor:#f58220;
+              font-size:18px;
+              color: #faa755;
+              background-color: #007947;
+          }
+        `;
         const style = document.createElement('style');
         style.type = 'text/css';
         style.innerHTML = css;
