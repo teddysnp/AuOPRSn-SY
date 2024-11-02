@@ -15,6 +15,14 @@
 
     setInterval(() => {
 //      console.log(document.querySelector("div[class='rc-doscaptcha-body']"));
+        //莫名其妙的错误，重载
+        let sc = document.getElementById("idcountdown");
+        if(sc) {
+            if(parseInt(sc.textContent)<-300) {
+                console.log("error","300秒重载");
+                mywin.reload();
+            }
+        }
         if(document.querySelector("div[class='rc-doscaptcha-body']")){
                 createNotify("傻逼了", {
                     body: "被当成机器人了，歇菜了",
