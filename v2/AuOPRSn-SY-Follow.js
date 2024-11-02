@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4.6
+// @version      1.4.7
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -307,14 +307,14 @@
         });
     }
 
-    //根据标题名有重合，给提示是否重复，并加60秒倒计时
+    //根据标题名有重合，给提示是否重复，并加20秒倒计时
     function isDuplicate(pData){
         if(pData.nearbyPortals.find(p=>{return p.title==pData.title})){
             setTimeout(function(){
                 let iauto = document.getElementById("idautolabel");
                 console.log(iauto);
                 let sc = document.getElementById("idcountdown");
-                sc.textContent = sc.textContext + "+60";
+                sc.textContent = sc.textContext + "+20";
                 if (iauto)
                 {
                     if (iauto.textContent == "自动"){
