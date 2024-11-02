@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.6.3
+// @version      4.6.4
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1920,64 +1920,74 @@
             let id = event.srcElement.attributes['tagname'].textContent;
             let us = event.srcElement.attributes['us'].textContent;
             let userEmailList = [];
-            let idUserEmail1 = document.getElementById("idUserEmail");
-            if(idUserEmail1.style.display=="none") {
-                let sss = event.srcElement;
-                sss.textContent = sss.textContent + "↓";
-            } else {
-                let sss = event.srcElement;
+            let idUserEmail = document.getElementById("idUserEmail");
+            let stmp="";
+            let sss = event.srcElement;
+            //console.log(idUserEmail.textContent);
+            if(sss.textContent.indexOf("↓")>0){
                 sss.textContent = sss.textContent.replace(/↓/g,"");
-            }
-            if(us=="us1") {
-                userEmailList = JSON.parse(JSON.stringify(userEmailList1));
-            } else if(us=="us2") {
-                userEmailList = JSON.parse(JSON.stringify(userEmailList2));
-            }
-            let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review."+id+".json")
-            .then(res=>{
-                if(!res) {
-                    setTimeout(function(){
-                        console.log("switchUserReviewDiv","未找到审核文件");
-                    },1000);
-                    return;
+                stmp+="<div id='idUserEmail' style='display: none;'></div>";
+                $("#idUserEmail").replaceWith(stmp);
+            } else {
+                let eus1 = document.querySelectorAll('[us="us1"');
+                eus1.forEach(item=>{
+                    if(item.textContent.indexOf("↓")>0) item.textContent = item.textContent.replace("↓","");
+                });
+                let eus2 = document.querySelectorAll('[us="us2"');
+                eus2.forEach(item=>{
+                    if(item.textContent.indexOf("↓")>0) item.textContent = item.textContent.replace("↓","");
+                });
+                sss.textContent = sss.textContent + "↓";
+                idUserEmail.style.display = "block";
+                if(us=="us1") {
+                    userEmailList = JSON.parse(JSON.stringify(userEmailList1));
+                } else if(us=="us2") {
+                    userEmailList = JSON.parse(JSON.stringify(userEmailList2));
                 }
-                let userreview = res;
-                let idUserEmail = document.getElementById("idUserEmail");
-                let stmp="";
-                //console.log(idUserEmail.style.display);
-                if(idUserEmail.style.display=="none") {
-                    idUserEmail.style.display = "block";
-                    if(idUserEmail){
-                        stmp+="<div id='idUserEmail' style='display:block;'><div style='display: flex;'>";
-                        for(let i=0;i<userEmailList.length;i++){
-                            if(res.indexOf(userEmailList[i])>=0) {
-                                //console.log(res);
-                                //console.log(userEmailList[i]);
-                                if(userEmailList[i]==userEmail){
-                                    stmp+="<div class='sqselfok'>"+userEmailList[i].replace(".com","")+"</div>";
-                                } else {
-                                    stmp+="<div class='sqok'>"+userEmailList[i].replace(".com","")+"</div>";
-                                }
+                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review."+id+".json")
+                .then(res=>{
+                    if(!res) {
+                        setTimeout(function(){
+                            console.log("switchUserReviewDiv","未找到审核文件");
+                        },1000);
+                        return;
+                    }
+                    let userreview = res;
+                    //console.log(idUserEmail.style.display);
+                    stmp+="<div id='idUserEmail' style='display:block;'><div style='display: flex;'>";
+                    //console.log("userEmailList",userEmailList);
+                    //console.log("res",res);
+                    for(let i=0;i<userEmailList.length;i++){
+                        if(res.indexOf(userEmailList[i])>=0) {
+                            //console.log(res);
+                            //console.log(userEmailList[i]);
+                            if(userEmailList[i]==userEmail){
+                                stmp+="<div class='sqselfok'>"+userEmailList[i].replace(".com","")+"</div>";
                             } else {
-                                if(userEmailList[i]==userEmail){
-                                    stmp+="<div class='sqselfno'>"+userEmailList[i].replace(".com","")+"</div>";
-                                } else {
-                                    stmp+="<div class='sqno'>"+userEmailList[i].replace(".com","")+"</div>";
-                                }
+                                stmp+="<div class='sqok'>"+userEmailList[i].replace(".com","")+"</div>";
                             }
-
-                            if((i+1)%5==0) {
-                                stmp+="</div><p><div style='padding-top:1em;display: flex;'>";
+                        } else {
+                            if(userEmailList[i]==userEmail){
+                                stmp+="<div class='sqselfno'>"+userEmailList[i].replace(".com","")+"</div>";
+                            } else {
+                                stmp+="<div class='sqno'>"+userEmailList[i].replace(".com","")+"</div>";
                             }
                         }
-                        stmp+="</div></div>";
+
+                        if((i+1)%5==0) {
+                            stmp+="</div><p><div style='padding-top:1em;display: flex;'>";
+                        }
                     }
-                } else {
-                    stmp+="<div id='idUserEmail' style='display: none;'></div>";
-                }
-                $("#idUserEmail").replaceWith(stmp);
-                console.log(id);
-            });
+                    stmp+="</div></div>";
+                    $("#idUserEmail").replaceWith(stmp);
+                });
+            }
+            setTimeout(function(){
+                //console.log("stmp",stmp);
+                //$("#idUserEmail").replaceWith(stmp);
+            },500);
+            console.log(id);
+
         } catch(e) {
             console.log("switchUserReviewDiv",e);
         }
@@ -2127,6 +2137,7 @@
                        "pkpkqq01@gmail.com","pkpkqq02@outlook.com","pokepokem01@outlook.com","whathowyou@gmail.com","pokemonmiaowa@gmail.com",
                        "pokecntv01@outlook.com","pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com","pokecntv22@outlook.com",
                        "kobebrynan007@gmail.com","xiaohouzi0503@gmail.com","tongliang12345@outlook.com"];
+        userEmailList2=["w4b4uh134@gmail.com","1806424832mjn@gmail.com"];
     }
 
     //css
