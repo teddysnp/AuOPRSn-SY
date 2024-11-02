@@ -1959,6 +1959,9 @@
                                     stmp+="<div class='sqok'>"+userEmailList[i].replace(".com","")+"</div>";
                                 }
                             } else {
+                            console.log("userEmail",userEmail);
+                            console.log("userEmailList",userEmailList[i]);
+                                console.log(userEmailList[i]==userEmail);
                                 if(userEmailList[i]==userEmail){
                                     stmp+="<div class='sqselfno'>"+userEmailList[i].replace(".com","")+"</div>";
                                 } else {
