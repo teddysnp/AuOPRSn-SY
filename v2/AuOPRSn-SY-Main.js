@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.6
+// @version      4.6.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -75,6 +75,8 @@
     }
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let cookie = localStorage.cfcookie;//上传权限
+    let userEmailList1 = [];
+    let userEmailList2 = [];
 
     const loginNotice = null;
 
@@ -1700,7 +1702,7 @@
                                                                  //"<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>"
                                                                 );
         $(".showcase-gallery").replaceWith(
-            "<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div>"
+            "<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div><div id='missionuser'></div>"
             +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
             +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
             +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
@@ -1897,38 +1899,72 @@
                 if (missionlist1[k][2]=="true") {missionlist1[k][2]="✓"} else {missionlist1[k][2]="✗";};//开审
                 if(missionlist1[k][6]=="ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
                 smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td>"
-                    +"<td>"+missionlist1[k][6]+"</td><td>"+missionlist1[k][1]+"</td>"
-                    +"<td><a href='https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/html.users.list.review.html?id="+missionlist1[k][10]+"' target='_blank'>"+missionlist1[k][3]+"<a></td>"
+                    +"<td>"+missionlist1[k][6]+"</td><td>"
+                    +'<td><a href="javascript:void(0);" us="us2" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
+                    +'<td><a href="javascript:void(0);" us="us1" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
                     +"<td>"+missionlist1[k][2]+"</td>"
                     +"<td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td>"
                     +"</tr>";
             }
             smistmp+="</tbody></table>";
+            let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
             $("#missionPortal1").replaceWith(smistmp);
+            $("#missionuser").replaceWith(sultmp);
         } catch(e){console.log(e);}
     }
+//<a href='https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/html.users.list.review.html?id="+missionlist1[k][10]+"' target='_blank'>"
 
-    //css
-    (function() {
-        const css = `
-          .clusertop {
-              margin-left: 2em;
-              padding-top: 0.3em;
-              text-align: left;
-              display: flex;
-              justify-content: flex-start;
-              float: left;
-          }
-          .txtcenter {
-            margin-left: 0em;
-            text-align : center;
-          }
-        `;
-        const style = document.createElement('style');
-        style.type = 'text/css';
-        style.innerHTML = css;
-        document.querySelector('head').appendChild(style);
-    })()
+    switchUserReviewDiv = function() {
+        //console.log("switchUserReviewDiv",id);
+        try{
+            let id = event.srcElement.attributes['tagname'].textContent;
+            let us = event.srcElement.attributes['us'].textContent;
+            let userEmailList = [];
+            if(us=="us1") {
+                userEmailList = JSON.parse(JSON.stringify(userEmailList1));
+            } else if(us=="us2") {
+                userEmailList = JSON.parse(JSON.stringify(userEmailList2));
+            }
+            let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review."+id+".json")
+            .then(res=>{
+                if(!res) {
+                    setTimeout(function(){
+                        console.log("switchUserReviewDiv","未找到审核文件");
+                    },1000);
+                    return;
+                }
+                let userreview = res;
+                let idUserEmail = document.getElementById("idUserEmail");
+                let stmp="";
+                //console.log(idUserEmail.style.display);
+                if(idUserEmail.style.display=="none") {
+                    idUserEmail.style.display = "block";
+                    if(idUserEmail){
+                        stmp+="<div id='idUserEmail' style='display:block;'><div style='display: flex;'>";
+                        for(let i=0;i<userEmailList.length;i++){
+                            if(res.indexOf(userEmailList[i])>=0) {
+                                //console.log(res);
+                                //console.log(userEmailList[i]);
+                                stmp+="<div class='sqok'>"+userEmailList[i].replace(".com","")+"</div>";
+                            } else {
+                                stmp+="<div class='sqno'>"+userEmailList[i].replace(".com","")+"</div>";
+                            }
+                            if((i+1)%5==0) {
+                                stmp+="</div><p><div style='padding-top:1em;display: flex;'>";
+                            }
+                        }
+                        stmp+="</div></div>";
+                    }
+                } else {
+                    stmp+="<div id='idUserEmail' style='display: none;'></div>";
+                }
+                $("#idUserEmail").replaceWith(stmp);
+                console.log(id);
+            });
+        } catch(e) {
+            console.log("switchUserReviewDiv",e);
+        }
+    };
 
     // 滚动到页面顶部
     function scrollToTop() {
@@ -2066,5 +2102,59 @@
         }
         return fmt;
     }
+
+    initUserEmailList();
+    function initUserEmailList(){
+        userEmailList1=["snp66666@gmail.com","tydtyd@gmail.com","zhangnan107107@gmail.com","sunkpty@gmail.com","poketyd@outlook.com",
+                       "zhangnan_007@outlook.com","unicode@163.com","ingresstyd@outlook.com","poketydf02@gmail.com","poketydf03@gmail.com",
+                       "pkpkqq01@gmail.com","pkpkqq02@outlook.com","pokepokem01@outlook.com","whathowyou@gmail.com","pokemonmiaowa@gmail.com",
+                       "pokecntv01@outlook.com","pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com","pokecntv22@outlook.com",
+                       "kobebrynan007@gmail.com ","xiaohouzi0503@gmail.com ","tongliang12345@outlook.com"];
+    }
+
+    //css
+    (function() {
+        const css = `
+          .clusertop {
+              margin-left: 2em;
+              padding-top: 0.3em;
+              text-align: left;
+              display: flex;
+              justify-content: flex-start;
+              float: left;
+          }
+          .txtcenter {
+            margin-left: 0em;
+            text-align : center;
+          }
+.container {
+   display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 100vh;
+}
+.sqno {
+              margin-left: 2em;
+              padding-top: 1em;
+    width: 250px;
+    height: 50px;
+    font-size:18px;
+    background-color: #cccccc;
+}
+.sqok {
+              margin-left: 2em;
+              padding-top: 1em;
+    width: 250px;
+    height: 50px;
+    font-size:18px;
+    color: #ffe600;
+    background-color: #007947;
+}
+`;
+        const style = document.createElement('style');
+        style.type = 'text/css';
+        style.innerHTML = css;
+        document.querySelector('head').appendChild(style);
+    })()
 
 })();
