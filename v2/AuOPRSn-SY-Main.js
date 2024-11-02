@@ -1959,9 +1959,6 @@
                                     stmp+="<div class='sqok'>"+userEmailList[i].replace(".com","")+"</div>";
                                 }
                             } else {
-                            console.log("userEmail",userEmail);
-                            console.log("userEmailList",userEmailList[i]);
-                                console.log(userEmailList[i]==userEmail);
                                 if(userEmailList[i]==userEmail){
                                     stmp+="<div class='sqselfno'>"+userEmailList[i].replace(".com","")+"</div>";
                                 } else {
@@ -2129,7 +2126,7 @@
                        "zhangnan_007@outlook.com","unicode@163.com","ingresstyd@outlook.com","poketydf02@gmail.com","poketydf03@gmail.com",
                        "pkpkqq01@gmail.com","pkpkqq02@outlook.com","pokepokem01@outlook.com","whathowyou@gmail.com","pokemonmiaowa@gmail.com",
                        "pokecntv01@outlook.com","pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com","pokecntv22@outlook.com",
-                       "kobebrynan007@gmail.com ","xiaohouzi0503@gmail.com ","tongliang12345@outlook.com"];
+                       "kobebrynan007@gmail.com","xiaohouzi0503@gmail.com","tongliang12345@outlook.com"];
     }
 
     //css
