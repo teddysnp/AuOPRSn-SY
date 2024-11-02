@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.6.1
+// @version      4.6.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1899,7 +1899,7 @@
                 if (missionlist1[k][2]=="true") {missionlist1[k][2]="✓"} else {missionlist1[k][2]="✗";};//开审
                 if(missionlist1[k][6]=="ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
                 smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td>"
-                    +"<td>"+missionlist1[k][6]+"</td><td>"
+                    +"<td>"+missionlist1[k][6]+"</td>"
                     +'<td><a href="javascript:void(0);" us="us2" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
                     +'<td><a href="javascript:void(0);" us="us1" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
                     +"<td>"+missionlist1[k][2]+"</td>"
