@@ -520,7 +520,7 @@
                                 },500);
                             }
                         },500);
-                    } else if (rdata.rejectReasons[0] == "SAFETY") {
+                    } else if (rdata.rejectReasons[0] == "UNSAFE") {
                         //setTimeout(function(){
                             if(document.querySelector('#safe-card').querySelectorAll('button')[2])
                             { //
