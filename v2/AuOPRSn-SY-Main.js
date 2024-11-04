@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.6.6
+// @version      4.6.7
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1589,7 +1589,7 @@
                                 }
                                 icnt++;
                                 //任务  //0名称,1位置,2开始,3类型,4已审,5时间
-                                console.log(tmpmissionlist);
+                                //console.log(tmpmissionlist);
                                 for(let k=tmpmissionlist.length-1;k>=0;k--){
                                     if(stmparr.title==tmpmissionlist[k][0]){
                                         if(tmpmissionlist[k][4]!="true"){ //第一条匹配的(临时借用missionlist[i][2])
@@ -1625,9 +1625,9 @@
                                 //console.log(tmpmissionlist);
                                 for(let k=0;k<tmpmissionlist.length;k++){
                                     if(stmparr.title==tmpmissionlist[k][0]){
-                                        if(tmpmissionlist[k][3]!="true"){ //第一条匹配的
+                                        if(tmpmissionlist[k][4]!="true"){ //第一条匹配的
                                             if(new Date(stmparr.dt) >= new Date(tmpmissionlist[k][5]+" 00:00:00")){ //进审po池子后审到的
-                                                tmpmissionlist[k][3]="true";tmpmissionlist[k][4]="true"; //标记已经找到;审过了
+                                                tmpmissionlist[k][4]="true"; //标记已经找到;审过了
                                             }
                                         }
                                     }
