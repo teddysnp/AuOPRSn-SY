@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.6.5
+// @version      4.6.6
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1589,12 +1589,12 @@
                                 }
                                 icnt++;
                                 //任务  //0名称,1位置,2开始,3类型,4已审,5时间
-                                //console.log(tmpmissionlist);
+                                console.log(tmpmissionlist);
                                 for(let k=tmpmissionlist.length-1;k>=0;k--){
                                     if(stmparr.title==tmpmissionlist[k][0]){
-                                        if(tmpmissionlist[k][2]!="true"){ //第一条匹配的(临时借用missionlist[i][2])
+                                        if(tmpmissionlist[k][4]!="true"){ //第一条匹配的(临时借用missionlist[i][2])
                                             if(new Date(stmparr.dt) >= new Date(tmpmissionlist[k][5]+" 00:00:00")){ //进审po池子后审到的
-                                                tmpmissionlist[k][2]="true";tmpmissionlist[k][4]="true"; //标记已经找到;审过了
+                                                tmpmissionlist[k][4]="true"; //标记已经找到;审过了
                                             }
                                         }
                                     }
@@ -1639,7 +1639,7 @@
                     }
                 }
                 //console.log(stmp);
-                //生成 ：三种任务po归类 ：待完成2|已完成|未进池|已终止4
+                //生成 ：三种任务po归类 ：待完成2|已完成1|未进池3|已终止4
                 //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
                 let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
                 for (let j=0;j<tmpmissionlist.length;j++){
