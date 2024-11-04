@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4.7
+// @version      1.4.8
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -36,9 +36,9 @@
             //console.log("isTrusted",event.isTrusted);
             isUserClick = event.isTrusted;
             if(event.isTrusted) {
-                //console.log(event);
+                console.log(event.srcElement.innerText);
                 let iauto = document.getElementById("idautolabel");
-                //console.log(iauto.textContent);
+                console.log(iauto.textContent);
                 if(event.srcElement.innerText == "thumb_down" || event.srcElement.innerText == "標記為重複") {
                     if (iauto.textContent == "自动") {
                         iautoman = "自动";
