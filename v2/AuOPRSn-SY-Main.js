@@ -2139,11 +2139,12 @@
 
     initUserEmailList();
     function initUserEmailList(){
-        userEmailList1=["snp66666@gmail.com","tydtyd@gmail.com","zhangnan107107@gmail.com","sunkpty@gmail.com","poketyd@outlook.com",
-                       "zhangnan_007@outlook.com","unicode@163.com","tydingress@outlook.com","poketydf02@gmail.com","poketydf03@gmail.com",
-                       "pkpkqq01@gmail.com","pkpkqq02@outlook.com","pokepokem01@outlook.com","whathowyou@gmail.com","pokemonmiaowa@gmail.com",
-                       "pokecntv01@outlook.com","pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com","pokecntv22@outlook.com",
-                       "kobebrynan007@gmail.com","xiaohouzi0503@gmail.com","tongliang12345@outlook.com"];
+        userEmailList1=["snp66666@gmail.com","kobebrynan007@gmail.com","xiaohouzi0503@gmail.com","pokemonmiaowa@gmail.com","tydtyd@gmail.com",
+                        "zhangnan107107@gmail.com","sunkpty@gmail.com","zhangnan_007@outlook.com","unicode@163.com","tongliang12345@outlook.com",
+                       "pkpkqq01@gmail.com","pkpkqq02@outlook.com","tydingress@outlook.com","poketydf02@gmail.com","poketydf03@gmail.com",
+                       "poketyd@outlook.com","pokecntv01@outlook.com","pokecntv22@outlook.com","whathowyou@gmail.com","pokepokem01@outlook.com",
+                       "pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com"
+                       ];
         userEmailList2=["w4b4uh134@gmail.com","1806424832mjn@gmail.com"];
     }
 
