@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.6.7
+// @version      4.6.8
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -132,7 +132,7 @@
     }
 
     mywin.onload = function() {
-        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/missionlist.json")
+        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission.list.json")
         .then(res=>{
             console.log("读取网络任务");
             //console.log("res",res);
@@ -145,7 +145,7 @@
             let miss = JSON.parse(res)[0];
             console.log(miss);
             if(miss){
-                let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/"+miss.title+".json";
+                let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+miss.title+".json";
                 console.log(miss.title);
                 let resp1 = U_XMLHttpRequest("GET",title)
                 .then(res=>{
@@ -938,6 +938,9 @@
     function uploadReviewMark(portaldata){
         try{
             if(!missionlist){ return;}
+            let miss=localStorage.currentmissiontitle;
+            let ititle=null;
+            if(miss) ititle=JSON.parse(miss).title;
             let pname = null; let preview=null;
             for(let i=0;i<missionlist.length;i++){
                 if(missionlist[i][0] == portaldata.title) {
@@ -949,7 +952,7 @@
             if(pname == null) {return;}
 
             if(portaldata.id){
-                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review.mission.portallist.json")
+                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+ititle+".portallist.json")
                 .then(res=>{
                     console.log("读取任务po列表");
                     //console.log("res",res);
@@ -967,7 +970,11 @@
                             +'"supportingImageUrl":"'+portaldata.supportingImageUrl+'",'
                             +'"streetAddress":"'+portaldata.streetAddress+'"'
                             + "}]";
-                            uploadFile("PUT","review.mission.portallist.json",susermark);
+                            if(ititle) {
+                                uploadFile("PUT","mission/mission."+ititle+".portallist.json",susermark);
+                            } else {
+                                console.log("错误：","未获取任务名！");
+                            }
                         },1000);
                         return;
                     } else {
@@ -989,7 +996,12 @@
                             dupdata.push(susermark);
                             console.log(dupdata);
                             console.log(JSON.stringify(dupdata));
-                            uploadFile("PUT","review.mission.portallist.json",JSON.stringify(dupdata));
+                            if(ititle) {
+                                uploadFile("PUT","mission/mission."+ititle+".portallist.json",JSON.stringify(dupdata));
+                            } else
+                            {
+                                console.log("错误：","未获取任务名！");
+                            }
                         }
                     }
                 },err=>{
@@ -997,7 +1009,7 @@
                 });
 
                 console.log("任务po，保存用户审核打卡...");
-                let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review."+portaldata.id+".json")
+                let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
                 .then(res=>{
                     //如果任务未开审，则更新任务为开审并加id
                     console.log("preview",preview);
@@ -1011,11 +1023,9 @@
                             }
                         }
                         console.log("update1",missionlist);
-                        let miss=localStorage.currentmissiontitle;
                         if(miss){
-                            let ititle=JSON.parse(miss).title;
                             console.log("ititle",ititle);
-                            if(miss) uploadFile("PUT",ititle+".json",JSON.stringify(missionlist));
+                            if(miss) uploadFile("PUT","mission/mission."+ititle+".json",JSON.stringify(missionlist));
                             console.log("更新任务为开审",portaldata.title);
                         }
                     }
@@ -1029,7 +1039,7 @@
                             + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
                             +'"performance":"' + performance +'"'
                             + "}]";
-                            uploadFile("PUT","review."+portaldata.id+".json",susermark);
+                            uploadFile("PUT","portal/portalusermail/portal."+portaldata.id+".usermail.json",susermark);
                         },1000);
                         return;
                     } else {
@@ -1047,7 +1057,7 @@
                         dupdata.push(susermark);
                         console.log(dupdata);
                         console.log(JSON.stringify(dupdata));
-                        uploadFile("PUT","review."+portaldata.id+".json",JSON.stringify(dupdata));
+                        uploadFile("PUT","portal/portalusermail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
                     }
                 },err=>{
                     console.log(err);
@@ -1899,7 +1909,7 @@
                 $("#privatePortal2").replaceWith(stmp);
                 //console.log(prpo[0].title);
             }
-            //console.log("missionlist1",missionlist1);
+            console.log("missionlist1",missionlist1);
             for(let k=0;k<missionlist1.length;k++){
                 //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id
                 if(missionlist1[k][9] == userEmail){ missionlist1[k][4] = "O";}//自己
@@ -1907,8 +1917,8 @@
                 if(missionlist1[k][6]=="ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
                 smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td>"
                     +"<td>"+missionlist1[k][6]+"</td>"
-                    +'<td><a href="javascript:void(0);" us="us2" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
-                    +'<td><a href="javascript:void(0);" us="us1" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
+                    +'<td><a href="javascript:void(0);" us="us2" owner="'+missionlist1[k][4]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
+                    +'<td><a href="javascript:void(0);" us="us1" owner="'+missionlist1[k][4]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
                     +"<td>"+missionlist1[k][2]+"</td>"
                     +"<td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td>"
                     +"</tr>";
@@ -1926,6 +1936,7 @@
         try{
             let id = event.srcElement.attributes['tagname'].textContent;
             let us = event.srcElement.attributes['us'].textContent;
+            let owner = event.srcElement.attributes['owner'].textContent;
             let userEmailList = [];
             let idUserEmail = document.getElementById("idUserEmail");
             let stmp="";
@@ -1951,22 +1962,24 @@
                 } else if(us=="us2") {
                     userEmailList = JSON.parse(JSON.stringify(userEmailList2));
                 }
-                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/review."+id+".json")
+                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+id+".useremail.json")
                 .then(res=>{
+                    let userreview = [];
                     if(!res) {
                         setTimeout(function(){
                             console.log("switchUserReviewDiv","未找到审核文件");
                         },1000);
-                        return;
+                        //return;
+                    } else {
+                        userreview = res;
                     }
-                    let userreview = res;
                     //console.log(idUserEmail.style.display);
                     stmp+="<div id='idUserEmail' style='display:block;'><div style='display: flex;'>";
                     //console.log("userEmailList",userEmailList);
-                    //console.log("res",res);
+                    //console.log("userreview",userreview);
                     for(let i=0;i<userEmailList.length;i++){
-                        if(res.indexOf(userEmailList[i])>=0) {
-                            //console.log(res);
+                        if(userreview.indexOf(userEmailList[i])>=0) {
+                            //console.log(userreview);
                             //console.log(userEmailList[i]);
                             if(userEmailList[i]==userEmail){
                                 stmp+="<div class='sqselfok'>"+userEmailList[i].replace(".com","")+"</div>";
@@ -1975,7 +1988,11 @@
                             }
                         } else {
                             if(userEmailList[i]==userEmail){
-                                stmp+="<div class='sqselfno'>"+userEmailList[i].replace(".com","")+"</div>";
+                                if(owner=="O"){
+                                    stmp+="<div class='sqselfowner'>"+userEmailList[i].replace(".com","")+"</div>";
+                                } else {
+                                    stmp+="<div class='sqselfno'>"+userEmailList[i].replace(".com","")+"</div>";
+                                }
                             } else {
                                 stmp+="<div class='sqno'>"+userEmailList[i].replace(".com","")+"</div>";
                             }
@@ -1986,7 +2003,10 @@
                         }
                     }
                     stmp+="</div></div>";
+                    //console.log("stmp",stmp);
                     $("#idUserEmail").replaceWith(stmp);
+                },err=>{
+                    console.log("err","not found");
                 });
             }
             setTimeout(function(){
@@ -2185,6 +2205,18 @@
               font-size:18px;
               color: #ffe600;
               background-color: #007947;
+          }
+          .sqselfowner {
+              margin-left: 2em;
+              padding-top: 1em;
+              width: 250px;
+              height: 50px;
+              borderStyle:solid;
+              borderWidth:2px;
+              bordercolor:#f58220;
+              font-size:18px;
+              color:#fcf16e;
+              background-color: #7bbfea;
           }
           .sqselfno {
               margin-left: 2em;
