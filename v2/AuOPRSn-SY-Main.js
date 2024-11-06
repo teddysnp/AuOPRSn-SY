@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.6.8
+// @version      4.6.9
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1039,7 +1039,7 @@
                             + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
                             +'"performance":"' + performance +'"'
                             + "}]";
-                            uploadFile("PUT","portal/portalusermail/portal."+portaldata.id+".usermail.json",susermark);
+                            uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
                         },1000);
                         return;
                     } else {
@@ -1057,7 +1057,7 @@
                         dupdata.push(susermark);
                         console.log(dupdata);
                         console.log(JSON.stringify(dupdata));
-                        uploadFile("PUT","portal/portalusermail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
+                        uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
                     }
                 },err=>{
                     console.log(err);
