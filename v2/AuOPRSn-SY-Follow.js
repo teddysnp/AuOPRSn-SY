@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4.8
+// @version      1.4.9
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -38,7 +38,7 @@
             if(event.isTrusted) {
                 console.log(event.srcElement.innerText);
                 let iauto = document.getElementById("idautolabel");
-                console.log(iauto.textContent);
+                if(iauto) console.log(iauto.textContent);
                 if(event.srcElement.innerText == "thumb_down" || event.srcElement.innerText == "標記為重複") {
                     if (iauto.textContent == "自动") {
                         iautoman = "自动";
@@ -81,11 +81,12 @@
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
                     },
                     onload: function(res){
-                        //console.log("postjson",res)
+                        console.log("postjson",res)
                         if(res.status === 200){
                             //修改首页上传显示  绿：1d953f
                             let iup = document.getElementById("iduplabel");
                             if(iup) iup.style="font-weight:bold;color:#1d953f";
+                            console.log(purl+pid+".json");
                             console.log('审核记录上传成功:'+pid)
                         }else{
                             let iup = document.getElementById("iduplabel");
@@ -352,7 +353,8 @@
         if(pdata.type=="PHOTO" || pdata.type=="EDIT"){
             return null;
         }
-        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/" +id +".json")
+        //console.log("https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portalreview/portal." +id +".json");
+        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portalreview/portal." +id +".json")
         .then(res=>{
             //console.log("getjson",res);
             if(!res) {
@@ -394,14 +396,25 @@
                 isDuplicate(pdata);
                 return null;
             }
+            //20241106，将原审核记录通过脚本移动到portal/portalreview下，导致20141105以前的文件中多了：
+            //  开头"(应该没有)  结尾:"(应该没有)  中间\"(应该无\)
+            //20241106以后生成的审核记录应该无此问题
+            let res1=null;
+            if(res.substring(0,1)=='"')
+            {
+                res1=res.substring(1,res.length-1);
+                res1=res1.replace(/\\/g,"");
+            } else
+                res1=res;
+            //console.log("res1",JSON.parse(res1));
             let creviewdata = null;
             let title=pdata.title;let lat=pdata.lat;let lng=pdata.lng;
-            if(res.substring(0,1)=="[") {
-//                console.log("searching review record：",JSON.parse(JSON.parse(res)[0]));
-                creviewdata = JSON.parse(JSON.parse(res)[0]);   //网络审核记录
+            if(res1.substring(0,1)=="[") {
+//                console.log("searching review record：",JSON.parse(JSON.parse(res1)[0]));
+                creviewdata = JSON.parse(JSON.parse(res1)[0]);   //网络审核记录
             } else {
 //                console.log("searching review record：",JSON.parse(res));
-                creviewdata = JSON.parse(res);   //网络审核记录
+                creviewdata = JSON.parse(res1);   //网络审核记录
             }
             let idown = document.getElementById("idcountdownlabel");
             if(idown) idown.style="font-weight:bold;color:#1d953f";
@@ -463,7 +476,7 @@
                     },500);
                 }
             } else if(rdata.quality) {
-                console.log(rdata);
+                //console.log(rdata);
                 if(rdata.cultural==5 & rdata.exercise==5 & rdata.location==5 & rdata.quality==5 & rdata.safety==5 & rdata.socialize==5 & rdata.uniqueness==5){
                     if(rdata.newLocation) {
                         tmptext = "照抄网络审核：五星+挪po";
@@ -650,7 +663,7 @@
                             localStorage.setItem(useremail+"upload",JSON.stringify(localpd));
                         }
                         //上传至云端
-                        gmrequest("PUT",surl,data.id,JSON.stringify(data));
+                        gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
                     }
                 } else {
                     //保存审核记录至本地：以下未调试
