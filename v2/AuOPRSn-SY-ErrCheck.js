@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-ErrCheck
 // @namespace    AuOPR
-// @version      1.2.1
+// @version      1.2.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -20,7 +20,7 @@
         if(sc) {
             if(parseInt(sc.textContent)<-300) {
                 console.log("error","300秒重载");
-                mywin.reload();
+                mywin.location.reload();
             }
         }
         if(document.querySelector("div[class='rc-doscaptcha-body']")){
