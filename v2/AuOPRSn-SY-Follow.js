@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.4.9
+// @version      1.5
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -36,9 +36,9 @@
             //console.log("isTrusted",event.isTrusted);
             isUserClick = event.isTrusted;
             if(event.isTrusted) {
-                console.log(event.srcElement.innerText);
+                //console.log(event.srcElement.innerText);
                 let iauto = document.getElementById("idautolabel");
-                if(iauto) console.log(iauto.textContent);
+                //if(iauto) console.log(iauto.textContent);
                 if(event.srcElement.innerText == "thumb_down" || event.srcElement.innerText == "標記為重複") {
                     if (iauto.textContent == "自动") {
                         iautoman = "自动";
@@ -81,13 +81,27 @@
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
                     },
                     onload: function(res){
-                        console.log("postjson",res)
+                        let restext = null;
+                        try {
+                            restext = JSON.parse(res.responseText);
+                        } catch(e) {
+                            console.log(e);
+                        }
                         if(res.status === 200){
-                            //修改首页上传显示  绿：1d953f
-                            let iup = document.getElementById("iduplabel");
-                            if(iup) iup.style="font-weight:bold;color:#1d953f";
-                            console.log(purl+pid+".json");
-                            console.log('审核记录上传成功:'+pid)
+                            if (restext.success) {
+                                console.log("postjson",restext);
+                                //success:false情况
+                                //修改首页上传显示  绿：1d953f
+                                let iup = document.getElementById("iduplabel");
+                                if(iup) iup.style="font-weight:bold;color:#1d953f";
+                                console.log(purl+pid+".json");
+                                console.log('审核记录上传成功:'+pid)
+                            } else {
+                                console.log("postjson",restext);
+                                let iup = document.getElementById("iduplabel");
+                                if(iup) iup.style="font-weight:bold;color:red";
+                                console.log('审核记录上传失败:'+pid)
+                            }
                         }else{
                             let iup = document.getElementById("iduplabel");
                             if(iup) iup.style="font-weight:bold;color:red";
@@ -157,7 +171,7 @@
                 this.send = function (...data) {
                     try{
                         let tmpdata = JSON.parse(data[0]);
-//                        console.log("olddata",data);
+                        //console.log("olddata",data);
                         //console.log("cloudReviewData",cloudReviewData);
                         //NEW+挪po,直接用网络审核结果覆盖data
                         if(cloudReviewData!=null) {
@@ -192,11 +206,19 @@
                         }
 
                         let iautolabel = document.querySelector("p[id='idautolabel']");
-                        let rd1=cloudReviewData;if(rd1) {rd1.acceptCategories=null;rd1.rejectCategories=null;}
-                        let rd2=JSON.parse(data);if(rd2) {rd2.acceptCategories=null;rd2.rejectCategories=null;}
+                        let rd1=cloudReviewData;
+                        console.log("cloudReviewData",rd1);
+                        if(rd1) {
+                            rd1.acceptCategories=null;rd1.rejectCategories=null;
+                            if(!rd1.skip) rd1.skip=false;
+                        }
+                        let rd2=JSON.parse(data);
+                        console.log("reviewData",rd2);
+                        if(rd2) {
+                            rd2.acceptCategories=null;rd2.rejectCategories=null;
+                            if(!rd2.skip & rd1) rd2.skip=rd1.skip;
+                        }
                         let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
-                        //console.log("cloudReviewData",rs1);
-                        //console.log("reviewData",rs2);
                         console.log("是否和网络一致",rs1==rs2);
                         setTimeout(function(){
                             if(isUserClick & rs1!=rs2) {
@@ -213,7 +235,7 @@
                         //console.log("tmpdata",tmpdata);
                         return send.apply(_this,data);
                     } catch(e) {
-                        //console.log(e);
+                        console.log(e);
                     }
                     //saveReviewData(data);
                 }
@@ -425,7 +447,7 @@
 //            console.log("找到审核记录",creviewdata);
             let rdata = creviewdata;
             //              let rdata = eval("(" + creviewdata[creviewdata.length - 1] + ")");
-            console.log("rdata",rdata);
+            //console.log("rdata",rdata);
             //rejectReasons 是个数组
             tmpfollow.id=id;tmpfollow.title=title;tmpfollow.lat=lat;tmpfollow.lng=lng;
             if(rdata.skip){
