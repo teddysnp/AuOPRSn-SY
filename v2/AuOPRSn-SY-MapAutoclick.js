@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-MapAutoclick
 // @namespace    AuOPR
-// @version      1.4
+// @version      1.4.1
 // @description  try to take over the world!
 // @author       You
 // @match        https://wayfarer.nianticlabs.com/*
@@ -12,7 +12,7 @@
 // 1-9:左至右排列第几个  11:19:上至下排列第几个  10:最右一个  20:最下一个
 (function() {
     let ioutput = "true";
-    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["步步高升","false","2"],["万达贾飞碟","false","11"],
+    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["鼎盛千秋","false","2"],["万达贾飞碟","false","11"],
                            ["粉嘟对象","false","11"],["黑鼻对象","false","11"]];
     let editGYMAuto = "false";
     let portalData = null;
@@ -83,10 +83,10 @@
                         let ptbutton = document.querySelectorAll('agm-map div[role="button"]');
                         let ptstruct = getbtnStruct(ptbutton);
                         let ititle = findArrayTwo(editGYMPosition,portalData.title);
-                                                console.log("ititle",ititle);
+                        console.log("ititle",ititle);
                         if(ititle>=0){
-                            //                            console.log(editGYMPosition[ititle]);
-                            //                            console.log(editGYMPosition[ititle][2]);
+                            //console.log(editGYMPosition[ititle]);
+                            //console.log(editGYMPosition[ititle][2]);
                             let editgym = editGYMPosition[ititle];
                             let resortdata = getclickedbtn(ptstruct,editgym);
                             let movepos = parseInt(editgym[2]);
