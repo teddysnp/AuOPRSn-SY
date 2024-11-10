@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.6.9
+// @version      4.7
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -294,7 +294,7 @@
                 const response = this.response;
                 const json = JSON.parse(response);
                 if (!json) return;
-                console.log(json);
+                //console.log(json);
                 if(bNextAuto){
                     autoReview = "true";
                     localStorage.setItem("autoReview", autoReview );
@@ -978,7 +978,7 @@
                         },1000);
                         return;
                     } else {
-                        console.log("res",res);
+                        //console.log("res",res);
                         const dupload = JSON.parse(res);
                         let isave=0;
                         for(let i=0;i<dupload.length;i++){
@@ -988,14 +988,14 @@
                             }
                         }
                         if(isave==0){
-                            console.log(dupload);
+                            //console.log(dupload);
                             let dupdata = dupload ;
                             //dupdata.push(dupload);
                             let susermark={id:portaldata.id,title:portaldata.title,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),type:portaldata.type,
                                            lat:portaldata.lat,lng:portaldata.lng,imageUrl:portaldata.imageUrl,supportingImageUrl:portaldata.supportingImageUrl,streetAddress:portaldata.streetAddress};
                             dupdata.push(susermark);
-                            console.log(dupdata);
-                            console.log(JSON.stringify(dupdata));
+                            //console.log(dupdata);
+                            //console.log(JSON.stringify(dupdata));
                             if(ititle) {
                                 uploadFile("PUT","mission/mission."+ititle+".portallist.json",JSON.stringify(dupdata));
                             } else
@@ -1012,7 +1012,7 @@
                 let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
                 .then(res=>{
                     //如果任务未开审，则更新任务为开审并加id
-                    console.log("preview",preview);
+                    //console.log("preview",preview);
                     if(preview == "false" || preview == "✗" ) {
                         console.log("update1",missionlist);
                         for(let i=0;i<missionlist.length;i++){
@@ -1050,13 +1050,13 @@
                                 return;
                             }
                         }
-                        console.log(dupload);
+                        //console.log(dupload);
                         let dupdata = dupload ;
                         //dupdata.push(dupload);
                         let susermark={useremail:userEmail,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),performance:performance};
                         dupdata.push(susermark);
-                        console.log(dupdata);
-                        console.log(JSON.stringify(dupdata));
+                        //console.log(dupdata);
+                        //console.log(JSON.stringify(dupdata));
                         uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
                     }
                 },err=>{
@@ -1168,7 +1168,7 @@
         if (optp2) {
             optp2.scrollIntoView(true);
             let opt2 = optp2.querySelector("label[class='mat-radio-label']");
-            console.log(opt2);
+            //console.log(opt2);
             while(!opt2) {
                 setTimeout(function(){
                     opt2 = optp2.querySelector("label[class='mat-radio-label']");
@@ -1177,7 +1177,7 @@
                 icnt2++;
                 if (icnt2>10) { break;}
             }
-            console.log(opt2);
+            //console.log(opt2);
             if (opt2) {
                 opt2.click();
                 console.log("options click!");
@@ -1190,7 +1190,7 @@
         if (optp3) {
             optp3.scrollIntoView(true);
             let opt3 = optp3.querySelector("label[class='mat-radio-label']");
-            console.log(opt3);
+            //console.log(opt3);
             while(!opt3) {
                 setTimeout(function(){
                     opt3 = optp3.querySelector("label[class='mat-radio-label']");
@@ -1199,7 +1199,7 @@
                 icnt3++;
                 if (icnt3>10) { break;}
             }
-            console.log(opt3);
+            //console.log(opt3);
             if (opt3) {
                 opt3.click();
                 console.log("options click!");
@@ -1548,6 +1548,7 @@
             {return "池中";
             }
         }
+        //任务列表判断
         for (let i=0;i<missionlist.length;i++){
             if(missionlist[i][0]==portal.title & (Math.abs(portal.lat-missionlist[i][7])<=0.001) & (Math.abs(portal.lng-missionlist[i][8])<=0.001)){
                 return "池中";
@@ -1705,7 +1706,7 @@
 
     //首页home显示用户审过的po
     function showReviewedHome(){
-        console.log("missionlist",missionlist);
+        //console.log("missionlist",missionlist);
         if(missionlist.length==0) {
             if(localStorage.currentmission) missionlist=JSON.parse(localStorage.currentmission);
         }
@@ -1909,7 +1910,7 @@
                 $("#privatePortal2").replaceWith(stmp);
                 //console.log(prpo[0].title);
             }
-            console.log("missionlist1",missionlist1);
+            //console.log("missionlist1",missionlist1);
             for(let k=0;k<missionlist1.length;k++){
                 //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id
                 if(missionlist1[k][9] == userEmail){ missionlist1[k][4] = "O";}//自己
