@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.5
+// @version      1.5.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -27,6 +27,7 @@
     let isUserClick = false ;
     let iautoman = null;
     let mywin = window;
+    var _self = this;
 
     listenLinkClick();
     //监听页面点击，获取是否人工点击
@@ -138,6 +139,8 @@
                     } else if(xhr.status === 404){
                         res(xhr.responseText);
                     } else {
+                        //被登出状态post的时候，状态码可能403(应该401)，此时需location.reload
+                        console.log("err:",xhr.status);
                         err(xhr.statusText);
                     }
                 }
@@ -216,13 +219,13 @@
                         console.log("reviewData",rd2);
                         if(rd2) {
                             rd2.acceptCategories=null;rd2.rejectCategories=null;
-                            if(!rd2.skip & rd1) rd2.skip=rd1.skip;
+                            if(!rd2.skip) rd2.skip=false;
                         }
                         let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
                         console.log("是否和网络一致",rs1==rs2);
                         setTimeout(function(){
                             if(isUserClick & rs1!=rs2) {
-                                console.log("上传",isUserClick);
+                                console.log("调用上传接口",isUserClick);
                                 savePostData(portalData,JSON.parse(data),0,false);
                             } else {
                                 console.log("不上传",isUserClick);
@@ -268,6 +271,7 @@
                         } else {
                             ic=0;
                         }
+                        console.log("调用上传接口",isUserClick);
                         savePostData(portalData,JSON.parse(data),ic,true);
                     }
 
@@ -279,6 +283,35 @@
             open.apply(this, arguments);
         };
     })(XMLHttpRequest.prototype.open);
+
+    //用于截获send请于，如果错误在U_XMLHttpRequest能被截获(应该不一样，U_XMLHttpRequest只能得到自己发的请求)，那么这个可能用处不大
+    (function (send) {
+        XMLHttpRequest.prototype.send = function (method, url) {
+            // 记录xhr
+            var xhrmsg = {
+                'url': this.reqUrl,
+                'type': this.reqMethod,
+                // 此处可以取得 ajax 的请求参数
+                'data': arguments[0] || {}
+            }
+            this.addEventListener('readystatechange', function () {
+                if(this.status>400 & this.status!=404 ) {
+                    console.log("send status",this.status);
+                    console.log("send response",this.response);
+                }
+                if (this.readyState === 4) {
+                    // 此处可以取得一些响应信息
+                    // 响应信息
+                    xhrmsg.res = this.response;
+                    xhrmsg.status = this.status;
+                    this.status >= 200 && this.status < 400 ?
+                        xhrmsg.level = 'success' : xhrmsg.level = 'error';
+                    //xhrArray.push(xhrmsg);
+                }
+            });
+            send.apply(this, arguments);
+        };
+    })(XMLHttpRequest.prototype.send);
 
     const awaitElement = get => new Promise((resolve, reject) => {
         let triesLeft = 10;
@@ -685,6 +718,7 @@
                             localStorage.setItem(useremail+"upload",JSON.stringify(localpd));
                         }
                         //上传至云端
+                        console.log("上传...",data.id);
                         gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
                     }
                 } else {
@@ -709,6 +743,7 @@
                 console.log(e);
             }
         } else {
+            console.log("不需上传",data.id);
             //let iup = document.getElementById("iduplabel");
             //if(iup) iup.style="font-weight:bold;color:#f6f5ec";
         }
