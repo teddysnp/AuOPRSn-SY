@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-MapAutoclick
 // @namespace    AuOPR
-// @version      1.4.1
+// @version      1.4.2
 // @description  try to take over the world!
 // @author       You
 // @match        https://wayfarer.nianticlabs.com/*
@@ -17,8 +17,12 @@
     let editGYMAuto = "false";
     let portalData = null;
     let portalTitle = null;
-
+    let missionlist = [];
     localStorage.setItem("editGYMAuto",editGYMAuto);
+
+    let miss = localStorage.currentmission;
+    if (miss) missionlist =  eval("(" + miss + ")");
+    console.log("MapAutoClick",missionlist);
 
     (function (open) {
         XMLHttpRequest.prototype.open = function (method, url) {
@@ -81,15 +85,17 @@
                         console.log("发现编辑po申请");
                         console.log("查找地图上的点");
                         let ptbutton = document.querySelectorAll('agm-map div[role="button"]');
+                        //得到挪po点集合，屏幕坐标
                         let ptstruct = getbtnStruct(ptbutton);
-                        let ititle = findArrayTwo(editGYMPosition,portalData.title);
-                        console.log("ititle",ititle);
-                        if(ititle>=0){
+                        let iplan = findiPlan(missionlist,editGYMPosition,portalData);
+                        //let ititle = findArrayTwo(editGYMPosition,portalData.title);
+                        if(iplan>=0){
                             //console.log(editGYMPosition[ititle]);
                             //console.log(editGYMPosition[ititle][2]);
-                            let editgym = editGYMPosition[ititle];
-                            let resortdata = getclickedbtn(ptstruct,editgym);
-                            let movepos = parseInt(editgym[2]);
+                            //let iplan = editGYMPosition[ititle][2];
+                            //按计划对要挪的坐标点进行排序
+                            let resortdata = getclickedbtn(ptstruct,);
+                            let movepos = parseInt(iplan);
                             if( movepos >10) movepos = movepos-10;
                             console.log("GYMData",ptstruct);
                             console.log("resortGYM",resortdata);
@@ -106,13 +112,13 @@
                                         if(idscore) {
                                             setTimeout(function(){
                                                 let idscore = document.querySelector("span[id='idscore']");
-                                                if(editgym[2]<10){
-                                                    idscore.textContent = "左第"+editgym[2]+"个";
-                                                } else if(editgym[2]==10){
+                                                if(iplan<10){
+                                                    idscore.textContent = "左第"+iplan+"个";
+                                                } else if(iplan==10){
                                                     idscore.textContent = "最右边";
-                                                } else if(editgym[2]<20){
-                                                    idscore.textContent = "上第"+(editgym[2]-10)+"个";
-                                                } else if(editgym[2]==20){
+                                                } else if(iplan<20){
+                                                    idscore.textContent = "上第"+(iplan-10)+"个";
+                                                } else if(iplan==20){
                                                     idscore.textContent = "最下";
                                                 }
                                             },1000);
@@ -149,14 +155,38 @@
         return -1;
     }
 
-    function getclickedbtn(ptstruct,editgym){
+    //返回挪po计划:首先根据任务判断;其次根据编辑po列表判断
+    function findiPlan(miss,editGym,portal){
+        if(miss.length>0){
+            for(let i=0;i<miss.length;i++){
+                if(miss[i][0]==portal.title & (miss[i][3]=="EDIT" || miss[i][3]=="编辑") &
+                   (Math.abs(portal.lat-miss[i][7])<=0.001) &
+                   (Math.abs(portal.lng-miss[i][8])<=0.001))
+                {
+                    return miss[i][11];
+                }
+            }
+        } else if (editGym.length>0){
+            for(let i=0;i<editGym.length;i++){
+                //            console.log("arr["+i+"]",arr[i]);
+                if(editGym[i].indexOf(portal.title)>=0){
+                    return editGym[i][2];
+                }
+            }
+        } else {
+            return -1;
+        }
+    }
+
+    //返回排好序的挪po点集合
+    function getclickedbtn(ptstruct,iplan){
         let ilen=ptstruct.length;
-        let iplan =editgym[2];
         if (ilen<=0) return null;
         if (ilen==1) return ptstruct[0].aria-describedby;
         return resort(ptstruct,iplan);
     }
 
+    //按挪的计划，对挪po点集合进行排序
     function resort(ptstruct,iplan){
         //    console.log(ptstruct[0].left);
         if(iplan<=10){
@@ -186,6 +216,7 @@
         return ptstruct;
     }
 
+    //得到挪po的点坐标集合，屏幕坐标
     function getbtnStruct(ptbutton){
         let ptall = [];
         ptbutton.forEach((ptbtn) => {
