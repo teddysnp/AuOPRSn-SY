@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7
+// @version      4.7.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -13,6 +13,7 @@
 (function() {
     //变量区
     let mywin = window;
+    //如果任务中没有，可以修改此处应急
     let gpausePortal=["白白的鹅111","腾飞111","无锡记忆——河边洗衣三少妇11。","Curved monument11"];
     let gpausePortalString=["重复了-白白的大鹅","重复了-马踏飞燕","重复了-洗刷刷","重复了"];
     let mission ={  //名称,位置,开始,类型,已审,时间
@@ -37,8 +38,8 @@
 //    let editGYMPosition = [["丛林里的梅花鹿","false","10"],["职工文体广场","false","2"],["仨轮子","false","12"],
 //                          ["粉嘟对象","false","11"],["黑鼻对象","false","11"]];
     let privatePortal = ["占位po"];
-    let editGYMPhoto = ["重型皮带轮"];
-    //沈阳大学南一门  吉大法学建院史
+    let editGYMPhoto = ["重型皮带轮"];//不再使用，将同commitScorePhoto一并删除
+    //沈阳大学南一门  吉大法学建院史,errPortal可以不再使用，删除时需在倒计时提交处一并修改
     let errPortal = ["b7a1c45e923048e0be225bbc264f9161","08196910e908e2613194624f7c04a46e"];
 
     let tryNumber = 10;
@@ -46,7 +47,7 @@
     let reviewTime = 20;  //审po时间为20分钟
     let autoReview = null;
     let reviewPortalAuto = "true";
-    let editGYMAuto = "true";//编辑po是否暂停:true-暂停;false-不暂停,false由MapAutoclick控制
+    let editGYMAuto = "true";//不再使用，删除时需与commitScoreEdit及监听XMLHttpRequest里一并删除
     let postPeriod=[25,35];
     let postTimeoutLimit = 60;//最后一分钟强制提交
     //let submitCountDown = null;
@@ -812,9 +813,9 @@
                 let userprofile = json.result;
                 let arrjson = [];
                 arrjson.push(JSON.stringify(json));
-                console.log(arrjson);
+                //console.log(arrjson);
                 //      console.log(userprofile);
-                console.log(needCaptcha);
+                //console.log(needCaptcha);
                 if (json.captcha) {
                     if(needCaptcha=="true"){
                         createNotify("需要验证", {
@@ -855,14 +856,14 @@
                         suser="<div id='dvuserlist'>"+suser+"</div>";
                     }
                     let bnext = "";
-                    console.log("bNextAuto",bNextAuto);
+                    //console.log("bNextAuto",bNextAuto);
                     if(bNextAuto){
                         bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' checked=true onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
                     } else {
                         bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
                     }
                     let cbxcaptcha=localStorage.captchasetting;
-                    console.log(cbxcaptcha);
+                    //console.log(cbxcaptcha);
                     let cap ="";
                     if(cbxcaptcha=="true") {
                         cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' checked=true onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
@@ -1078,7 +1079,7 @@
         let ssc=document.querySelector("span[id='idscore']");
         let sscore="";
         let pdata = JSON.parse(data);
-        console.log(pdata);
+        console.log("post审核结果:",pdata);
         if(pdata){
             if(pdata.type=="NEW"){
                 if(pdata.duplicate) {
@@ -1151,12 +1152,16 @@
         //本地道馆编辑图片，全选 app-accept-all-photos-card
         if(editGYMPhoto.indexOf(portalData1.title)>=0){
             if(photoall){
-                photoall.click();
+                if(photoall.className.indexOf("photo-card--reject")==-1){
+                    photoall.click();
+                }
             }
             return "全选";
         } else if (photo)
         {
-            photo[0].click();
+            if(photo[0].className.indexOf("photo-card--reject")==-1){
+                photo[0].click();
+            }
             return "瞎选第一个";
         }
     }
@@ -1247,7 +1252,7 @@
                   }
                 console.log("map click!");
               }
-            },1000);
+            },200);
         }
 
       //滚回顶部
@@ -1511,12 +1516,14 @@
         if(portalData1.type=="NEW"){
             return commitScoreNew(portalData1,loc);
         }
+        //挪至follow中，commitScoreEdit、commitScorePhoto函数不再使用，测试后将删除
+        /*
         if(portalData1.type=="EDIT"){
             return commitScoreEdit(portalData1,loc);
         }
         if(portalData1.type=="PHOTO"){
             return commitScorePhoto(portalData1,loc);
-        }
+        }*/
     }
 
     //池中、本地、外地判断 返回1：池中；2：本地；3：外地；0：无
@@ -1760,7 +1767,7 @@
             if(slocalupload.length>0){
                 sudetail+="<tbody>";
                 let icnt = 0;if (slocalupload.length>uploadPortalDisplay) icnt = slocalupload.length - uploadPortalDisplay;
-                for (let i=icnt - 1;i>=icnt;i--){
+                for (let i=slocalupload.length - 1;i>=icnt;i--){
                     sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+slocalupload[i].review+"</td></tr>";
                 }
                 sudetail+="</tbody></table>";
