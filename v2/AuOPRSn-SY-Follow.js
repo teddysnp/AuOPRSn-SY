@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.5.1
+// @version      1.5.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -27,7 +27,20 @@
     let isUserClick = false ;
     let iautoman = null;
     let mywin = window;
-    var _self = this;
+    let missionlist = [];
+
+    mywin.onload = function() {
+        getLocalMissionList();
+    }
+
+    function getLocalMissionList(){
+        let miss = localStorage.currentmission;
+        if (miss) {
+            missionlist = eval("(" + miss + ")");
+            //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
+            console.log("follow-mission",missionlist);
+        }
+    }
 
     listenLinkClick();
     //监听页面点击，获取是否人工点击
@@ -138,8 +151,18 @@
                         res(xhr.responseText);
                     } else if(xhr.status === 404){
                         res(xhr.responseText);
+                    } else if(xhr.status==401){
+                        let msg = JSON.parse(xhr.responseText);
+                        let login = document.querySelector("app-login");
+                        //console.log(login);
+                        setTimeout(function(){
+                            if(msg){
+                                if(msg.message=="Unauthorized" & !login) {
+                                    mywin.location.reload();
+                                }
+                            }
+                        },5000);
                     } else {
-                        //被登出状态post的时候，状态码可能403(应该401)，此时需location.reload
                         console.log("err:",xhr.status);
                         err(xhr.statusText);
                     }
@@ -194,47 +217,8 @@
 
                         //跟po，保存记录至本地：用户名+follow
                         console.log("查看是否跟po，保存至本地",tmpfollow);
-                        if(tmpfollow.id!=null){
-                            let localpd1 = [];
-                            if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
-                            if(localpd1.length==0){
-                                console.log("saving local follow 1");
-                                localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
-                            } else {
-                                console.log("saving local follow n");
-                                localpd1.push(tmpfollow);
-                                //console.log(localpd1);
-                                localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
-                            }
-                        }
+                        savePostData(tmpfollow,data);
 
-                        let iautolabel = document.querySelector("p[id='idautolabel']");
-                        let rd1=cloudReviewData;
-                        console.log("cloudReviewData",rd1);
-                        if(rd1) {
-                            rd1.acceptCategories=null;rd1.rejectCategories=null;
-                            if(!rd1.skip) rd1.skip=false;
-                        }
-                        let rd2=JSON.parse(data);
-                        console.log("reviewData",rd2);
-                        if(rd2) {
-                            rd2.acceptCategories=null;rd2.rejectCategories=null;
-                            if(!rd2.skip) rd2.skip=false;
-                        }
-                        let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
-                        console.log("是否和网络一致",rs1==rs2);
-                        setTimeout(function(){
-                            if(isUserClick & rs1!=rs2) {
-                                console.log("调用上传接口",isUserClick);
-                                savePostData(portalData,JSON.parse(data),0,false);
-                            } else {
-                                console.log("不上传",isUserClick);
-                            }
-                        },1000);
-                        if (iautolabel.textContent == "手动" & rs1!=rs2){
-                            //console.log("data",JSON.parse(data));
-                            //savePostData(portalData,JSON.parse(data),0,false);
-                        }
                         //console.log("tmpdata",tmpdata);
                         return send.apply(_this,data);
                     } catch(e) {
@@ -272,7 +256,7 @@
                             ic=0;
                         }
                         console.log("调用上传接口",isUserClick);
-                        savePostData(portalData,JSON.parse(data),ic,true);
+                        uploadPostData(portalData,JSON.parse(data),ic,true);
                     }
 
                     console.log("skip",data);
@@ -295,7 +279,7 @@
                 'data': arguments[0] || {}
             }
             this.addEventListener('readystatechange', function () {
-                if(this.status>400 & this.status!=404 ) {
+                if(this.status>400 & this.status!=404 & this.status!=401) {
                     console.log("send status",this.status);
                     console.log("send response",this.response);
                 }
@@ -312,6 +296,51 @@
             send.apply(this, arguments);
         };
     })(XMLHttpRequest.prototype.send);
+
+    //保存审核数据到本地，并判断是否需要上传
+    function savePostData(tmpfollow,data){
+        if(tmpfollow.id!=null){
+            let localpd1 = [];
+            if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
+            if(localpd1.length==0){
+                console.log("saving local follow 1");
+                localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
+            } else {
+                console.log("saving local follow n");
+                localpd1.push(tmpfollow);
+                //console.log(localpd1);
+                localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
+            }
+        }
+
+        let iautolabel = document.querySelector("p[id='idautolabel']");
+        let rd1=cloudReviewData;
+        console.log("云审核数据:",rd1);
+        if(rd1) {
+            rd1.acceptCategories=null;rd1.rejectCategories=null;
+            if(!rd1.skip) rd1.skip=false;
+        }
+        let rd2=JSON.parse(data);
+        console.log("本次审核数据:",rd2);
+        if(rd2) {
+            rd2.acceptCategories=null;rd2.rejectCategories=null;
+            if(!rd2.skip) rd2.skip=false;
+        }
+        let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
+        console.log("是否和网络一致",rs1==rs2);
+        setTimeout(function(){
+            if(isUserClick & rs1!=rs2) {
+                console.log("调用上传接口",isUserClick);
+                uploadPostData(portalData,JSON.parse(data),0,false);
+            } else {
+                console.log("不上传",isUserClick);
+            }
+        },1000);
+        if (iautolabel.textContent == "手动" & rs1!=rs2){
+            //console.log("data",JSON.parse(data));
+            //uploadPostData(portalData,JSON.parse(data),0,false);
+        }
+    };
 
     const awaitElement = get => new Promise((resolve, reject) => {
         let triesLeft = 10;
@@ -352,9 +381,9 @@
                     return;
                 }
                 portalData = json.result;
-                console.log(portalData);
+                console.log("原始po数据:",portalData);
 //                if(!portalData.id || portalData.id==null) return;
-                loadReviewData(portalData);
+                setTimeout(function(){ loadReviewData(portalData); },1000);
 //                let testid = "74908645df72e5da08ebd13be138275c";
 //                loadReviewData(testid);
             } catch (e) {
@@ -363,7 +392,7 @@
         });
     }
 
-    //根据标题名有重合，给提示是否重复，并加20秒倒计时
+    //NEW:根据标题名有重合，给提示是否重复，并加20秒倒计时
     function isDuplicate(pData){
         if(pData.nearbyPortals.find(p=>{return p.title==pData.title})){
             setTimeout(function(){
@@ -398,91 +427,313 @@
         }
     }
 
+    //PHOTO:未找到网络审核，按任务中选/瞎选一个
+    function photoReview(pdata){
+        if(pdata.type!="PHOTO") return;
+        let iall = true;let tmptext = "";
+        for(let i=0;i<missionlist.length;i++){
+            //任务里有，全选：photo只能做到全选
+            if(missionlist[i][0]==pdata.title){
+                const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
+                if(photoall.className.indexOf("photo-card--reject")==-1){
+                    photoall.click();
+                }
+                tmptext = "任务po:全选";
+                iall = false;
+            }
+        }
+        if(iall){
+            const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
+            if (photo)
+            {
+                if(photo[0].className.indexOf("photo-card--reject")==-1) photo[0].click();
+                tmptext = "瞎选第一个";
+            }
+        }
+        setTimeout(function(){
+            let ilabel = document.getElementById("idscore");
+            if(ilabel) ilabel.textContent = tmptext;
+            console.log("idscore",tmptext);
+        },500);
+    }
+
+    //EDIT:未找到网络审核，按任务中选/瞎选
+    function editReview(pdata){
+        if(pdata.type!="EDIT") return;
+        let iplan = null;let tmptext = "";
+        for(let i=0;i<missionlist.length;i++){
+            //任务里有：其它瞎选，经纬度按任务挪
+            if(missionlist[i][0]==pdata.title){
+                if(missionlist[i][11]) iplan = missionlist[i][11];
+            }
+        }
+
+        //标题：点第一个
+        let icnt2 = 0;
+        let optp2 = document.querySelector('app-select-title-edit mat-radio-button');
+        if (optp2) {
+            optp2.scrollIntoView(true);
+            //console.log(opt2);
+            awaitElement(() => optp2.querySelector("label[class='mat-radio-label']"))
+                .then((ref) => {
+                let opt2 = optp2.querySelector("label[class='mat-radio-label']");
+                opt2.click();
+                tmptext = "瞎选第一个";
+                console.log("title click!");
+            })
+        }
+
+        //描述：点第一个
+        let icnt3 = 0;
+        let optp3 = document.querySelector('app-select-description-edit mat-radio-button');
+        if (optp3) {
+            optp3.scrollIntoView(true);
+            awaitElement(() => optp3.querySelector("label[class='mat-radio-label']"))
+                .then((ref) => {
+                let opt3 = optp3.querySelector("label[class='mat-radio-label']");
+                opt3.click();
+                tmptext = "瞎选第一个";
+                console.log("description click!");
+            })
+        }
+
+        //点地图中的第一个点
+        let icnt1 = 0;
+        let optp = document.querySelector('agm-map');
+        if (optp) {
+            optp.scrollIntoView(true);
+            setTimeout(function(){
+                //地图不出来，所以先滚动到下面categorization处
+                let ccard = document.querySelector("wf-review-card[id='categorization-card']");
+                if(ccard){
+                    ccard.scrollIntoView(true);
+                }
+                awaitElement(() => document.querySelector("wf-checkbox mat-checkbox input"))
+                    .then((ref) => {
+                    let cbxpt = document.querySelector("wf-checkbox mat-checkbox input");
+                    let btnpt = document.querySelectorAll('agm-map div[role="button"]');
+                    if (cbxpt) {
+                        console.log("iplan",iplan);
+                        if(iplan & iplan>=0)
+                        {
+                            let ptbutton = document.querySelectorAll('agm-map div[role="button"]');
+                            let ptstruct = getbtnStruct(ptbutton);
+                            //console.log(editGYMPosition[ititle]);
+                            //console.log(editGYMPosition[ititle][2]);
+                            //let iplan = editGYMPosition[ititle][2];
+                            //按计划对要挪的坐标点进行排序
+                            let resortdata = getclickedbtn(ptstruct,iplan);
+                            let movepos = parseInt(iplan);
+                            if( movepos >10) movepos = movepos-10;
+                            console.log("GYMData",ptstruct);
+                            console.log("resortGYM",resortdata);
+                            //console.log(movepos);
+                            //console.log(resortdata.length);
+                            if(movepos<=resortdata.length || movepos == 10){
+                                let resdata=null;
+                                if(movepos==10) {resdata=resortdata[resortdata.length - 1];} else {resdata=resortdata[movepos-1];}
+                                console.log("resdata",resdata);
+                                ptbutton.forEach((ptbtn)=>{
+                                    //left: 65px; top: -135px;
+                                    if(ptbtn.getAttribute('style').indexOf("left: "+resdata.left +"px; top: "+resdata.top)>=0){
+                                        console.log("选中",ptbtn);
+                                        let idscore = document.querySelector("span[id='idscore']");
+                                        if(idscore) {
+                                            setTimeout(function(){
+                                                if(iplan<10){
+                                                    idscore.textContent = "左第"+iplan+"个";
+                                                } else if(iplan==10){
+                                                    idscore.textContent = "最右边";
+                                                } else if(iplan<20){
+                                                    idscore.textContent = "上第"+(iplan-10)+"个";
+                                                } else if(iplan==20){
+                                                    idscore.textContent = "最下";
+                                                }
+                                            },1000);
+                                        }
+                                        ptbtn.click();
+                                        return;
+                                    }
+                                })
+                            }
+                        } else
+                        {
+                            if(btnpt){
+                                btnpt[0].click();
+                                tmptext = "瞎选第一个";
+                            }
+                        }
+                    }
+                    console.log("map click!");
+                })
+            },500);
+        }
+
+        //滚回顶部
+        setTimeout(function(){
+            var conpan = document.querySelector('mat-sidenav-content[class="mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100"]');
+            if(conpan)
+            {
+                conpan.scrollTo({top:0,left:0,behavior:'smooth'});
+            }
+            let ilabel = document.getElementById("idscore");
+            if(ilabel) ilabel.textContent = tmptext;
+            console.log("idscore",tmptext);
+        },1000);
+    }
+
+    //EDIT位置编辑用的函数
+    function findArrayTwo(arr,title){
+        for(let i=0;i<arr.length;i++){
+            //            console.log("arr["+i+"]",arr[i]);
+            if(arr[i].indexOf(title)>=0){
+                return i;
+            }
+        }
+        return -1;
+    }
+    //返回排好序的挪po点集合
+    function getclickedbtn(ptstruct,iplan){
+        let ilen=ptstruct.length;
+        if (ilen<=0) return null;
+        if (ilen==1) return ptstruct[0].aria-describedby;
+        return resort(ptstruct,iplan);
+    }
+    //按挪的计划，对挪po点集合进行排序
+    function resort(ptstruct,iplan){
+        //    console.log(ptstruct[0].left);
+        if(iplan<=10){
+            for(let i=0;i<ptstruct.length;i++){
+                for(let j=0;j<ptstruct.length - 1;j++){
+                    let tmp = ptstruct[j];
+                    if(parseInt(ptstruct[j].left) > parseInt(ptstruct[j+1].left)){
+                        tmp = ptstruct[j];
+                        ptstruct[j]=ptstruct[j+1];
+                        ptstruct[j+1]=tmp;
+                    }
+                }
+            }
+        }
+        if(iplan>10){
+            for(let i=0;i<ptstruct.length;i++){
+                for(let j=0;j<ptstruct.length - 1;j++){
+                    let tmp = ptstruct[j];
+                    if(parseInt(ptstruct[j].top) > parseInt(ptstruct[j+1].top)){
+                        tmp = ptstruct[j];
+                        ptstruct[j]=ptstruct[j+1];
+                        ptstruct[j+1]=tmp;
+                    }
+                }
+            }
+        }
+        return ptstruct;
+    }
+    //得到挪po的点坐标集合，屏幕坐标
+    function getbtnStruct(ptbutton){
+        let ptall = [];
+        ptbutton.forEach((ptbtn) => {
+            let ptbtaria = ptbtn.getAttribute("aria-describedby");
+            let ptbtnatt = ptbtn.getAttribute('style');
+            while(ptbtnatt.indexOf(" ")>0) {
+                ptbtnatt = ptbtnatt.replace(" ","");
+            }
+            ptbtnatt = ptbtnatt.replaceAll(":",'":"');
+            ptbtnatt = ptbtnatt.replaceAll(";",'","');
+            ptbtnatt = ptbtnatt.replaceAll("px","");
+            ptbtnatt = '{"aria-describedby":"'+ptbtaria+'","'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
+            //                    ptbtnatt='{"'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
+            //      console.log(ptbtnatt);
+            ptbtnatt=JSON.parse(ptbtnatt);
+            //      console.log(ptbtnatt);
+            ptall.push(ptbtnatt);
+        })
+        //    console.log(ptall);
+        return ptall;
+    }
+
+    //判断云端是否有审核记录，执行跟审或任务审
     function loadReviewData(pdata){
-        //        console.log(id);
-//        let sid="05a6bef32a01cc9e39c967677e18763f";
+        //console.log(id);
+        //let sid="05a6bef32a01cc9e39c967677e18763f";
         //console.log("email",useremail);
         let tmptext = '';
         let id=pdata.id;
         tmpfollow.id = null; tmpfollow.title = null; tmpfollow.lat = null; tmpfollow.lng = null; tmpfollow.review = null;
-        if(pdata.type=="PHOTO" || pdata.type=="EDIT"){
-            return null;
-        }
         //console.log("https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portalreview/portal." +id +".json");
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portalreview/portal." +id +".json")
         .then(res=>{
             //console.log("getjson",res);
+            let idown = document.getElementById("idcountdownlabel");
+            let ilabel = document.getElementById("iduserlabel");
+            //getLocalMissionList();
             if(!res) {
                 //修改首页下载显示
                 console.log("getjsonerr");
                 cloudReviewData = null;
                 setTimeout(function(){
-                    let ilabel = document.getElementById("iduserlabel");
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
-                    let idown = document.getElementById("idcountdownlabel");
                     if(idown) idown.style="font-weight:bold;color:red";
                 },1000);
                 //未找到网络审核时，去判断是否有重复可能
-                isDuplicate(pdata);
+                if(pdata.type=="EDIT") editReview(pdata);
+                if(pdata.type=="PHOTO") photoReview(pdata);
+                if(pdata.type=="NEW") isDuplicate(pdata);
                 return null;
             }
             if(res.indexOf("Error 404")>=0) {
                 //修改首页下载显示
-                let idown = document.getElementById("idcountdownlabel");
                 //中黄：ffe600
                 if(idown) idown.style="font-weight:bold;color:#ffe600";
                 console.log("未找到json");
                 cloudReviewData = null;
                 setTimeout(function(){
-                    let ilabel = document.getElementById("iduserlabel");
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
                 },1000);
                 //未找到网络审核时，去判断是否有重复可能
-                isDuplicate(pdata);
+                if(pdata.type=="EDIT") editReview(pdata);
+                if(pdata.type=="PHOTO") photoReview(pdata);
+                if(pdata.type=="NEW") isDuplicate(pdata);
                 return null;
             }
             if(res.indexOf("<!DOCTYPE html>")>=0){
                 cloudReviewData = null;
                 setTimeout(function(){
-                    let ilabel = document.getElementById("iduserlabel");
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
                 },1000);
                 //未找到网络审核时，去判断是否有重复可能
-                isDuplicate(pdata);
+                if(pdata.type=="EDIT") editReview(pdata);
+                if(pdata.type=="PHOTO") photoReview(pdata);
+                if(pdata.type=="NEW") isDuplicate(pdata);
                 return null;
             }
             //20241106，将原审核记录通过脚本移动到portal/portalreview下，导致20141105以前的文件中多了：
             //  开头"(应该没有)  结尾:"(应该没有)  中间\"(应该无\)
             //20241106以后生成的审核记录应该无此问题
-            let res1=null;
+            let res1 = null;
             if(res.substring(0,1)=='"')
             {
                 res1=res.substring(1,res.length-1);
                 res1=res1.replace(/\\/g,"");
-            } else
-                res1=res;
+            } else res1=res;
+
             //console.log("res1",JSON.parse(res1));
             let creviewdata = null;
             let title=pdata.title;let lat=pdata.lat;let lng=pdata.lng;
             if(res1.substring(0,1)=="[") {
-//                console.log("searching review record：",JSON.parse(JSON.parse(res1)[0]));
+                //console.log("searching review record：",JSON.parse(JSON.parse(res1)[0]));
                 creviewdata = JSON.parse(JSON.parse(res1)[0]);   //网络审核记录
             } else {
-//                console.log("searching review record：",JSON.parse(res));
+                //console.log("searching review record：",JSON.parse(res));
                 creviewdata = JSON.parse(res1);   //网络审核记录
             }
-            let idown = document.getElementById("idcountdownlabel");
             if(idown) idown.style="font-weight:bold;color:#1d953f";
             cloudReviewData = creviewdata ;
-            //              let creviewdata = JSON.parse(localStorage.getItem(id));  //本地审核记录
             if(creviewdata==null) { return null; }
             console.log("cloudReviewData",cloudReviewData);
-//            console.log("找到审核记录",creviewdata);
             let rdata = creviewdata;
-            //              let rdata = eval("(" + creviewdata[creviewdata.length - 1] + ")");
-            //console.log("rdata",rdata);
             //rejectReasons 是个数组
             tmpfollow.id=id;tmpfollow.title=title;tmpfollow.lat=lat;tmpfollow.lng=lng;
+            //skip：NEW,EDIT,PHOTO都有
             if(rdata.skip){
                 if(pdata.canSkip){
                     tmptext = "照抄网络审核：略过";
@@ -504,129 +755,229 @@
                         requireInteraction: true
                     });
                 }
-            } else if(rdata.duplicate){
-                tmptext = "照抄网络审核：重复";
-                tmpfollow.review="重复："+creviewdata.duplicateOf;
-                let nbportal = pdata.nearbyPortals;
-                console.log("审核记录：重复！");
-                //console.log(nbportal);
-                //let testdupid="513b37393fb04a8e95281c81513c6ecc.16";
-                //console.log(nbportal.find(p=>{return p.guid==rdata.duplicateOf}));
-                if(nbportal.find(p=>{return p.guid==rdata.duplicateOf})){
-                    //console.log((nbportal.find(p=>{return p.guid==rdata.duplicateOf})).title);
-                    let dbtitle = (nbportal.find(p=>{return p.guid==rdata.duplicateOf})).title;
-                    //console.log(dbtitle);
+            }
+            //pdata.type=="PHOTO"
+            if(pdata.type=="PHOTO"){
+                tmptext = "照抄网络审核：";
+                const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
+                const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
+                if(rdata.rejectPhotos.length==0){
+                    if(photoall.className.indexOf("photo-card--reject")==-1){
+                        setTimeout(function(){ photoall.click(); },500);
+                        tmptext = "照抄网络审核：全选";
+                    }
+                } else{
                     setTimeout(function(){
-                        //console.log(document.querySelector("[alt='"+dbtitle+"']"));
-                        if (document.querySelector("[alt='"+dbtitle+"']")) {
-                            document.querySelector("[alt='"+dbtitle+"']").click();
-
-                        }
-                        setTimeout(function(){
-                            let dupbut = document.querySelector("div[role='dialog']").querySelector("button[wftype='primary'");
-                            if(dupbut){
-                                dupbut.click();
+                        for(let i=0;i<pdata.newPhotos.length;i++){
+                            if(photo[i].className.indexOf("photo-card--reject")>=0){
+                                photo[i].click();
                             }
-                        },500);
+                            for(let j=0;j<rdata.rejectPhotos.length;j++){
+                                if (rdata.rejectPhotos[j] == pdata.newPhotos[i].hash) {
+                                    photo[i].click();
+                                    tmptext+=i+"/";
+                                }
+                            }
+                        }
                     },500);
                 }
-            } else if(rdata.quality) {
-                //console.log(rdata);
-                if(rdata.cultural==5 & rdata.exercise==5 & rdata.location==5 & rdata.quality==5 & rdata.safety==5 & rdata.socialize==5 & rdata.uniqueness==5){
-                    if(rdata.newLocation) {
-                        tmptext = "照抄网络审核：五星+挪po";
-                        tmpfollow.review = "五星+挪:" + rdata.newLocation;
-                    } else {
-                        tmptext = "照抄网络审核：五星";
-                        tmpfollow.review="五星";
-                    }
-                    console.log("审核记录：五星");
-                    const appcard=["appropriate-card","safe-card","accurate-and-high-quality-card","permanent-location-card","socialize-card","exercise-card","explore-card"];
-                    setTimeout(function(){
-                        for(let i=0;i<=appcard.length-1;i++){
-                            if(document.querySelector('#'+appcard[i])) {
-                                let bappcard = document.querySelector('#'+appcard[i]);
-                                if(bappcard.querySelectorAll("button")){
-                                    let tmpbtn=bappcard.querySelectorAll("button")[1];
-                                    if(tmpbtn.className.indexOf("is-selected")<0){
-                                        tmpbtn.click();
-                                    }
+            }//pdata.type=="PHOTO"
+            //pdata.type=="EDIT"
+            if(pdata.type=="EDIT"){
+                tmptext = "照抄网络审核：";
+                //rdata selectedLocationHash selectedTitleHash selectedDescriptionHash
+                //pdata titleEdits[] descriptionEdits[] locationEdits[]
+                //titleUnable : 以上皆非
+                setTimeout(function(){
+                    let btntitle = document.querySelector('app-select-title-edit');
+                    if(btntitle) {
+                        let labdesc = btntitle.querySelectorAll("label[class='mat-radio-label']");
+                        if(rdata.titleUnable){
+                            tmptext += "名称否";
+                            labdesc[labdesc.length-1].click();
+                        } else if(rdata.selectedTitleHash){
+                            for (let i=0;i<pdata.titleEdits.length;i++){
+                                if(rdata.selectedTitleHash == pdata.titleEdits[i].hash) {
+                                    labdesc[i].click();
                                 }
                             }
                         }
-                        let idscore = document.querySelector("span[id='idscore']");
-                        idscore.textContent = "YYYYYYY";
-                    },3000);
-                } else {
-                    tmptext = "照抄网络审核：非重复";
-                    tmpfollow.review="正常非重复";
-                }
-            } else if(rdata.rejectReasons){
-                tmptext = "照抄网络审核：否决";
-                tmpfollow.review="否决:"+rdata.rejectReasons;
-                console.log("审核记录拒",rdata.rejectReasons);
-                for(let i=0;i<rdata.rejectReasons.length;i++){
-                    if(rdata.rejectReasons[i]=="PRIVATE" || rdata.rejectReasons[i]=="INAPPROPRIATE" || rdata.rejectReasons[i]=="SCHOOL" ||
-                       rdata.rejectReasons[i]=="SENSITIVE" || rdata.rejectReasons[i]=="EMERGENCY" || rdata.rejectReasons[i]=="GENERIC"){
-                        console.log("适当拒");
-                        setTimeout(function(){
-                            //console.log(document.querySelector('#appropriate-card'));
-                            if(document.querySelector('#appropriate-card').querySelectorAll('button')[2])
-                            { //
-                                if(document.querySelector('#appropriate-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
-                                    document.querySelector('#appropriate-card').querySelectorAll('button')[2].click();
+                    }
+                    //descriptionUnable : 以上皆非
+                    let btndesc = document.querySelector('app-select-description-edit');
+                    if(btndesc) {
+                        let labdesc = btndesc.querySelectorAll("label[class='mat-radio-label']");
+                        if(rdata.descriptionUnable){
+                            tmptext += ",描述否";
+                            labdesc[labdesc.length-1].click();
+                        } else if(rdata.selectedDescriptionHash){
+                            for (let i=0;i<pdata.descriptionEdits.length;i++){
+                                if(rdata.selectedDescriptionHash == pdata.descriptionEdits[i].hash) {
+                                    labdesc[i].click();
                                 }
-                                setTimeout(function(){
-                                    let icbx = document.querySelector("input[value='"+rdata.rejectReasons[i]+"']");
-                                    //console.log("icbx",icbx);
-                                    if(icbx) {
-                                        //let ic = document.getElementById(document.querySelector("input[value='GENERIC']").getAttribute("id"));
-                                        //console.log(icbx);
-                                        //setTimeout(function(){ic.checked = true;},500);
-                                        icbx.parentNode.click();
+                            }
+                        }
+                    }
+                    //locationUnable : 找不到实际位置
+                    let agmmap = document.querySelector('agm-map');
+                    if (agmmap) {
+                        agmmap.scrollIntoView(true);
+                        if(rdata.locationUnable){
+                            tmptext += ",位置否";
+                            document.querySelector("wf-checkbox mat-checkbox input").click();
+                        } else if(rdata.selectedLocationHash){
+                            setTimeout(function(){
+                                let ccard = document.querySelector("wf-review-card[id='categorization-card']");
+                                if(ccard){
+                                    ccard.scrollIntoView(true);
+                                }
+                                let btnloc = agmmap.querySelectorAll('div[role="button"]');
+                                if (btnloc) {
+                                    for (let i=0;i<pdata.locationEdits.length;i++){
+                                        if(rdata.selectedLocationHash == pdata.locationEdits[i].hash) {
+                                            btnloc[i].click();
+                                        }
                                     }
-                                },500);
+                                }
+                            },500);
+                        }
+                        //滚回顶部
+                        setTimeout(function(){
+                            var conpan = document.querySelector('mat-sidenav-content');
+                            if(conpan)
+                            {
+                                conpan.scrollTo({top:0,left:0,behavior:'smooth'});
                             }
                         },500);
-                    } else if (rdata.rejectReasons[0] == "UNSAFE") {
-                        //setTimeout(function(){
+                    }
+                },500);
+            }//pdata.type=="EDIT"
+            if(pdata.type=="NEW"){
+                if(rdata.duplicate){
+                    tmptext = "照抄网络审核：重复";
+                    tmpfollow.review="重复："+creviewdata.duplicateOf;
+                    let nbportal = pdata.nearbyPortals;
+                    console.log("审核记录：重复！");
+                    //console.log(nbportal);
+                    //let testdupid="513b37393fb04a8e95281c81513c6ecc.16";
+                    //console.log(nbportal.find(p=>{return p.guid==rdata.duplicateOf}));
+                    if(nbportal.find(p=>{return p.guid==rdata.duplicateOf})){
+                        //console.log((nbportal.find(p=>{return p.guid==rdata.duplicateOf})).title);
+                        let dbtitle = (nbportal.find(p=>{return p.guid==rdata.duplicateOf})).title;
+                        //console.log(dbtitle);
+                        setTimeout(function(){
+                            //console.log(document.querySelector("[alt='"+dbtitle+"']"));
+                            if (document.querySelector("[alt='"+dbtitle+"']")) {
+                                document.querySelector("[alt='"+dbtitle+"']").click();
+
+                            }
+                            setTimeout(function(){
+                                let dupbut = document.querySelector("div[role='dialog']").querySelector("button[wftype='primary'");
+                                if(dupbut){
+                                    dupbut.click();
+                                }
+                            },500);
+                        },500);
+                    }
+                } else if(rdata.quality) {
+                    //console.log(rdata);
+                    if(rdata.cultural==5 & rdata.exercise==5 & rdata.location==5 & rdata.quality==5 & rdata.safety==5 & rdata.socialize==5 & rdata.uniqueness==5)
+                    {
+                        if(rdata.newLocation) {
+                            tmptext = "照抄网络审核：五星+挪po";
+                            tmpfollow.review = "五星+挪:" + rdata.newLocation;
+                        } else {
+                            tmptext = "照抄网络审核：五星";
+                            tmpfollow.review="五星";
+                        }
+                        console.log("审核记录：五星");
+                        const appcard=["appropriate-card","safe-card","accurate-and-high-quality-card","permanent-location-card","socialize-card","exercise-card","explore-card"];
+                        setTimeout(function(){
+                            for(let i=0;i<=appcard.length-1;i++){
+                                if(document.querySelector('#'+appcard[i])) {
+                                    let bappcard = document.querySelector('#'+appcard[i]);
+                                    if(bappcard.querySelectorAll("button")){
+                                        let tmpbtn=bappcard.querySelectorAll("button")[1];
+                                        if(tmpbtn.className.indexOf("is-selected")<0){
+                                            tmpbtn.click();
+                                        }
+                                    }
+                                }
+                            }
+                            let idscore = document.querySelector("span[id='idscore']");
+                            idscore.textContent = "YYYYYYY";
+                        },3000);
+                    }
+                    else {
+                        tmptext = "照抄网络审核：非重复";
+                        tmpfollow.review="正常非重复";
+                    }
+                } else if(rdata.rejectReasons){
+                    tmptext = "照抄网络审核：否决";
+                    tmpfollow.review="否决:"+rdata.rejectReasons;
+                    console.log("审核记录拒",rdata.rejectReasons);
+                    for(let i=0;i<rdata.rejectReasons.length;i++){
+                        if(rdata.rejectReasons[i]=="PRIVATE" || rdata.rejectReasons[i]=="INAPPROPRIATE" || rdata.rejectReasons[i]=="SCHOOL" ||
+                           rdata.rejectReasons[i]=="SENSITIVE" || rdata.rejectReasons[i]=="EMERGENCY" || rdata.rejectReasons[i]=="GENERIC"){
+                            console.log("适当拒");
+                            setTimeout(function(){
+                                //console.log(document.querySelector('#appropriate-card'));
+                                if(document.querySelector('#appropriate-card').querySelectorAll('button')[2])
+                                { //
+                                    if(document.querySelector('#appropriate-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
+                                        document.querySelector('#appropriate-card').querySelectorAll('button')[2].click();
+                                    }
+                                    setTimeout(function(){
+                                        let icbx = document.querySelector("input[value='"+rdata.rejectReasons[i]+"']");
+                                        //console.log("icbx",icbx);
+                                        if(icbx) {
+                                            //let ic = document.getElementById(document.querySelector("input[value='GENERIC']").getAttribute("id"));
+                                            //console.log(icbx);
+                                            //setTimeout(function(){ic.checked = true;},500);
+                                            icbx.parentNode.click();
+                                        }
+                                    },500);
+                                }
+                            },500);
+                        } else if (rdata.rejectReasons[0] == "UNSAFE") {
+                            //setTimeout(function(){
                             if(document.querySelector('#safe-card').querySelectorAll('button')[2])
                             { //
                                 if(document.querySelector('#safe-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
                                     document.querySelector('#safe-card').querySelectorAll('button')[2].click();
                                 }
                             }
-                        //},1000);
-                    } else if (rdata.rejectReasons[0] == "TEMPORARY") {
-                        setTimeout(function(){
-                            if(document.querySelector('#permanent-location-card').querySelectorAll('button')[2])
-                            { //
-                                if(document.querySelector('#permanent-location-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
-                                    document.querySelector('#permanent-location-card').querySelectorAll('button')[2].click();
+                            //},1000);
+                        } else if (rdata.rejectReasons[0] == "TEMPORARY") {
+                            setTimeout(function(){
+                                if(document.querySelector('#permanent-location-card').querySelectorAll('button')[2])
+                                { //
+                                    if(document.querySelector('#permanent-location-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
+                                        document.querySelector('#permanent-location-card').querySelectorAll('button')[2].click();
+                                    }
                                 }
-                            }
-                        },500);
-                    }
-                    else {
-                        if(rejcbxengstr.indexOf(rdata.rejectReasons[i])>=0) {
-                            console.log("准确拒",rdata.rejectReasons);
-                            let dcbxstr = rejcbxchnstr[rejcbxengstr.indexOf(rdata.rejectReasons[i])];
-                            //setTimeout(function(){
+                            },500);
+                        }
+                        else {
+                            if(rejcbxengstr.indexOf(rdata.rejectReasons[i])>=0) {
+                                console.log("准确拒",rdata.rejectReasons);
+                                let dcbxstr = rejcbxchnstr[rejcbxengstr.indexOf(rdata.rejectReasons[i])];
+                                //setTimeout(function(){
                                 let accd = document.querySelector('#accurate-and-high-quality-card');
                                 if(accd) {
                                     setTimeout(function(){
                                         if(accd.querySelectorAll('button'))
                                         { //
-//                                            console.log(accd);
+                                            //                                            console.log(accd);
                                             let tmpbtns = accd.querySelectorAll('button')[2];
-//                                            console.log(tmpbtns);
+                                            //                                            console.log(tmpbtns);
                                             if(tmpbtns.className!="wf-button thumbs-button wf-button--icon is-selected") {
                                                 tmpbtns.click();
                                             }
                                         }},500);
                                 }
-                            //},500);
-                            //setTimeout(function(){
+                                //},500);
+                                //setTimeout(function(){
                                 setTimeout(function(){
                                     let spanarr = document.querySelectorAll("span[class='mat-checkbox-label']");
                                     //console.log(dcbxstr);
@@ -641,16 +992,18 @@
                                         }
                                     });
                                 },500);
-                            //},1000);
+                                //},1000);
+                            }
                         }
                     }
                 }
-            }
+            }//pdata=="NEW"
+            //改显示标签
             setTimeout(function(){
                 let ilabel = document.getElementById("iduserlabel");
                 if(ilabel) ilabel.textContent = tmptext;
-//                console.log("iduserlabel",ilabel);
-            },1000);
+                console.log("iduserlabel",tmptext);
+            },500);
             console.log("return true");
             return true;
         },
@@ -663,7 +1016,7 @@
     }
 
     //判断是否需要上传审核至云端，及保存至本地：用户+upload
-    function savePostData(pdata,rdata,icloud,iskip){
+    function uploadPostData(pdata,rdata,icloud,iskip){
         let data = rdata ;
         console.log("检查是否需要上传审核数据...");
         //console.log(data);
@@ -702,7 +1055,9 @@
             }
             if(data.newLocation) {tmpupload.review = tmpupload.review+":挪"+data.newLocation; isave=1};
         } else if(data.type=="EDIT"){
+            isave=1;
         } else if(data.type=="PHOTO"){
+            isave=1;
         }
         console.log("isave",isave);
         if(isave==1){
