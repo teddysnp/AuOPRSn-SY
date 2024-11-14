@@ -132,6 +132,7 @@
         }
     }
 
+    console.log("mywin",mywin);
     mywin.onload = function() {
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission.list.json")
         .then(res=>{
