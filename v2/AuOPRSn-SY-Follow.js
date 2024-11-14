@@ -29,12 +29,7 @@
     let mywin = window;
     let missionlist = [];
 
-    mywin.onload = function() {
-        setTimeout(function(){
-            getLocalMissionList();
-        },300);
-    }
-
+    setTimeout(function() {getLocalMissionList(); },1000);
     function getLocalMissionList(){
         let miss = localStorage.currentmission;
         if (miss) {
