@@ -30,7 +30,9 @@
     let missionlist = [];
 
     mywin.onload = function() {
-        getLocalMissionList();
+        setTimeout(function(){
+            getLocalMissionList();
+        },300);
     }
 
     function getLocalMissionList(){
