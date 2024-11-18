@@ -427,6 +427,7 @@
                                     }
                                     //开审
                                     if(pData.submissions[i].status == "VOTING" & missionlist[j][3]!="true") {
+                                        missionlist[j][3]="true";
                                         isave=1;
                                         console.log("isave2");
                                     }
