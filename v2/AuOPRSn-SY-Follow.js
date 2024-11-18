@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.5.2
+// @version      1.5.3
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -29,7 +29,8 @@
     let mywin = window;
     let missionlist = [];
 
-    setTimeout(function() {getLocalMissionList(); },1000);
+    getLocalMissionList();
+
     function getLocalMissionList(){
         let miss = localStorage.currentmission;
         if (miss) {
@@ -261,6 +262,10 @@
                     return send.apply(_this,data);
                 }
             }
+
+            if (url == '/api/v1/vault/manage'){
+                this.addEventListener('load', injectManage, false);
+            }
             open.apply(this, arguments);
         };
     })(XMLHttpRequest.prototype.open);
@@ -331,8 +336,9 @@
                 uploadPostData(portalData,JSON.parse(data),0,false);
             } else {
                 console.log("不上传",isUserClick);
+                console.log("审核结束:",rd2.id);
             }
-        },1000);
+        },200);
         if (iautolabel.textContent == "手动" & rs1!=rs2){
             //console.log("data",JSON.parse(data));
             //uploadPostData(portalData,JSON.parse(data),0,false);
@@ -378,11 +384,80 @@
                     return;
                 }
                 portalData = json.result;
+                console.log("开始新审核:",portalData.title);
                 console.log("原始po数据:",portalData);
 //                if(!portalData.id || portalData.id==null) return;
                 setTimeout(function(){ loadReviewData(portalData); },1000);
 //                let testid = "74908645df72e5da08ebd13be138275c";
 //                loadReviewData(testid);
+            } catch (e) {
+                console.log(e);
+            }
+        });
+    }
+
+    function injectManage() {
+        awaitElement(() => document.querySelector('app-submissions'))
+            .then((ref) => {
+            try {
+                const response = this.response;
+                const json = JSON.parse(response);
+                if (!json) return;
+                if (json.captcha || json==null) {
+                    return;
+                }
+                let pData = json.result;
+                if(pData.submissions){
+                    let isave=0;
+                    for(let i=0;i<pData.submissions.length;i++){
+                        //console.log("申请:",pData.submissions[i]);
+                        //1分钟的时间戳值:60000 20分钟是1200000
+                        for(let j=0;j<missionlist.length;j++){
+                            if(missionlist[j][0]==pData.submissions[i].title ){
+                                //1分钟的时间戳值:60000 查任务时间前5天的(防误输入)
+                                if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (missionlist[j][5] + " 00:00:00").getTime() - 60000*60*24*5 ) ){
+                                    //console.log("任务：",missionlist[j]);
+                                    //console.log("申请:",pData.submissions[i]);
+                                    //"NOMINATION" "ACCEPTED" "REJECTED"
+                                    //通过或拒绝
+                                    if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & missionlist[j][6]!="ok") {
+                                        missionlist[j][6]="ok";
+                                        isave=1;
+                                        console.log("isave1");
+                                    }
+                                    //开审
+                                    if(pData.submissions[i].status == "VOTING" & missionlist[j][3]!="true") {
+                                        isave=1;
+                                        console.log("isave2");
+                                    }
+                                    //审核人写错
+                                    if(missionlist[j][9]!=useremail) {
+                                        missionlist[j][9] = useremail ;
+                                        isave=1;
+                                        console.log("isave3");
+                                    }
+                                    //更新经纬度、id
+                                    if(pData.submissions[i].lat != missionlist[j][7] & pData.submissions[i].lng != missionlist[j][8] & pData.submissions[i].id != missionlist[j][10]){
+                                        missionlist[j][7] = pData.submissions[i].lat;missionlist[j][8] = pData.submissions[i].lng;missionlist[j][10] = pData.submissions[i].id;
+                                        isave=1;
+                                        console.log("isave4");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    //console.log(isave);
+                    //更新云中任务
+                    if(isave==1){
+                        if(!missionlist){ return;}
+                        let miss=localStorage.currentmissiontitle;
+                        let ititle=null;
+                        if(miss) ititle=JSON.parse(miss).title;
+                            if(ititle) {
+                                //gmrequest("PUT",surl,"mission/mission."+ititle+"",JSON.stringify(missionlist));
+                            }
+                    }
+                }
             } catch (e) {
                 console.log(e);
             }
@@ -772,7 +847,7 @@
                             for(let j=0;j<rdata.rejectPhotos.length;j++){
                                 if (rdata.rejectPhotos[j] == pdata.newPhotos[i].hash) {
                                     photo[i].click();
-                                    tmptext+=i+"/";
+                                    tmptext+=(i+1)+"/";
                                 }
                             }
                         }
@@ -1072,6 +1147,7 @@
                         //上传至云端
                         console.log("上传...",data.id);
                         gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
+                        console.log("审核结束:",data.id);
                     }
                 } else {
                     //保存审核记录至本地：以下未调试
@@ -1095,7 +1171,7 @@
                 console.log(e);
             }
         } else {
-            console.log("不需上传",data.id);
+            console.log("不需上传,审核结束:",data.id);
             //let iup = document.getElementById("iduplabel");
             //if(iup) iup.style="font-weight:bold;color:#f6f5ec";
         }
