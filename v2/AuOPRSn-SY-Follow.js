@@ -454,7 +454,7 @@
                         let ititle=null;
                         if(miss) ititle=JSON.parse(miss).title;
                             if(ititle) {
-                                //gmrequest("PUT",surl,"mission/mission."+ititle+"",JSON.stringify(missionlist));
+                                gmrequest("PUT",surl,"mission/mission."+ititle+"",JSON.stringify(missionlist));
                             }
                     }
                 }
