@@ -438,8 +438,8 @@
                                         console.log("isave3");
                                     }
                                     //更新经纬度、id
-                                    if(pData.submissions[i].lat != missionlist[j][7] || pData.submissions[i].lng != missionlist[j][8] || pData.submissions[i].id != missionlist[j][10]){
-                                        missionlist[j][7] = pData.submissions[i].lat;missionlist[j][8] = pData.submissions[i].lng;missionlist[j][10] = pData.submissions[i].id;
+                                    if(pData.submissions[i].lat != missionlist[j][7] || pData.submissions[i].lng != missionlist[j][8] ){
+                                        missionlist[j][7] = pData.submissions[i].lat;missionlist[j][8] = pData.submissions[i].lng;
                                         isave=1;
                                         console.log("isave4");
                                     }
