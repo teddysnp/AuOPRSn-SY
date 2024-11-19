@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7.1
+// @version      4.7.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -48,7 +48,7 @@
     let autoReview = null;
     let reviewPortalAuto = "true";
     let editGYMAuto = "true";//不再使用，删除时需与commitScoreEdit及监听XMLHttpRequest里一并删除
-    let postPeriod=[25,35];
+    let postPeriod=[25,30];
     let postTimeoutLimit = 60;//最后一分钟强制提交
     //let submitCountDown = null;
     let userID = null;
@@ -132,8 +132,12 @@
         }
     }
 
-    console.log("mywin",mywin);
+    console.log("mywin",mywin.location);
     mywin.onload = function() {
+        getMission();
+    }
+
+    function getMission(){
         let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission.list.json")
         .then(res=>{
             console.log("读取网络任务");
@@ -1715,9 +1719,7 @@
     //首页home显示用户审过的po
     function showReviewedHome(){
         //console.log("missionlist",missionlist);
-        if(missionlist.length==0) {
-            if(localStorage.currentmission) missionlist=JSON.parse(localStorage.currentmission);
-        }
+        getMission();
         $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>"
                                                                  //+"<div><font size=5>skey:"+
                                                                  //"<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
@@ -1921,13 +1923,13 @@
             //console.log("missionlist1",missionlist1);
             for(let k=0;k<missionlist1.length;k++){
                 //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id
-                if(missionlist1[k][9] == userEmail){ missionlist1[k][4] = "O";}//自己
+                if(missionlist1[k][9].indexOf(userEmail)>=0){ missionlist1[k][4] = "O";}//自己
                 if (missionlist1[k][2]=="true") {missionlist1[k][2]="✓"} else {missionlist1[k][2]="✗";};//开审
                 if(missionlist1[k][6]=="ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
                 smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td>"
                     +"<td>"+missionlist1[k][6]+"</td>"
-                    +'<td><a href="javascript:void(0);" us="us2" owner="'+missionlist1[k][4]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
-                    +'<td><a href="javascript:void(0);" us="us1" owner="'+missionlist1[k][4]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
+                    +'<td><a href="javascript:void(0);" us="us2" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
+                    +'<td><a href="javascript:void(0);" us="us1" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
                     +"<td>"+missionlist1[k][2]+"</td>"
                     +"<td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td>"
                     +"</tr>";
@@ -1946,6 +1948,7 @@
             let id = event.srcElement.attributes['tagname'].textContent;
             let us = event.srcElement.attributes['us'].textContent;
             let owner = event.srcElement.attributes['owner'].textContent;
+            let powner = event.srcElement.attributes['powner'].textContent;
             let userEmailList = [];
             let idUserEmail = document.getElementById("idUserEmail");
             let stmp="";
@@ -1990,7 +1993,7 @@
                         if(userreview.indexOf(userEmailList[i])>=0) {
                             //console.log(userreview);
                             //console.log(userEmailList[i]);
-                            if(userEmailList[i]==userEmail){
+                            if(userEmailList[i].indexOf(userEmail)>=0){
                                 stmp+="<div class='sqselfok'>"+userEmailList[i].replace(".com","")+"</div>";
                             } else {
                                 stmp+="<div class='sqok'>"+userEmailList[i].replace(".com","")+"</div>";
@@ -2003,7 +2006,11 @@
                                     stmp+="<div class='sqselfno'>"+userEmailList[i].replace(".com","")+"</div>";
                                 }
                             } else {
-                                stmp+="<div class='sqno'>"+userEmailList[i].replace(".com","")+"</div>";
+                                if(userEmailList[i]==powner){
+                                    stmp+="<div class='sqno'><span style='color:red'>O:</span>"+userEmailList[i].replace(".com","")+"</div>";
+                                } else {
+                                    stmp+="<div class='sqno'>"+userEmailList[i].replace(".com","")+"</div>";
+                                }
                             }
                         }
 
@@ -2172,7 +2179,7 @@
                         "zhangnan107107@gmail.com","sunkpty@gmail.com","zhangnan_007@outlook.com","unicode@163.com","tongliang12345@outlook.com",
                        "pkpkqq01@gmail.com","pkpkqq02@outlook.com","tydingress@outlook.com","poketydf02@gmail.com","poketydf03@gmail.com",
                        "poketyd@outlook.com","pokecntv01@outlook.com","pokecntv22@outlook.com","whathowyou@gmail.com","pokepokem01@outlook.com",
-                       "pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com"
+                       "pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com","xiuaoao@gmail.com","pkpkqq02@gmail.com"
                        ];
         userEmailList2=["w4b4uh134@gmail.com","1806424832mjn@gmail.com"];
     }
