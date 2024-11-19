@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.5.3
+// @version      1.5.4
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -397,6 +397,37 @@
     }
 
     function injectManage() {
+        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission.list.json")
+        .then(res=>{
+            console.log("读取网络任务");
+            //console.log("res",res);
+            if(!res) {
+                setTimeout(function(){
+                    console.log("onload","未找到任务列表");
+                },1000);
+                return;
+            }
+            let miss = JSON.parse(res)[0];
+            console.log(miss);
+            if(miss){
+                let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+miss.title+".json";
+                console.log(miss.title);
+                let resp1 = U_XMLHttpRequest("GET",title)
+                .then(res=>{
+                    //console.log("res",res);
+                    if(!res) {
+                        setTimeout(function(){
+                            console.log("onload","未找到任务列表");
+                        },1000);
+                        return;
+                    }
+                    localStorage.setItem("currentmissiontitle",JSON.stringify(miss));
+                    localStorage.setItem("currentmission",res);
+                    missionlist =  eval("(" + res + ")");
+                    //console.log(JSON.stringify(missionlist));
+                });
+            }
+        });
         awaitElement(() => document.querySelector('app-submissions'))
             .then((ref) => {
             try {
@@ -420,6 +451,9 @@
                                     //console.log("申请:",pData.submissions[i]);
                                     //"NOMINATION" "ACCEPTED" "REJECTED"
                                     //通过或拒绝
+                                    //console.log("accept",JSON.stringify(missionlist));
+                                    //console.log("accept",JSON.stringify(missionlist[j][6]));
+                                    //console.log("status",pData.submissions[i].status);
                                     if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & missionlist[j][6]!="ok") {
                                         missionlist[j][6]="ok";
                                         isave=1;
@@ -443,6 +477,7 @@
                                         isave=1;
                                         console.log("isave4");
                                     }
+                                    //console.log(missionlist);
                                 }
                             }
                         }
@@ -455,6 +490,7 @@
                         let ititle=null;
                         if(miss) ititle=JSON.parse(miss).title;
                             if(ititle) {
+                                //console.log(missionlist);
                                 gmrequest("PUT",surl,"mission/mission."+ititle+"",JSON.stringify(missionlist));
                             }
                     }
