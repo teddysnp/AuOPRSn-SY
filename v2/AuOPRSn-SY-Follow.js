@@ -617,12 +617,12 @@
         let optp = document.querySelector('agm-map');
         if (optp) {
             optp.scrollIntoView(true);
+            let ccard = document.querySelector("wf-review-card[id='categorization-card']");
+            if(ccard){
+                ccard.scrollIntoView(true);
+            }
             setTimeout(function(){
                 //地图不出来，所以先滚动到下面categorization处
-                let ccard = document.querySelector("wf-review-card[id='categorization-card']");
-                if(ccard){
-                    ccard.scrollIntoView(true);
-                }
                 awaitElement(() => document.querySelector("wf-checkbox mat-checkbox input"))
                     .then((ref) => {
                     let cbxpt = document.querySelector("wf-checkbox mat-checkbox input");
