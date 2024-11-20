@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.5.4
+// @version      1.5.5
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -244,8 +244,8 @@
                         }
                     }
 
-                    let iautolabel = document.querySelector("p[id='idautolabel']");
-                    if (iautolabel.textContent == "手动"){
+                    //let iautolabel = document.querySelector("p[id='idautolabel']");
+                    //if (iautolabel.textContent == "手动"){
                         //console.log("data",JSON.parse(data));
                         let ic =0;
                         if(cloudReviewData){
@@ -255,7 +255,7 @@
                         }
                         console.log("调用上传接口",isUserClick);
                         uploadPostData(portalData,JSON.parse(data),ic,true);
-                    }
+                    //}
 
                     console.log("skip",data);
                     console.log("skip",portalData);
@@ -466,13 +466,19 @@
                                         console.log("isave2");
                                     }
                                     //审核人写错
-                                    if(missionlist[j][9]!=useremail) {
+                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & missionlist[j][9]!=useremail) {
                                         missionlist[j][9] = useremail ;
                                         isave=1;
                                         console.log("isave3");
                                     }
                                     //更新经纬度、id
-                                    if(pData.submissions[i].lat != missionlist[j][7] || pData.submissions[i].lng != missionlist[j][8] ){
+                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & (pData.submissions[i].lat != missionlist[j][7] || pData.submissions[i].lng != missionlist[j][8] )){
+                                        console.log("ptitle",pData.submissions[i].title);
+                                        console.log("mtitle",JSON.stringify(missionlist[j][0]));
+                                        console.log("plat",JSON.stringify(pData.submissions[i].lat));
+                                        console.log("mlat",JSON.stringify(missionlist[j][7]));
+                                        console.log("plng",JSON.stringify(pData.submissions[i].lng));
+                                        console.log("mlng",JSON.stringify(missionlist[j][8]));
                                         missionlist[j][7] = pData.submissions[i].lat;missionlist[j][8] = pData.submissions[i].lng;
                                         isave=1;
                                         console.log("isave4");
@@ -667,7 +673,7 @@
                             }
                         } else
                         {
-                            if(btnpt){
+                            if(btnpt.length>0){
                                 btnpt[0].click();
                                 tmptext = "瞎选第一个";
                             }
@@ -675,7 +681,7 @@
                     }
                     console.log("map click!");
                 })
-            },500);
+            },1000);
         }
 
         //滚回顶部
@@ -688,7 +694,7 @@
             let ilabel = document.getElementById("idscore");
             if(ilabel) ilabel.textContent = tmptext;
             console.log("idscore",tmptext);
-        },1000);
+        },1500);
     }
 
     //EDIT位置编辑用的函数
