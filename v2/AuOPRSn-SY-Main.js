@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7.2
+// @version      4.7.3
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -254,10 +254,10 @@
                 let send = this.send;
                 let _this = this;
                 this.send = function (...data) {
-                    console.log("skip",data);
+                    //console.log("skip",data);
                     mywin.clearInterval(timer);
                     timer = null;
-                    console.log("skip",portalData);
+                    //console.log("skip",portalData);
                     return send.apply(_this,data);
                 }
             }
