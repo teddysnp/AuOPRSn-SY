@@ -141,7 +141,9 @@
 //        console.log(url);
         return new Promise((res, err) => {
             const xhr = new XMLHttpRequest();
+            //Cache-Control: no-cache
             xhr.open(method, url, true);
+            xhr.setRequestHeader("Cache-Control","no-cache");
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
                     //console.log(xhr.status);
@@ -151,15 +153,15 @@
                         res(xhr.responseText);
                     } else if(xhr.status==401){
                         let msg = JSON.parse(xhr.responseText);
-                        let login = document.querySelector("app-login");
                         //console.log(login);
-                        setTimeout(function(){
-                            if(msg){
+                        if(msg){
+                            setTimeout(function(){
+                                let login = document.querySelector("app-login");
                                 if(msg.message=="Unauthorized" & !login) {
                                     mywin.location.reload();
                                 }
-                            }
-                        },5000);
+                            },5000);
+                        }
                     } else {
                         console.log("err:",xhr.status);
                         err(xhr.statusText);
@@ -397,114 +399,106 @@
     }
 
     function injectManage() {
-        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission.list.json")
-        .then(res=>{
-            console.log("读取网络任务");
-            //console.log("res",res);
-            if(!res) {
-                setTimeout(function(){
-                    console.log("onload","未找到任务列表");
-                },1000);
-                return;
-            }
-            let miss = JSON.parse(res)[0];
-            console.log(miss);
-            if(miss){
-                let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+miss.title+".json";
-                console.log(miss.title);
-                let resp1 = U_XMLHttpRequest("GET",title)
-                .then(res=>{
-                    //console.log("res",res);
-                    if(!res) {
-                        setTimeout(function(){
-                            console.log("onload","未找到任务列表");
-                        },1000);
-                        return;
-                    }
-                    localStorage.setItem("currentmissiontitle",JSON.stringify(miss));
-                    localStorage.setItem("currentmission",res);
-                    missionlist =  eval("(" + res + ")");
-                    //console.log(JSON.stringify(missionlist));
-                });
-            }
-        });
-        awaitElement(() => document.querySelector('app-submissions'))
-            .then((ref) => {
-            try {
-                const response = this.response;
-                const json = JSON.parse(response);
-                if (!json) return;
-                if (json.captcha || json==null) {
+        let miss1 = localStorage.currentmissiontitle;
+        //console.log(miss);
+        if(miss1){
+            let miss = JSON.parse(miss1);
+            let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+miss.title+".json";
+            console.log(title);
+            let resp1 = U_XMLHttpRequest("GET",title)
+            .then(res=>{
+                //console.log("res",res);
+                if(!res) {
                     return;
                 }
-                let pData = json.result;
-                if(pData.submissions){
-                    let isave=0;
-                    for(let i=0;i<pData.submissions.length;i++){
-                        //console.log("申请:",pData.submissions[i]);
-                        //1分钟的时间戳值:60000 20分钟是1200000
-                        for(let j=0;j<missionlist.length;j++){
-                            if(missionlist[j][0]==pData.submissions[i].title ){
-                                //1分钟的时间戳值:60000 查任务时间前5天的(防误输入)
-                                if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (missionlist[j][5] + " 00:00:00").getTime() - 60000*60*24*5 ) ){
-                                    //console.log("任务：",missionlist[j]);
-                                    //console.log("申请:",pData.submissions[i]);
-                                    //"NOMINATION" "ACCEPTED" "REJECTED"
-                                    //通过或拒绝
-                                    //console.log("accept",JSON.stringify(missionlist));
-                                    //console.log("accept",JSON.stringify(missionlist[j][6]));
-                                    //console.log("status",pData.submissions[i].status);
-                                    if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & missionlist[j][6]!="ok") {
-                                        missionlist[j][6]="ok";
-                                        isave=1;
-                                        console.log("isave1");
+                localStorage.setItem("currentmission",res);
+                missionlist =  eval("(" + res + ")");
+                //console.log(JSON.stringify(missionlist));
+                awaitElement(() => document.querySelector('app-submissions'))
+                    .then((ref) => {
+                    try {
+                        const response = this.response;
+                        const json = JSON.parse(response);
+                        if (!json) return;
+                        if (json.captcha || json==null) {
+                            return;
+                        }
+                        let pData = json.result;
+                        if(pData.submissions){
+                            let isave=0;
+                            for(let i=0;i<pData.submissions.length;i++){
+                                //console.log("申请:",pData.submissions[i]);
+                                //1分钟的时间戳值:60000 20分钟是1200000
+                                for(let j=0;j<missionlist.length;j++){
+                                    if(missionlist[j][0]==pData.submissions[i].title ){
+                                        //1分钟的时间戳值:60000 查任务时间前5天的(防误输入)
+                                        if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (missionlist[j][5] + " 00:00:00").getTime() - 60000*60*24*10 ) ){
+                                            //console.log("任务：",missionlist[j]);
+                                            //console.log("申请:",pData.submissions[i]);
+                                            //"NOMINATION" "ACCEPTED" "REJECTED"
+                                            //通过或拒绝
+                                            //console.log("accept",JSON.stringify(missionlist));
+                                            //console.log("accept",JSON.stringify(missionlist[j][6]));
+                                            //console.log("status",pData.submissions[i].status);
+                                            if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & missionlist[j][6]!="ok") {
+                                                missionlist[j][6]="ok";
+                                                //console.log("accept?",JSON.stringify(missionlist[j][6]));
+                                                //console.log("accept?",JSON.stringify(missionlist));
+                                                isave=1;
+                                                console.log("isave1");
+                                            }
+                                            //开审
+                                            if(pData.submissions[i].status == "VOTING" & missionlist[j][2]!="true") {
+                                                missionlist[j][2]="true";
+                                                isave=1;
+                                                console.log("isave2");
+                                            }
+                                            //审核人写错
+                                            if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & missionlist[j][9]!=useremail) {
+                                                missionlist[j][9] = useremail ;
+                                                isave=1;
+                                                console.log("isave3");
+                                            }
+                                            //更新经纬度、id
+                                            if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & (pData.submissions[i].lat != missionlist[j][7] || pData.submissions[i].lng != missionlist[j][8] )){
+                                                console.log("ptitle",pData.submissions[i].title);
+                                                console.log("mtitle",JSON.stringify(missionlist[j][0]));
+                                                console.log("plat",JSON.stringify(pData.submissions[i].lat));
+                                                console.log("mlat",JSON.stringify(missionlist[j][7]));
+                                                console.log("plng",JSON.stringify(pData.submissions[i].lng));
+                                                console.log("mlng",JSON.stringify(missionlist[j][8]));
+                                                missionlist[j][7] = pData.submissions[i].lat;missionlist[j][8] = pData.submissions[i].lng;
+                                                isave=1;
+                                                console.log("isave4");
+                                            }
+                                            //console.log(missionlist);
+                                        }
                                     }
-                                    //开审
-                                    if(pData.submissions[i].status == "VOTING" & missionlist[j][2]!="true") {
-                                        missionlist[j][2]="true";
-                                        isave=1;
-                                        console.log("isave2");
-                                    }
-                                    //审核人写错
-                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & missionlist[j][9]!=useremail) {
-                                        missionlist[j][9] = useremail ;
-                                        isave=1;
-                                        console.log("isave3");
-                                    }
-                                    //更新经纬度、id
-                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & (pData.submissions[i].lat != missionlist[j][7] || pData.submissions[i].lng != missionlist[j][8] )){
-                                        console.log("ptitle",pData.submissions[i].title);
-                                        console.log("mtitle",JSON.stringify(missionlist[j][0]));
-                                        console.log("plat",JSON.stringify(pData.submissions[i].lat));
-                                        console.log("mlat",JSON.stringify(missionlist[j][7]));
-                                        console.log("plng",JSON.stringify(pData.submissions[i].lng));
-                                        console.log("mlng",JSON.stringify(missionlist[j][8]));
-                                        missionlist[j][7] = pData.submissions[i].lat;missionlist[j][8] = pData.submissions[i].lng;
-                                        isave=1;
-                                        console.log("isave4");
-                                    }
+                                }
+                            }
+                            //console.log(isave);
+                            //更新云中任务
+                            if(isave==1){
+                                if(!missionlist){ return;}
+                                let miss=localStorage.currentmissiontitle;
+                                let ititle=null;
+                                if(miss) ititle=JSON.parse(miss).title;
+                                if(ititle) {
                                     //console.log(missionlist);
+                                    setTimeout(function(){
+                                        localStorage.setItem("currentmission",JSON.stringify(missionlist));
+                                        //console.log(JSON.stringify(missionlist));
+                                        gmrequest("PUT",surl,"mission/mission."+ititle+"",JSON.stringify(missionlist));
+                                    },500);
                                 }
                             }
                         }
+                    } catch (e) {
+                        console.log(e);
                     }
-                    //console.log(isave);
-                    //更新云中任务
-                    if(isave==1){
-                        if(!missionlist){ return;}
-                        let miss=localStorage.currentmissiontitle;
-                        let ititle=null;
-                        if(miss) ititle=JSON.parse(miss).title;
-                            if(ititle) {
-                                //console.log(missionlist);
-                                gmrequest("PUT",surl,"mission/mission."+ititle+"",JSON.stringify(missionlist));
-                            }
-                    }
-                }
-            } catch (e) {
-                console.log(e);
-            }
-        });
+                });
+            });
+        }
     }
 
     //NEW:根据标题名有重合，给提示是否重复，并加20秒倒计时
@@ -616,7 +610,9 @@
         let icnt1 = 0;
         let optp = document.querySelector('agm-map');
         if (optp) {
-            optp.scrollIntoView(true);
+            //optp.scrollIntoView(true);
+            optp.scrollTo({top:0,left:0,behavior:'smooth'});
+            //setTimeout(scrollToBottom, 100);
             let ccard = document.querySelector("wf-review-card[id='categorization-card']");
             if(ccard){
                 ccard.scrollIntoView(true);
@@ -697,6 +693,18 @@
         },1500);
     }
 
+    function scrollToBottom (){
+        console.log('scrollToBottom');
+        (function smoothscroll() {
+            const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
+            const clientHeight = document.documentElement.clientHeight; // 浏览器高度
+            const scrollHeight = document.documentElement.scrollHeight; // 总高度
+            if (scrollHeight - 10 > currentScroll + clientHeight) {
+                window.requestAnimationFrame(smoothscroll);
+                window.scrollTo(0, currentScroll + (scrollHeight - currentScroll - clientHeight) / 2);
+            }
+        })();
+    };
     //EDIT位置编辑用的函数
     function findArrayTwo(arr,title){
         for(let i=0;i<arr.length;i++){
