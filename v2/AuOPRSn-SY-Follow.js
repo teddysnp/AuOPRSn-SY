@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.5.5
+// @version      1.5.6
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -430,7 +430,7 @@
                                 //console.log("申请:",pData.submissions[i]);
                                 //1分钟的时间戳值:60000 20分钟是1200000
                                 for(let j=0;j<missionlist.length;j++){
-                                    if(missionlist[j][0]==pData.submissions[i].title ){
+                                    if( (missionlist[j][0]==pData.submissions[i].title) || (pdata.submissions[i].type=="EDIT_LOCATION" & ( missionlist[j][0]==pData.submissions[i].poiData.title) ) ){
                                         //1分钟的时间戳值:60000 查任务时间前5天的(防误输入)
                                         if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (missionlist[j][5] + " 00:00:00").getTime() - 60000*60*24*10 ) ){
                                             //console.log("任务：",missionlist[j]);
