@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.5.6
+// @version      1.5.7
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -48,7 +48,7 @@
             //console.log("isTrusted",event.isTrusted);
             isUserClick = event.isTrusted;
             if(event.isTrusted) {
-                //console.log(event.srcElement.innerText);
+                //console.log(event.srcElement);
                 let iauto = document.getElementById("idautolabel");
                 //if(iauto) console.log(iauto.textContent);
                 if(event.srcElement.innerText == "thumb_down" || event.srcElement.innerText == "標記為重複") {
@@ -398,6 +398,7 @@
         });
     }
 
+    //申请页面
     function injectManage() {
         let miss1 = localStorage.currentmissiontitle;
         //console.log(miss);
@@ -430,9 +431,13 @@
                                 //console.log("申请:",pData.submissions[i]);
                                 //1分钟的时间戳值:60000 20分钟是1200000
                                 for(let j=0;j<missionlist.length;j++){
-                                    if( (missionlist[j][0]==pData.submissions[i].title) || (pData.submissions[i].type=="EDIT_LOCATION" & ( missionlist[j][0]==pData.submissions[i].poiData.title) ) ){
-                                        //1分钟的时间戳值:60000 查任务时间前5天的(防误输入)
-                                        if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (missionlist[j][5] + " 00:00:00").getTime() - 60000*60*24*10 ) ){
+                                    if( (missionlist[j][0]==pData.submissions[i].title) ||
+                                       (pData.submissions[i].type=="EDIT_LOCATION" &
+                                        ( missionlist[j][0]==pData.submissions[i].poiData.title) ) )
+                                    {
+                                        //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
+                                        if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (missionlist[j][5] + " 00:00:00").getTime() - 60000*60*24*3 ) )
+                                        {
                                             //console.log("任务：",missionlist[j]);
                                             //console.log("申请:",pData.submissions[i]);
                                             //"NOMINATION" "ACCEPTED" "REJECTED"
