@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7.3
+// @version      4.7.4
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1665,8 +1665,10 @@
                 //生成 ：三种任务po归类 ：待完成2|已完成1|未进池3|已终止4
                 //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
                 let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
+                let okcount = 0;
                 for (let j=0;j<tmpmissionlist.length;j++){
                     if(tmpmissionlist[j][6]=="ok"){
+                        okcount++;
                         tmmiss4+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
                     }
                     else if(tmpmissionlist[j][4]=="✓" || tmpmissionlist[j][4]=="true"){
@@ -1699,7 +1701,7 @@
                   appreview.insertBefore(dva1,appreview.firstChild);
                   //console.log("missionlist",missionlist);
                   if(missiondisplay == "true"){
-                      if(miss1.state == "going"){
+                      if(miss1.state == "going" & okcount<tmpmissionlist.length){
                           $(".userclass.missionpo").replaceWith(
                               "<font size=3><div class='userclass missionpo' id='missionpo'>【待完成】"+tmmiss2
                               //+"<p>【已完成】"+tmmiss1
@@ -1942,6 +1944,28 @@
     }
 //<a href='https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/html.users.list.review.html?id="+missionlist1[k][10]+"' target='_blank'>"
 
+    function findUserEmail(userreview,UEmailList){
+        try{
+            console.log(userreview);
+            if(UEmailList.indexOf(";")>=0){
+                let sss=UEmailList+";";
+                while(sss.indexOf(";")>=0){
+                    let sss1 = sss.substring(0,sss.indexOf(";"));
+                    if(userreview.indexOf(sss1)>=0) return 1;
+                    sss=sss.substring(sss.indexOf(";")+1,sss.length);
+                    console.log("sss1",sss1);console.log("sss",sss);
+                }
+                return -1;
+            } else {
+                return userreview.indexOf(UEmailList);
+            }
+        }
+        catch(e){
+            console.log(e);
+            return -1
+        }
+    }
+
     switchUserReviewDiv = function() {
         //console.log("switchUserReviewDiv",id);
         try{
@@ -1990,26 +2014,27 @@
                     //console.log("userEmailList",userEmailList);
                     //console.log("userreview",userreview);
                     for(let i=0;i<userEmailList.length;i++){
-                        if(userreview.indexOf(userEmailList[i])>=0) {
+                        if(findUserEmail(userreview,userEmailList[i])>0){
+                        //if(userreview.indexOf(userEmailList[i])>=0) {
                             //console.log(userreview);
                             //console.log(userEmailList[i]);
                             if(userEmailList[i].indexOf(userEmail)>=0){
-                                stmp+="<div class='sqselfok'>"+userEmailList[i].replace(".com","")+"</div>";
+                                stmp+="<div class='sqselfok'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
                             } else {
-                                stmp+="<div class='sqok'>"+userEmailList[i].replace(".com","")+"</div>";
+                                stmp+="<div class='sqok'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
                             }
                         } else {
-                            if(userEmailList[i]==userEmail){
+                            if(userEmailList[i].indexOf(userEmail)>=0){
                                 if(owner=="O"){
-                                    stmp+="<div class='sqselfowner'>"+userEmailList[i].replace(".com","")+"</div>";
+                                    stmp+="<div class='sqselfowner'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
                                 } else {
-                                    stmp+="<div class='sqselfno'>"+userEmailList[i].replace(".com","")+"</div>";
+                                    stmp+="<div class='sqselfno'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
                                 }
                             } else {
-                                if(userEmailList[i]==powner){
-                                    stmp+="<div class='sqno'><span style='color:red'>O:</span>"+userEmailList[i].replace(".com","")+"</div>";
+                                if(userEmailList[i].indexOf(powner)>=0){
+                                    stmp+="<div class='sqno'><span style='color:red'>O:</span>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
                                 } else {
-                                    stmp+="<div class='sqno'>"+userEmailList[i].replace(".com","")+"</div>";
+                                    stmp+="<div class='sqno'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
                                 }
                             }
                         }
@@ -2176,10 +2201,10 @@
     initUserEmailList();
     function initUserEmailList(){
         userEmailList1=["snp66666@gmail.com","kobebrynan007@gmail.com","xiaohouzi0503@gmail.com","pokemonmiaowa@gmail.com","tydtyd@gmail.com",
-                        "zhangnan107107@gmail.com","sunkpty@gmail.com","zhangnan_007@outlook.com","unicode@163.com","tongliang12345@outlook.com",
-                       "pkpkqq01@gmail.com","pkpkqq02@outlook.com","tydingress@outlook.com","poketydf02@gmail.com","poketydf03@gmail.com",
+                        "zhangnan107107@gmail.com","sunkpty@gmail.com","zhangnan_007@outlook.com","unicode@163.com","tongliang12345@outlook.com;xiuaoao@gmail.com",
+                       "pkpkqq01@gmail.com","pkpkqq02@outlook.com;pkpkqq02@gmail.com","tydingress@outlook.com;poketydf01@gmail.com","poketydf02@gmail.com","poketydf03@gmail.com",
                        "poketyd@outlook.com","pokecntv01@outlook.com","pokecntv22@outlook.com","whathowyou@gmail.com","pokepokem01@outlook.com",
-                       "pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com","xiuaoao@gmail.com","pkpkqq02@gmail.com"
+                       "pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com","",""
                        ];
         userEmailList2=["w4b4uh134@gmail.com","1806424832mjn@gmail.com"];
     }
