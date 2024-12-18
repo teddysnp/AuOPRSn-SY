@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.5.8
+// @version      1.5.9
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -14,13 +14,14 @@
 
     let autoreview = null;
     let portalData = null;
-    let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確","方向","不準確的位置"];
-    let rejcbxengstr = ["PHOTO_BAD_BLURRY","PHOTO_FACE","PHOTO_PLATE","PHOTO_BAD","TEXT_BAD_TITLE","PHOTO_DIR","MISMATCH"];
+    let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確","方向","不準確的位置","不存在的假位置"];
+    let rejcbxengstr = ["PHOTO_BAD_BLURRY","PHOTO_FACE","PHOTO_PLATE","PHOTO_BAD","TEXT_BAD_TITLE","PHOTO_DIR","MISMATCH","ACCURACY_FAKE"];
     let reviewPortalAuto ="false";
     let cloudReviewData = null;
     localStorage.setItem("reviewPortalAuto",reviewPortalAuto);
 
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
+    let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
     let cookie = localStorage.cfcookie;
     let useremail = "";
     let tmpfollow={id:null,title:null,lat:null,lng:null,review:null};
@@ -404,7 +405,7 @@
         //console.log(miss);
         if(miss1){
             let miss = JSON.parse(miss1);
-            let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+miss.title+".json";
+            let title=durl+"/mission/mission."+miss.title+".json";
             console.log(title);
             let resp1 = U_XMLHttpRequest("GET",title)
             .then(res=>{
@@ -787,8 +788,8 @@
         let tmptext = '';
         let id=pdata.id;
         tmpfollow.id = null; tmpfollow.title = null; tmpfollow.lat = null; tmpfollow.lng = null; tmpfollow.review = null;
-        //console.log("https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portalreview/portal." +id +".json");
-        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portalreview/portal." +id +".json")
+        //console.log(durl+"/portal/portalreview/portal." +id +".json");
+        let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
         .then(res=>{
             //console.log("getjson",res);
             let idown = document.getElementById("idcountdownlabel");
