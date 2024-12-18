@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7.4
+// @version      4.7.5
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -77,6 +77,7 @@
         needCaptcha = localStorage.captchasetting;
     }
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
+    let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
     let cookie = localStorage.cfcookie;//上传权限
     let userEmailList1 = [];
     let userEmailList2 = [];
@@ -1728,8 +1729,9 @@
                                                                  //"<button class='wf-button' onclick=saveKey()>保存</button></font></div>"+
                                                                  //"<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>"
                                                                 );
+        let miss=JSON.parse(localStorage.currentmissiontitle);
         $(".showcase-gallery").replaceWith(
-            "<div><font size=5>任务  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div><div id='missionuser'></div>"
+            "<div><font size=5><a href='"+durl+"/mission/mission."+miss.title+".json' target='_blank'>任</a><a href='"+durl+"/mission/mission."+miss.title+".portallist.json' target='_blank'>务</a>  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div><div id='missionuser'></div>"
             +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
             +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
             +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
@@ -1924,7 +1926,7 @@
             }
             //console.log("missionlist1",missionlist1);
             for(let k=0;k<missionlist1.length;k++){
-                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id
+                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪计划
                 if(missionlist1[k][9].indexOf(userEmail)>=0){ missionlist1[k][4] = "O";}//自己
                 if (missionlist1[k][2]=="true") {missionlist1[k][2]="✓"} else {missionlist1[k][2]="✗";};//开审
                 if(missionlist1[k][6]=="ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
@@ -1932,8 +1934,8 @@
                     +"<td>"+missionlist1[k][6]+"</td>"
                     +'<td><a href="javascript:void(0);" us="us2" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
                     +'<td><a href="javascript:void(0);" us="us1" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
-                    +"<td>"+missionlist1[k][2]+"</td>"
-                    +"<td>"+missionlist1[k][4]+"</td><td>"+missionlist1[k][5]+"</td>"
+                    +"<td>"+missionlist1[k][2]+"</td><td>"+missionlist1[k][4]+"</td>"+
+                    "<td><a href='"+durl+"/portal/portaluseremail/portal."+missionlist1[k][10]+".useremail.json'  target='_blank'>"+missionlist1[k][5]+"</a></td>"
                     +"</tr>";
             }
             smistmp+="</tbody></table>";
@@ -1946,14 +1948,17 @@
 
     function findUserEmail(userreview,UEmailList){
         try{
-            console.log(userreview);
-            if(UEmailList.indexOf(";")>=0){
-                let sss=UEmailList+";";
-                while(sss.indexOf(";")>=0){
-                    let sss1 = sss.substring(0,sss.indexOf(";"));
-                    if(userreview.indexOf(sss1)>=0) return 1;
-                    sss=sss.substring(sss.indexOf(";")+1,sss.length);
-                    console.log("sss1",sss1);console.log("sss",sss);
+            //console.log(userreview);
+            if(UEmailList.indexOf(",")>=0){
+                let sss=UEmailList+",";
+                while(sss.indexOf(",")>=0){
+                    let sss1 = sss.substring(0,sss.indexOf(","));
+                    if(userreview.indexOf(sss1)>=0) {
+                        //if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss1",sss1);console.log("sss",sss);}
+                        return 1;
+                    }
+                    sss=sss.substring(sss.indexOf(",")+1,sss.length-1);
+                    //if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss1",sss1);console.log("sss",sss);}
                 }
                 return -1;
             } else {
@@ -1962,7 +1967,7 @@
         }
         catch(e){
             console.log(e);
-            return -1
+            return -1;
         }
     }
 
@@ -2014,27 +2019,37 @@
                     //console.log("userEmailList",userEmailList);
                     //console.log("userreview",userreview);
                     for(let i=0;i<userEmailList.length;i++){
-                        if(findUserEmail(userreview,userEmailList[i])>0){
+                        let sname=null;let semail=null;let slink=null;
+                        sname=userEmailList[i].substring(0,userEmailList[i].indexOf(';'));
+                        semail=userEmailList[i].substring(userEmailList[i].indexOf(';')+1,userEmailList[i].indexOf(';',userEmailList[i].indexOf(';')+1));
+                        slink=userEmailList[i].substring(userEmailList[i].lastIndexOf(';')+1);
+                        if(sname == "pkpkqq02") {
+                            //console.log(sname);console.log(semail);console.log(slink);console.log(userEmail);console.log(powner);
+                            //console.log(userreview);console.log(semail);
+                        }
+                        if(findUserEmail(userreview,semail)>0){
+                            //if(sname == "pkpkqq02") { console.log("find OK");}
                         //if(userreview.indexOf(userEmailList[i])>=0) {
                             //console.log(userreview);
                             //console.log(userEmailList[i]);
                             if(userEmailList[i].indexOf(userEmail)>=0){
-                                stmp+="<div class='sqselfok'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
+                                stmp+="<div class='sqselfok'>"+sname+"</div>";
                             } else {
-                                stmp+="<div class='sqok'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
+                                stmp+="<div class='sqok'>"+sname+"</div>";
                             }
                         } else {
-                            if(userEmailList[i].indexOf(userEmail)>=0){
+                            //if(sname == "pkpkqq02") { console.log("find NO");}
+                            if(semail.indexOf(userEmail)>=0){
                                 if(owner=="O"){
-                                    stmp+="<div class='sqselfowner'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
+                                    stmp+="<div class='sqselfowner'>"+sname+"</div>";
                                 } else {
-                                    stmp+="<div class='sqselfno'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
+                                    stmp+="<div class='sqselfno'>"+sname+"</div>";
                                 }
                             } else {
-                                if(userEmailList[i].indexOf(powner)>=0){
-                                    stmp+="<div class='sqno'><span style='color:red'>O:</span>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
+                                if(semail.indexOf(powner)>=0){
+                                    stmp+="<div class='sqno'><span style='color:red'>O:</span>"+sname+"</div>";
                                 } else {
-                                    stmp+="<div class='sqno'>"+userEmailList[i].replace("@outlook.com","").replace("@gmail.com","")+"</div>";
+                                    stmp+="<div class='sqno'>"+sname+"</div>";
                                 }
                             }
                         }
@@ -2200,11 +2215,11 @@
 
     initUserEmailList();
     function initUserEmailList(){
-        userEmailList1=["snp66666@gmail.com","kobebrynan007@gmail.com","xiaohouzi0503@gmail.com","pokemonmiaowa@gmail.com","tydtyd@gmail.com",
-                        "zhangnan107107@gmail.com","sunkpty@gmail.com","zhangnan_007@outlook.com","unicode@163.com","tongliang12345@outlook.com;xiuaoao@gmail.com",
-                       "pkpkqq01@gmail.com","pkpkqq02@outlook.com;pkpkqq02@gmail.com","tydingress@outlook.com;poketydf01@gmail.com","poketydf02@gmail.com","poketydf03@gmail.com",
-                       "poketyd@outlook.com","pokecntv01@outlook.com","pokecntv22@outlook.com","whathowyou@gmail.com","pokepokem01@outlook.com",
-                       "pokecntv08@outlook.com","pokecntv09@outlook.com","pokecntv10@outlook.com","",""
+        userEmailList1=["snpsl;snp66666@gmail.com;open chrome 1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;","tydtyd;tydtyd@gmail.com;",
+                        "kingsnan;zhangnan107107@gmail.com;","18kpt;sunkpty@gmail.com;","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;open chrome 23",
+                       "pkpkqq01;pkpkqq01@gmail.com;","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;","poketydf02;poketydf02@gmail.com;","poketydf03;poketydf03@gmail.com;",
+                       "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;","pokepokem01;pokepokem01@outlook.com;",
+                       "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
                        ];
         userEmailList2=["w4b4uh134@gmail.com","1806424832mjn@gmail.com"];
     }
