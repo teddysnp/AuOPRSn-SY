@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.5.9
+// @version      1.6.0
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -433,7 +433,8 @@
                                 //1分钟的时间戳值:60000 20分钟是1200000
                                 for(let j=0;j<missionlist.length;j++){
                                     if( (missionlist[j][0]==pData.submissions[i].title) ||
-                                       (pData.submissions[i].type=="EDIT_LOCATION" &
+                                       //(pData.submissions[i].type=="EDIT_LOCATION" &
+                                       (
                                         ( missionlist[j][0]==pData.submissions[i].poiData.title) ) )
                                     {
                                         //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
@@ -456,17 +457,20 @@
                                             //开审
                                             if(pData.submissions[i].status == "VOTING" & missionlist[j][2]!="true") {
                                                 missionlist[j][2]="true";
+                                                missionlist[j][6]="";
                                                 isave=1;
                                                 console.log("isave2");
                                             }
                                             //审核人写错
                                             if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & missionlist[j][9]!=useremail) {
                                                 missionlist[j][9] = useremail ;
+                                                missionlist[j][6]="";//图片
                                                 isave=1;
                                                 console.log("isave3");
                                             }
                                             //更新经纬度、id
-                                            if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & (pData.submissions[i].lat != missionlist[j][7] || pData.submissions[i].lng != missionlist[j][8] )){
+                                            if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") &
+                                               (pData.submissions[i].lat != missionlist[j][7] || pData.submissions[i].lng != missionlist[j][8] )){
                                                 console.log("ptitle",pData.submissions[i].title);
                                                 console.log("mtitle",JSON.stringify(missionlist[j][0]));
                                                 console.log("plat",JSON.stringify(pData.submissions[i].lat));
@@ -474,6 +478,7 @@
                                                 console.log("plng",JSON.stringify(pData.submissions[i].lng));
                                                 console.log("mlng",JSON.stringify(missionlist[j][8]));
                                                 missionlist[j][7] = pData.submissions[i].lat;missionlist[j][8] = pData.submissions[i].lng;
+                                                missionlist[j][6]="";//图片
                                                 isave=1;
                                                 console.log("isave4");
                                             }
