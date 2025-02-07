@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7.5
+// @version      4.7.6
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -347,6 +347,13 @@
             //在顶部增加计时标签
             if(portalData1.type=="NEW") {
                 document.getElementById("title-description-card").setAttribute("class","card");
+                let dd = document.getElementById("title-description-card").parentNode;
+                let dd1 = dd.nextSibling;
+                let dd2 = dd1.nextSibling;
+                dd.parentNode.insertBefore(dd1,dd);
+                dd.parentNode.insertBefore(dd2,dd);
+                let lbtitle = document.querySelector('.review-new.ng-star-inserted').childNodes[0].childNodes[0];
+                if(lbtitle) lbtitle.textContent = portalData1.title;
             }
             document.querySelector("h2[class='wf-page-header__title ng-star-inserted']").replaceWith("");
             let liddvall = document.getElementById("iddvall");
@@ -1024,7 +1031,8 @@
                         console.log("update1",missionlist);
                         for(let i=0;i<missionlist.length;i++){
                             if(missionlist[i][0]==portaldata.title){
-                                missionlist[i][5]=formatDate(new Date(),"yyyy-MM-dd");
+                                //missionlist[i][5]=formatDate(new Date(),"yyyy-MM-dd");
+                                missionlist[i][12]=formatDate(new Date(),"yyyy-MM-dd");
                                 missionlist[i][2]="true";
                                 missionlist[i][10]=portaldata.id;
                             }
@@ -1731,7 +1739,7 @@
                                                                 );
         let miss=JSON.parse(localStorage.currentmissiontitle);
         $(".showcase-gallery").replaceWith(
-            "<div><font size=5><a href='"+durl+"/mission/mission."+miss.title+".json' target='_blank'>任</a><a href='"+durl+"/mission/mission."+miss.title+".portallist.json' target='_blank'>务</a>  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div><div id='missionuser'></div>"
+            "<div><font size=5><a href='"+durl+"/mission/mission."+miss.title+".json' target='_blank'>-任-</a><span>　</span><a href='"+durl+"/mission/mission."+miss.title+".portallist.json' target='_blank'>-务-</a>  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div><div id='missionuser'></div>"
             +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
             +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
             +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
