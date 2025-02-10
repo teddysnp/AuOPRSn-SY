@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7.6
+// @version      4.7.6.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1571,7 +1571,8 @@
         }
         //任务列表判断
         for (let i=0;i<missionlist.length;i++){
-            if(missionlist[i][0]==portal.title & (Math.abs(portal.lat-missionlist[i][7])<=0.001) & (Math.abs(portal.lng-missionlist[i][8])<=0.001)){
+            if(missionlist[i][0]===portal.title & (Math.abs(portal.lat-missionlist[i][7])<=0.001) & (Math.abs(portal.lng-missionlist[i][8])<=0.001)){
+                console.log("位置判断：池中");
                 return "池中";
             }
         }
@@ -1962,11 +1963,15 @@
                 while(sss.indexOf(",")>=0){
                     let sss1 = sss.substring(0,sss.indexOf(","));
                     if(userreview.indexOf(sss1)>=0) {
-                        //if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss1",sss1);console.log("sss",sss);}
+                        if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss1",sss1);console.log("sss",sss);}
                         return 1;
                     }
                     sss=sss.substring(sss.indexOf(",")+1,sss.length-1);
-                    //if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss1",sss1);console.log("sss",sss);}
+                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss12",sss1);console.log("sss2",sss);}
+                }
+                if(userreview.indexOf(sss)>=0) {
+                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss3",sss);}
+                    return 1;
                 }
                 return -1;
             } else {
@@ -2032,8 +2037,8 @@
                         semail=userEmailList[i].substring(userEmailList[i].indexOf(';')+1,userEmailList[i].indexOf(';',userEmailList[i].indexOf(';')+1));
                         slink=userEmailList[i].substring(userEmailList[i].lastIndexOf(';')+1);
                         if(sname == "pkpkqq02") {
-                            //console.log(sname);console.log(semail);console.log(slink);console.log(userEmail);console.log(powner);
-                            //console.log(userreview);console.log(semail);
+                            console.log(sname);console.log(semail);console.log(slink);console.log(userEmail);console.log(powner);
+                            console.log(userreview);console.log(semail);
                         }
                         if(findUserEmail(userreview,semail)>0){
                             //if(sname == "pkpkqq02") { console.log("find OK");}
