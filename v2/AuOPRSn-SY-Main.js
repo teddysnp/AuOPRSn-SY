@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7.6.1
+// @version      4.7.7
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -955,11 +955,11 @@
             let miss=localStorage.currentmissiontitle;
             let ititle=null;
             if(miss) ititle=JSON.parse(miss).title;
-            let pname = null; let preview=null;
+            let pname = null; let preview=null;let mid = null;
             for(let i=0;i<missionlist.length;i++){
                 if(missionlist[i][0] == portaldata.title) {
                     if(Math.abs(missionlist[i][7]-portaldata.lat)<=0.001 & Math.abs(missionlist[i][8]-portaldata.lng)<=0.01) {
-                        pname = portaldata.title;preview=missionlist[i][2];
+                        pname = portaldata.title;preview=missionlist[i][2];mid=missionlist[i][10];
                     }
                 }
             }
@@ -1027,23 +1027,24 @@
                 .then(res=>{
                     //如果任务未开审，则更新任务为开审并加id
                     //console.log("preview",preview);
-                    if(preview == "false" || preview == "✗" ) {
-                        console.log("update1",missionlist);
-                        for(let i=0;i<missionlist.length;i++){
-                            if(missionlist[i][0]==portaldata.title){
+                    for(let i=0;i<missionlist.length;i++){
+                        if(missionlist[i][0]==portaldata.title){
+                            if(preview == "false" || preview == "✗" || missionlist[i][10] == null || missionlist[i][10]=="") {
+                                console.log("update1",missionlist);
                                 //missionlist[i][5]=formatDate(new Date(),"yyyy-MM-dd");
                                 missionlist[i][12]=formatDate(new Date(),"yyyy-MM-dd");
                                 missionlist[i][2]="true";
                                 missionlist[i][10]=portaldata.id;
+                                console.log("update1",missionlist);
+                                if(miss){
+                                    console.log("ititle",ititle);
+                                    if(miss) uploadFile("PUT","mission/mission."+ititle+".json",JSON.stringify(missionlist));
+                                    console.log("更新任务为开审",portaldata.title);
+                                }
                             }
                         }
-                        console.log("update1",missionlist);
-                        if(miss){
-                            console.log("ititle",ititle);
-                            if(miss) uploadFile("PUT","mission/mission."+ititle+".json",JSON.stringify(missionlist));
-                            console.log("更新任务为开审",portaldata.title);
-                        }
                     }
+
                     console.log("读取用户打卡");
                     //console.log("res",res);
                     if(!res) {
