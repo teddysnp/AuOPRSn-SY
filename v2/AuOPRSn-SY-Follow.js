@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.6.0
+// @version      1.6.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -14,8 +14,8 @@
 
     let autoreview = null;
     let portalData = null;
-    let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確","方向","不準確的位置","不存在的假位置"];
-    let rejcbxengstr = ["PHOTO_BAD_BLURRY","PHOTO_FACE","PHOTO_PLATE","PHOTO_BAD","TEXT_BAD_TITLE","PHOTO_DIR","MISMATCH","ACCURACY_FAKE"];
+    let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確","方向","不準確的位置","不存在的假位置","標題含有顏文字或表情符號"];
+    let rejcbxengstr = ["PHOTO_BAD_BLURRY","PHOTO_FACE","PHOTO_PLATE","PHOTO_BAD","TEXT_BAD_TITLE","PHOTO_DIR","MISMATCH","ACCURACY_FAKE","EMOJI_TITLE"];
     let reviewPortalAuto ="false";
     let cloudReviewData = null;
     localStorage.setItem("reviewPortalAuto",reviewPortalAuto);
@@ -636,8 +636,10 @@
                     let btnpt = document.querySelectorAll('agm-map div[role="button"]');
                     if (cbxpt) {
                         console.log("iplan",iplan);
-                        if(iplan & iplan>=0)
+                        console.log("iplan & iplan>=0",iplan & iplan>=0);
+                        if(iplan>=0)
                         {
+                            console.log("iplam1",iplan);
                             let ptbutton = document.querySelectorAll('agm-map div[role="button"]');
                             let ptstruct = getbtnStruct(ptbutton);
                             //console.log(editGYMPosition[ititle]);
@@ -649,7 +651,7 @@
                             if( movepos >10) movepos = movepos-10;
                             console.log("GYMData",ptstruct);
                             console.log("resortGYM",resortdata);
-                            //console.log(movepos);
+                            console.log("movepos",movepos);
                             //console.log(resortdata.length);
                             if(movepos<=resortdata.length || movepos == 10){
                                 let resdata=null;
@@ -1052,7 +1054,8 @@
                     console.log("审核记录拒",rdata.rejectReasons);
                     for(let i=0;i<rdata.rejectReasons.length;i++){
                         if(rdata.rejectReasons[i]=="PRIVATE" || rdata.rejectReasons[i]=="INAPPROPRIATE" || rdata.rejectReasons[i]=="SCHOOL" ||
-                           rdata.rejectReasons[i]=="SENSITIVE" || rdata.rejectReasons[i]=="EMERGENCY" || rdata.rejectReasons[i]=="GENERIC"){
+                           rdata.rejectReasons[i]=="SENSITIVE" || rdata.rejectReasons[i]=="EMERGENCY" || rdata.rejectReasons[i]=="GENERIC")
+                        {
                             console.log("适当拒");
                             setTimeout(function(){
                                 //console.log(document.querySelector('#appropriate-card'));
@@ -1073,7 +1076,9 @@
                                     },500);
                                 }
                             },500);
-                        } else if (rdata.rejectReasons[0] == "UNSAFE") {
+                        }
+                        else if (rdata.rejectReasons[0] == "UNSAFE")
+                        {
                             //setTimeout(function(){
                             if(document.querySelector('#safe-card').querySelectorAll('button')[2])
                             { //
@@ -1082,7 +1087,9 @@
                                 }
                             }
                             //},1000);
-                        } else if (rdata.rejectReasons[0] == "TEMPORARY") {
+                        }
+                        else if (rdata.rejectReasons[0] == "TEMPORARY")
+                        {
                             setTimeout(function(){
                                 if(document.querySelector('#permanent-location-card').querySelectorAll('button')[2])
                                 { //
