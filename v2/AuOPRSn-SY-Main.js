@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7.7
+// @version      4.7.8
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2235,7 +2235,8 @@
                        "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;","pokepokem01;pokepokem01@outlook.com;",
                        "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
                        ];
-        userEmailList2=["w4b4uh134@gmail.com","1806424832mjn@gmail.com"];
+        userEmailList2=["w4b4uh134;w4b4uh134@gmail.com;","1806424832mjn;1806424832mjn@gmail.com;"];
+
     }
 
     //css
