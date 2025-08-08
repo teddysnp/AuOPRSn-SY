@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.6.1
+// @version      1.6.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -637,6 +637,7 @@
                     if (cbxpt) {
                         console.log("iplan",iplan);
                         console.log("iplan & iplan>=0",iplan & iplan>=0);
+                        if(iplan){
                         if(iplan>=0)
                         {
                             console.log("iplam1",iplan);
@@ -680,7 +681,9 @@
                                     }
                                 })
                             }
-                        } else
+                        }
+                        }
+                        else
                         {
                             if(btnpt.length>0){
                                 btnpt[0].click();
