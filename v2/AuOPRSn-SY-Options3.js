@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options3
 // @namespace    AuOPR
-// @version      1.3
+// @version      1.4
 // @description  AuOPRSn-SY-MissionManager : Create and modify the missions
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
