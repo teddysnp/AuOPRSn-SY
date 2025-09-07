@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.7.9
+// @version      4.8.0
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -117,11 +117,11 @@
                         if(res.status === 200){
                             console.log('上传: '+pfilename+" 成功");
                         }else{
-                            console.log('上传失败')
+                            console.log('上传失败:',surl+pfilename)
                         }
                     },
                     onerror : function(err){
-                        console.log('上传错误')
+                        console.log('上传错误',surl+pfilename)
                         console.log(err)
                     }
 //                    onload: resolve,
@@ -2236,7 +2236,7 @@
                        "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
                        ];
         userEmailList2=["小尔;w4b4uh134@gmail.com;","木木;1806424832mjn@gmail.com;","FishDragonKing;269999205@qq.com;","15998804246dyh;15998804246dyh@gmail.com;","hch463734529;hch463734529@gmail.com;",
-                        "masterxiaoli666;masterxiaoli666@gmail.com;",";shizx1twk;shizx1twk@gmail.com;",";;",";;",";;"
+                        "masterxiaoli666;masterxiaoli666@gmail.com;","shizx1twk;shizx1twk@gmail.com;","470274941;470274941@qq.com;","wczmw;wczmw@sina.com;",";;"
                        ];
 
     }
