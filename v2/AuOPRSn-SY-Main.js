@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      4.8.0
+// @version      4.8.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -135,6 +135,7 @@
 
     console.log("mywin",mywin.location);
     mywin.onload = function() {
+        //console.log("onload","getMission");
         getMission();
     }
 
@@ -150,7 +151,7 @@
                 return;
             }
             let miss = JSON.parse(res)[0];
-            console.log(miss);
+            //console.log(miss);
             if(miss){
                 let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+miss.title+".json";
                 console.log(miss.title);
@@ -1733,21 +1734,24 @@
     function showReviewedHome(){
         //console.log("missionlist",missionlist);
         getMission();
-        $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>"
-                                                                 //+"<div><font size=5>skey:"+
-                                                                 //"<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
-                                                                 //"<button class='wf-button' onclick=saveKey()>保存</button></font></div>"+
-                                                                 //"<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>"
-                                                                );
-        let miss=JSON.parse(localStorage.currentmissiontitle);
-        $(".showcase-gallery").replaceWith(
-            "<div><font size=5><a href='"+durl+"/mission/mission."+miss.title+".json' target='_blank'>-任-</a><span>　</span><a href='"+durl+"/mission/mission."+miss.title+".portallist.json' target='_blank'>-务-</a>  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div><div id='missionuser'></div>"
-            +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
-            +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
-            +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
-            +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
-        );
-        showReviewedHome1();
+        awaitElement(() => missionlist.length>0)
+            .then((ref) => {
+            $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>"
+                                                                     //+"<div><font size=5>skey:"+
+                                                                     //"<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
+                                                                     //"<button class='wf-button' onclick=saveKey()>保存</button></font></div>"+
+                                                                     //"<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>"
+                                                                    );
+            let miss=JSON.parse(localStorage.currentmissiontitle);
+            $(".showcase-gallery").replaceWith(
+                "<div><font size=5><a href='"+durl+"/mission/mission."+miss.title+".json' target='_blank'>-任-</a><span>　</span><a href='"+durl+"/mission/mission."+miss.title+".portallist.json' target='_blank'>-务-</a>  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div><div id='missionuser'></div>"
+                +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
+                +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
+                +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
+                +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
+            );
+            showReviewedHome1();
+        });
     }
     function showReviewedHome1()
     {
@@ -1797,11 +1801,12 @@
                     obj.checked = true;
                 }
             }
-            //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id
+            //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
             let smis="<table style='width:100%'><thead><tr>"
             +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
             +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
-            +"<th style='width:20%'>时间</th><th style='width:15%'>纬度</th><th style='width:15%'>经度</th>"
+            +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
+            +"<th style='width:14%'>挪po</th>"
             +"</tr></thead>";
             let smistmp="";let sstmp="";let ssok="";
             //console.log("start",missionlist);
@@ -1940,18 +1945,30 @@
                 if(missionlist1[k][9].indexOf(userEmail)>=0){ missionlist1[k][4] = "O";}//自己
                 if (missionlist1[k][2]=="true") {missionlist1[k][2]="✓"} else {missionlist1[k][2]="✗";};//开审
                 if(missionlist1[k][6]=="ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
+                let iplan=parseInt(missionlist[k][11]); let splan="";
+                if(iplan>=1 && iplan<10) splan="左第"+missionlist[k][11]+"个";
+                if(iplan>=11 && iplan<20) splan="上第"+(missionlist[k][11]-10)+"个";
+                if(iplan==10) splan="最右那个";
+                if(iplan==20) splan="最下那个";
                 smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td>"
                     +"<td>"+missionlist1[k][6]+"</td>"
                     +'<td><a href="javascript:void(0);" us="us2" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
                     +'<td><a href="javascript:void(0);" us="us1" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
                     +"<td>"+missionlist1[k][2]+"</td><td>"+missionlist1[k][4]+"</td>"+
                     "<td><a href='"+durl+"/portal/portaluseremail/portal."+missionlist1[k][10]+".useremail.json'  target='_blank'>"+missionlist1[k][5]+"</a></td>"
+                    +"<td>"+missionlist1[k][7]+"</td>"+"<td>"+missionlist1[k][8]+"</td>"+"<td>"+splan+"</td>"
                     +"</tr>";
             }
-            smistmp+="</tbody></table>";
             let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
-            $("#missionPortal1").replaceWith(smistmp);
+            //console.log("missionPortal1",$("#missionPortal1"));
+            smistmp+="</tbody></table>";
+            const parse = new DOMParser();
+            let smisssss=parse.parseFromString(smistmp,"text/html");
+            document.querySelector("#missionPortal1").innerHTML = smisssss.body.innerHTML;
+            //console.log(smisssss.body.innerHTML);
+            //console.log("smistmp",smistmp);
             $("#missionuser").replaceWith(sultmp);
+            //console.log(smisssss);
         } catch(e){console.log(e);}
     }
 //<a href='https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/html.users.list.review.html?id="+missionlist1[k][10]+"' target='_blank'>"
