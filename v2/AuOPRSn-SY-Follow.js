@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.6.2
+// @version      1.6.3
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -426,16 +426,19 @@
                             return;
                         }
                         let pData = json.result;
+                        console.log("missionlist",missionlist);
+                        console.log("pData",pData);
                         if(pData.submissions){
                             let isave=0;
-                            for(let i=0;i<pData.submissions.length;i++){
-                                //console.log("申请:",pData.submissions[i]);
-                                //1分钟的时间戳值:60000 20分钟是1200000
-                                for(let j=0;j<missionlist.length;j++){
-                                    if( (missionlist[j][0]==pData.submissions[i].title) ||
-                                       //(pData.submissions[i].type=="EDIT_LOCATION" &
-                                       (
-                                        ( missionlist[j][0]==pData.submissions[i].poiData.title) ) )
+                            for(let j=0;j<missionlist.length;j++){
+                                let iphoto=0;
+                                if(missionlist[j][3]=="图片"){
+                                    console.log(missionlist[j],"图片");
+                                }
+                                for(let i=0;i<pData.submissions.length;i++){
+                                    //console.log("申请:",pData.submissions[i]);
+                                    //1分钟的时间戳值:60000 20分钟是1200000
+                                    if( (missionlist[j][0]==pData.submissions[i].title) || ( ( missionlist[j][0]==pData.submissions[i].poiData.title) ) )
                                     {
                                         //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
                                         if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (missionlist[j][5] + " 00:00:00").getTime() - 60000*60*24*3 ) )
@@ -447,19 +450,25 @@
                                             //console.log("accept",JSON.stringify(missionlist));
                                             //console.log("accept",JSON.stringify(missionlist[j][6]));
                                             //console.log("status",pData.submissions[i].status);
-                                            if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & missionlist[j][6]!="ok") {
-                                                missionlist[j][6]="ok";
-                                                //console.log("accept?",JSON.stringify(missionlist[j][6]));
-                                                //console.log("accept?",JSON.stringify(missionlist));
-                                                isave=1;
-                                                console.log("isave1");
-                                            }
-                                            //开审
-                                            if(pData.submissions[i].status == "VOTING" & missionlist[j][2]!="true") {
-                                                missionlist[j][2]="true";
-                                                missionlist[j][6]="";
-                                                isave=1;
-                                                console.log("isave2");
+                                            if(pData.submissions[i].type=="PHOTO"){
+                                                if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED")) { iphoto+=0; }
+                                                //开审
+                                                if(pData.submissions[i].status == "VOTING") { iphoto+=1; }
+                                            } else {
+                                                if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & missionlist[j][6]!="ok") {
+                                                    missionlist[j][6]="ok";
+                                                    //console.log("accept?",JSON.stringify(missionlist[j][6]));
+                                                    //console.log("accept?",JSON.stringify(missionlist));
+                                                    isave=1;
+                                                    console.log("isave1");
+                                                }
+                                                //开审
+                                                if(pData.submissions[i].status == "VOTING" & missionlist[j][2]!="true") {
+                                                    missionlist[j][2]="true";
+                                                    missionlist[j][6]="";
+                                                    isave=1;
+                                                    console.log("isave2");
+                                                }
                                             }
                                             //审核人写错
                                             if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & missionlist[j][9]!=useremail) {
@@ -478,7 +487,6 @@
                                                 console.log("plng",JSON.stringify(pData.submissions[i].lng));
                                                 console.log("mlng",JSON.stringify(missionlist[j][8]));
                                                 missionlist[j][7] = pData.submissions[i].lat;missionlist[j][8] = pData.submissions[i].lng;
-                                                missionlist[j][6]="";//图片
                                                 isave=1;
                                                 console.log("isave4");
                                             }
@@ -486,21 +494,22 @@
                                         }
                                     }
                                 }
-                            }
-                            //console.log(isave);
-                            //更新云中任务
-                            if(isave==1){
-                                if(!missionlist){ return;}
-                                let miss=localStorage.currentmissiontitle;
-                                let ititle=null;
-                                if(miss) ititle=JSON.parse(miss).title;
-                                if(ititle) {
-                                    //console.log(missionlist);
-                                    setTimeout(function(){
-                                        localStorage.setItem("currentmission",JSON.stringify(missionlist));
-                                        //console.log(JSON.stringify(missionlist));
-                                        gmrequest("PUT",surl,"mission/mission."+ititle+"",JSON.stringify(missionlist));
-                                    },500);
+                                if(iphoto>0){ missionlist[j][6]=""; isave=1;}
+                                //console.log(isave);
+                                //更新云中任务
+                                if(isave==1){
+                                    if(!missionlist){ return;}
+                                    let miss=localStorage.currentmissiontitle;
+                                    let ititle=null;
+                                    if(miss) ititle=JSON.parse(miss).title;
+                                    if(ititle) {
+                                        //console.log(missionlist);
+                                        setTimeout(function(){
+                                            localStorage.setItem("currentmission",JSON.stringify(missionlist));
+                                            //console.log(JSON.stringify(missionlist));
+                                            gmrequest("PUT",surl,"mission/mission."+ititle+"",JSON.stringify(missionlist));
+                                        },500);
+                                    }
                                 }
                             }
                         }
