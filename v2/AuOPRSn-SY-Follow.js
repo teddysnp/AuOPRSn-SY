@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      2.1.2
+// @version      2.1.3
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -478,6 +478,7 @@
                 }
                 portalData = json.result;
                 if(!portalData) return;
+                if (missionGDoc.length === 0) {missionGDoc = JSON.parse(localStorage.missionGDoc);}
                 console.log("开始新审核:",portalData.title);
                 console.log("原始po数据:",portalData);
 //                if(!portalData.id || portalData.id==null) return;
@@ -669,8 +670,8 @@
             } else if(item.title === pdata.title){
                 if(item.moveoptions === "右") iplan =10;
                 if(item.moveoptions === "下") iplan =20;
-                if(item.moveoptions === "左") iplan =parseInt(item.moveplace);
-                if(item.moveoptions === "上") iplan =parseInt(item.moveplace) + 10;
+                if(item.moveoptions === "左") iplan =(parseInt(item.moveplace || 1, 10));
+                if(item.moveoptions === "上") iplan =(parseInt(item.moveplace || 1, 10)) + 10;
             }
         })
 
