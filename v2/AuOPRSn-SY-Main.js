@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main-New
 // @namespace    AuOPR
-// @version      5.0
+// @version      5.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -127,6 +127,7 @@
     console.log("mywin",mywin.location);
     mywin.onload = function() {
         //console.log("onload","getMission");
+        missionGDoc = JSON.parse(localStorage.missionGDoc);
         getMissionFromGoogleDoc();
         getMission();
     }
@@ -155,118 +156,66 @@
     };
 
     //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
+
+    // 改造：将 getMissionFromGoogleDoc 改为返回 Promise 的函数
     function getMissionFromGoogleDoc() {
-        const url = dURL+'?status=mission';
-        if (!url) { return; }
-
-        $.ajax({
-            url, type: 'GET', dataType: 'text',
-            success: function (data, status, header) {
-                try {
-                    let markercollection = JSON.parse(data);
-                    // 筛选出status为'提交'或'审核'的元素
-                    let filteredMarkers = markercollection.filter(item => {
-                        // 保留status为'提交'或'审核'的项
-                        return item.status === '提交' || item.status === '审核';
-                    });
-
-                    console.log('filteredMarkers',filteredMarkers);
-                    missionGDoc = filteredMarkers;
-                    localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
-
-                    //借用全局任务，初始化一下当前用户审的状态
-                    missionGDoc.forEach(item => {
-                        item.ownerstatus = "";
-                    });
-
-                    console.log("missionGDoc",missionGDoc);
-
-                    let testdata = filteredMarkers.filter(item => {
-                        return item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b" ;
-                    });
-                    if(testdata.length === 1){
-                        //console.log('testdata',JSON.stringify(testdata[0]));
-                        testdata[0].status = "通过" ;
-                        //testSaveToDoc(testdata[0]);
-                    }
-                    //以下，将从google doc读取的任务转换为老版任务格式
-                    /* {
-                    let docmission = [];
-
-                    filteredMarkers.forEach(item => {
-                        //console.log('item', item);
-                        // 每次循环都创建新对象，避免引用问题
-                        let docmissiontmp = {
-                            title: '',
-                            latlng: null,
-                            action: null,
-                            types: null,
-                            ownerreviewed: false,
-                            nomdate: null,
-                            status: false,
-                            lat: null,
-                            lng: null,
-                            submitter: null,
-                            portalID: null,
-                            moveplace: null,
-                            votingdate: null,
-                            docid:null
-                        };
-
-                        docmissiontmp.title = item.title;
-                        docmissiontmp.latlng = item.lat + ',' + item.lng;
-                        // 修正条件判断，使用===而不是=
-                        if (item.status === "提交") docmissiontmp.action = false;
-                        if (item.status === "审核") docmissiontmp.action = true;
-
-                        docmissiontmp.types = item.types;
-                        docmissiontmp.ownerreviewed = false;
-                        docmissiontmp.nomdate = item.timestamp;
-                        docmissiontmp.status = false;
-                        docmissiontmp.lat = item.lat;
-                        docmissiontmp.lng = item.lng;
-                        docmissiontmp.submitter = item.submitter;
-                        docmissiontmp.votingdate = item.submitteddate;
-                        docmissiontmp.portalID = item.portalID;
-                        docmissiontmp.docid = item.id;
-
-                        // 修正条件判断，使用===而不是=
-                        if (item.moveoptions === '右') docmissiontmp.moveplace = 10;
-                        if (item.moveoptions === '下') docmissiontmp.moveplace = 20;
-                        if (item.moveoptions === '左') docmissiontmp.moveplace = item.moveplace;
-                        if (item.moveoptions === '上') docmissiontmp.moveplace = item.moveplace + 10;
-
-                        //console.log(docmissiontmp);
-                        docmission.push(docmissiontmp);
-                    });
-                    let missionlistfromdoc = [];
-                    docmission.forEach(item => {
-                        let missionlisttmp = [];
-                        missionlisttmp[0]=item.title;missionlisttmp[1]=item.latlng;missionlisttmp[2]=item.action;
-                        missionlisttmp[3]=item.types;missionlisttmp[4]=item.ownerreviewed;missionlisttmp[5]=item.nomdate;
-                        missionlisttmp[6]=item.status;missionlisttmp[7]=item.lat;missionlisttmp[8]=item.lng;
-                        missionlisttmp[9]=item.submitter;missionlisttmp[10]=item.portalID;missionlisttmp[11]=item.moveplace;
-                        missionlisttmp[12]=item.votingdate;missionlisttmp[13]=item.docid;
-                        //0-title;1-lat,lng;2-action:voting;3-types:新增/编辑/图片;4-:true/false本用户是否审核;5-submitterdate:yyyy-mm-dd;6-status=accept:ok
-                        //7-lat;8-lng;9-submitter:email;10-:portal ID;11-moveoptions+moveplace:1-10 11-20;12-:开审日期 yyyy-mm-dd
-                        missionlistfromdoc.push(missionlisttmp);
-                    });
-                    console.log('missionlistfromdoc',missionlistfromdoc);
-                    missionlist = missionlistfromdoc;
-                    } */
-
-                } catch (e) {
-                    console.log(e);
-                    alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
-                    return;
-                }
-            },
-            error: function (x, y, z) {
-                console.log('Err:', x, y, z);
-                alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+        // 返回 Promise 对象，包裹异步请求逻辑
+        return new Promise((resolve, reject) => {
+            const url = dURL + '?status=mission';
+            if (!url) {
+                reject(new Error("请求地址为空")); // 地址无效时触发失败
+                return;
             }
-        })
+
+            $.ajax({
+                url, type: 'GET', dataType: 'text',
+                success: function (data, status, header) {
+                    try {
+                        let markercollection = JSON.parse(data);
+                        // 筛选状态为'提交'或'审核'的元素
+                        let filteredMarkers = markercollection.filter(item =>
+                                                                      item.status === '提交' || item.status === '审核'
+                                                                     );
+
+                        console.log('filteredMarkers', filteredMarkers);
+                        missionGDoc = filteredMarkers;
+                        localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
+
+                        // 初始化 ownerstatus 字段
+                        missionGDoc.forEach(item => {
+                            item.ownerstatus = "";
+                        });
+
+                        console.log("missionGDoc", missionGDoc);
+
+                        // 测试数据修改（保留原逻辑）
+                        let testdata = filteredMarkers.filter(item =>
+                                                              item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b"
+                                                             );
+                        if (testdata.length === 1) {
+                            testdata[0].status = "通过";
+                            // testSaveToDoc(testdata[0]); // 如需执行，可在这里调用
+                        }
+
+                        // 数据处理完成，触发 Promise 成功，返回处理后的数据
+                        resolve(missionGDoc);
+
+                    } catch (e) {
+                        console.log(e);
+                        alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                        reject(e); // 解析/处理失败时触发 Promise 失败
+                    }
+                },
+                error: function (x, y, z) {
+                    const errorMsg = `请求失败: ${x.status} - ${y}`;
+                    console.log('Err:', errorMsg, x, z);
+                    alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                    reject(new Error(errorMsg)); // AJAX 请求失败时触发 Promise 失败
+                }
+            });
+        });
     }
+
 
     //测试保存数据至GAC,data为JSON数据格式
     function testSaveToDoc(data){
@@ -1805,14 +1754,81 @@
             const retitle = document.getElementById("latestpo");
             //console.log("retitle",retitle);
             if( !retitle){
+
+                let prpo = JSON.parse(localStorage.getItem('Reviewed1'));
+                //console.log('prpo',prpo);
+                if (prpo!=null){
+                    let strarr ="";
+                    let stmparr=[];
+                    for(let i=prpo.length-1;i>=0;i--){
+                        strarr = prpo[i];
+                        try {
+                            while(strarr.indexOf("undefined")>0){
+                                strarr = strarr.replace("undefined","0");
+                            }
+                            while(strarr.indexOf('""')>0){
+                                strarr = strarr.replace('""','"');
+                            }
+                            while(strarr.indexOf('":","')>0){
+                                strarr = strarr.replace('":","','":"","');
+                            }
+                            stmparr = eval("(" + strarr + ")");
+                            if(stmparr.user==userEmail){
+                                missionGDoc.forEach(item => {
+                                    if(item.title === stmparr.title){
+                                        item.ownerstatus = true ;
+                                    }
+                                })
+                            }
+                        } catch(err) {
+                            console.log(err);
+                        }
+                    }
+                }
+                prpo = JSON.parse(localStorage.getItem('Reviewed2'));
+                //console.log('prpo',prpo);
+                if (prpo!=null){
+                    let strarr ="";
+                    let stmparr=[];
+                    for(let i=prpo.length-1;i>=0;i--){
+                        strarr = prpo[i];
+                        try {
+                            while(strarr.indexOf("undefined")>0){
+                                strarr = strarr.replace("undefined","0");
+                            }
+                            while(strarr.indexOf('""')>0){
+                                strarr = strarr.replace('""','"');
+                            }
+                            while(strarr.indexOf('":","')>0){
+                                strarr = strarr.replace('":","','":"","');
+                            }
+                            stmparr = eval("(" + strarr + ")");
+                            if(stmparr.user==userEmail){
+                                missionGDoc.forEach(item => {
+                                    if(item.title === stmparr.title){
+                                        item.ownerstatus = true ;
+                                    }
+                                })
+                            }
+                        } catch(err) {
+                            console.log(err);
+                        }
+                    }
+                }
+
                 //console.log(stmp);
                 //生成 ：三种任务po归类 ：待完成2|已完成1|未进池3|已终止4
                 //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
                 let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
                 missionGDoc.forEach(item => {
                     //待完成
-                    if (item.status === "提交"){
-                        tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                    console.log(item.title+':ownerstatus',item.ownerstatus);
+                    if (item.status === "提交" ||item.status === "审核" ){
+                        if(item.ownerstatus){
+                            tmmiss1+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                        } else {
+                            tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                        }
                     }
                     else {
                         if(item.submitter != userEmail)
@@ -1834,8 +1850,10 @@
                   appreview.insertBefore(dva1,appreview.firstChild);
                   if(missiondisplay == "true"){
                       $(".userclass.missionpo").replaceWith(
-                          "<font size=3><div class='userclass missionpo' id='missionpo'>【待完成】"+tmmiss2
-                          +"<p>【未进池】"+tmmiss3
+                          "<font size=3><div class='userclass missionpo' id='missionpo'>" +
+                          "【待完成】" + tmmiss2 +
+                          "<p>【未进池】" + tmmiss3 +
+                          "<p>【已完成】" + tmmiss1
                           +"</div></font>");
                   }
               }
@@ -1994,7 +2012,7 @@
     }
 
     //首页home显示用户审过的po
-    function showReviewedHome(){
+    async function showReviewedHome(){
         //console.log("missionlist",missionlist);
         //getMission();
         $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>");
@@ -2005,204 +2023,207 @@
             +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
             +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
         );
-        getMissionFromGoogleDoc();
-        console.log("missionGDoc.length1",missionGDoc.length);
-        awaitElement(() => missionGDoc.length>0)
-            .then((ref) => {
-            console.log("missionGDoc.length2",missionGDoc.length);
-            setTimeout(function(){showReviewedHome1()},500);
-        });
-        setTimeout(function(){
-            if (missionGDoc.length === 0){
-                awaitElement(() => missionGDoc.length>0)
-                    .then((ref) => {
-                    console.log("missionGDoc.length3",missionGDoc.length);
-                    showReviewedHome1();
-                });
+
+        try {
+            // 等待 getMissionFromGoogleDoc 执行完成（获取数据）
+            await getMissionFromGoogleDoc();
+
+            console.log("missionGDoc.length1",missionGDoc.length);
+            // 数据获取完成后，再执行业务逻辑
+            if (missionGDoc.length > 0) {
+                console.log("业务逻辑执行：", missionGDoc);
+                showReviewedHome1();
+            } else {
+                console.log("无符合条件的任务数据");
+                // 可选：处理无数据的场景（如显示空提示）
             }
-        },500);
+        } catch (error) {
+            // 捕获 getMissionFromGoogleDoc 中的所有错误（地址无效、请求失败、解析错误等）
+            console.log("getDisplay 执行失败：", error);
+            // 可选：进一步处理错误（如重试机制）
+        }
     }
     function showReviewedHome1()
     {
-        try{
-            //在首页显示池内已审po的表格
-            var prpo = [];
-            if(!userEmail)
-            {
-                //      userEmail=getUser();  //会引起promise错误
-            }
-            let cbxmiss = localStorage["cbxmission"];
-
-            let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
-            let sfdetail = "";
-            let slocalfollow = [];
-            if(localStorage.getItem(userEmail+"follow")) slocalfollow = JSON.parse(localStorage.getItem(userEmail+"follow"));
-            //console.log(slocalfollow);
-            if(slocalfollow.length>0){
-                sfdetail+="<tbody>";
-                //console.log(slocalfollow[0]);
-                let icnt = 0;if (slocalfollow.length>followPortalDisplay) icnt = slocalfollow.length - followPortalDisplay;
-                for (let i=slocalfollow.length - 1;i>=icnt;i--){
-                    sfdetail+="<tr><td>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>"+slocalfollow[i].review+"</td></tr>";
+            try{
+                //在首页显示池内已审po的表格
+                var prpo = [];
+                if(!userEmail)
+                {
+                    //      userEmail=getUser();  //会引起promise错误
                 }
-                sfdetail+="</tbody></table>";
-            }
-            $("#idfollow").replaceWith(sftitle+sfdetail);
+                let cbxmiss = localStorage["cbxmission"];
 
-            let sutitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>审核情况</th></thead>";
-            let sudetail = "";
-            let slocalupload = [];
-            if(localStorage.getItem(userEmail+"upload")) slocalupload = JSON.parse(localStorage.getItem(userEmail+"upload"));
-            //console.log(slocalupload);
-            if(slocalupload.length>0){
-                sudetail+="<tbody>";
-                let icnt = 0;if (slocalupload.length>uploadPortalDisplay) icnt = slocalupload.length - uploadPortalDisplay;
-                for (let i=slocalupload.length - 1;i>=icnt;i--){
-                    sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+slocalupload[i].review+"</td></tr>";
+                let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
+                let sfdetail = "";
+                let slocalfollow = [];
+                if(localStorage.getItem(userEmail+"follow")) slocalfollow = JSON.parse(localStorage.getItem(userEmail+"follow"));
+                //console.log(slocalfollow);
+                if(slocalfollow.length>0){
+                    sfdetail+="<tbody>";
+                    //console.log(slocalfollow[0]);
+                    let icnt = 0;if (slocalfollow.length>followPortalDisplay) icnt = slocalfollow.length - followPortalDisplay;
+                    for (let i=slocalfollow.length - 1;i>=icnt;i--){
+                        sfdetail+="<tr><td>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>"+slocalfollow[i].review+"</td></tr>";
+                    }
+                    sfdetail+="</tbody></table>";
                 }
-                sudetail+="</tbody></table>";
-            }
-            $("#idupload").replaceWith(sutitle+sudetail);
+                $("#idfollow").replaceWith(sftitle+sfdetail);
 
-            if(cbxmiss){
-                if(cbxmiss=="true"){
-                    let obj = document.getElementById("cbxmission");
-                    obj.checked = true;
+                let sutitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>审核情况</th></thead>";
+                let sudetail = "";
+                let slocalupload = [];
+                if(localStorage.getItem(userEmail+"upload")) slocalupload = JSON.parse(localStorage.getItem(userEmail+"upload"));
+                //console.log(slocalupload);
+                if(slocalupload.length>0){
+                    sudetail+="<tbody>";
+                    let icnt = 0;if (slocalupload.length>uploadPortalDisplay) icnt = slocalupload.length - uploadPortalDisplay;
+                    for (let i=slocalupload.length - 1;i>=icnt;i--){
+                        sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+slocalupload[i].review+"</td></tr>";
+                    }
+                    sudetail+="</tbody></table>";
                 }
-            }
-            //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
-            let smis="<table style='width:100%'><thead><tr>"
-            +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
-            +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
-            +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
-            +"<th style='width:14%'>挪po</th>"
-            +"</tr></thead>";
-            let smistmp="";let sstmp="";let ssok="";
-            //console.log("start",missionlist);
-            //let missionlist1 = JSON.parse(JSON.stringify(missionlist));
-            let usernamelist=localStorage[userEmail+"user"];
-            if (!usernamelist) usernamelist="";
-            smistmp=smis+"<tbody>";
-            //console.log(missionlist);
+                $("#idupload").replaceWith(sutitle+sudetail);
 
-            prpo = JSON.parse(localStorage.getItem('Reviewed1'));
-            //console.log(prpo);
-            let stmp = "<table style='width:100%'><thead><tr>"
-            +"<th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th>"
-            +"<th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th>"
-            +"<th style='width:40%'>时间</th></tr></thead>";
-            if (prpo!=null){
-                let strarr ="";
-                let stmparr=[];
-                stmp+="<tbody>";
-                for(let i=prpo.length-1;i>=0;i--){
-                    //console.log(prpo[i]);
-                    strarr = prpo[i];
-                    try {
-                        while(strarr.indexOf("undefined")>0){
-                            strarr = strarr.replace("undefined","0");
-                        }
-                        while(strarr.indexOf('""')>0){
-                            strarr = strarr.replace('""','"');
-                        }
-                        while(strarr.indexOf('":","')>0){
-                            strarr = strarr.replace('":","','":"","');
-                        }
-                        stmparr = eval("(" + strarr + ")");
-                        if(stmparr.score.length==7){
-                            stmparr.score = stmparr.score.replace(/5/g,"Y");
-                            stmparr.score = stmparr.score.replace(/3/g,"D");
-                            stmparr.score = stmparr.score.replace(/1/g,"N");
-                        }
-                        //console.log(JSON.parse(prpo[i]));
-                        //console.log(stmparr);
-                        //console.log(stmparr.title,stmparr.dt);
-                        if (prpo.length-1 - i <= privatePortalDisplay1 ) {
-                            stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
-                        }
-                        //console.log(usernamelist);console.log(stmparr.user);
-                        if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
-                            missionGDoc.forEach(item => {
-                                if(item.title === stmparr.title){
-                                    item.ownerstatus = true ;
-                                }
-                            })
-                        }
-                    } catch(err) {
-                        console.log(err);
+                if(cbxmiss){
+                    if(cbxmiss=="true"){
+                        let obj = document.getElementById("cbxmission");
+                        obj.checked = true;
                     }
                 }
-                stmp+="</tbody></table>";
-                //console.log("privatePortal1",$("#privatePortal1"));
-                $("#privatePortal1").replaceWith(stmp);
-                //console.log("stmp",stmp);
-                //console.log("privatePortal1",$("#privatePortal1"));
-            }
-            //       }
+                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
+                let smis="<table style='width:100%'><thead><tr>"
+                +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
+                +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
+                +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
+                +"<th style='width:14%'>挪po</th>"
+                +"</tr></thead>";
+                let smistmp="";let sstmp="";let ssok="";
+                //console.log("start",missionlist);
+                //let missionlist1 = JSON.parse(JSON.stringify(missionlist));
+                let usernamelist=localStorage[userEmail+"user"];
+                if (!usernamelist) usernamelist="";
+                smistmp=smis+"<tbody>";
+                //console.log(missionlist);
 
-            let prpo2 = JSON.parse(localStorage.getItem('Reviewed2'));
-            //console.log(prpo2);
-            //console.log(prpo2[0]);
-            stmp = "<table style='width:100%'><thead><tr>"
-            +"<th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th>"
-            +"<th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th>"
-            +"<th style='width:40%'>时间</th></tr></thead>";
-            if (prpo2!=null){
-                let strarr ="";
-                let stmparr=[];
-                stmp+="<tbody>";
-                //console.log(prpo2.length);
-                for(let i=prpo2.length-1;i>=0;i--){
-                    strarr = prpo2[i];
-                    try{
-                        while(strarr.indexOf("undefined")>0){
-                            strarr = strarr.replace("undefined","0");
+                prpo = JSON.parse(localStorage.getItem('Reviewed1'));
+                //console.log(prpo);
+                let stmp = "<table style='width:100%'><thead><tr>"
+                +"<th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th>"
+                +"<th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th>"
+                +"<th style='width:40%'>时间</th></tr></thead>";
+                if (prpo!=null){
+                    let strarr ="";
+                    let stmparr=[];
+                    stmp+="<tbody>";
+                    for(let i=prpo.length-1;i>=0;i--){
+                        //console.log(prpo[i]);
+                        strarr = prpo[i];
+                        try {
+                            while(strarr.indexOf("undefined")>0){
+                                strarr = strarr.replace("undefined","0");
+                            }
+                            while(strarr.indexOf('""')>0){
+                                strarr = strarr.replace('""','"');
+                            }
+                            while(strarr.indexOf('":","')>0){
+                                strarr = strarr.replace('":","','":"","');
+                            }
+                            stmparr = eval("(" + strarr + ")");
+                            if(stmparr.score.length==7){
+                                stmparr.score = stmparr.score.replace(/5/g,"Y");
+                                stmparr.score = stmparr.score.replace(/3/g,"D");
+                                stmparr.score = stmparr.score.replace(/1/g,"N");
+                            }
+                            //console.log(JSON.parse(prpo[i]));
+                            //console.log(stmparr);
+                            //console.log(stmparr.title,stmparr.dt);
+                            if (prpo.length-1 - i <= privatePortalDisplay1 ) {
+                                stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
+                            }
+                            //console.log(usernamelist);console.log(stmparr.user);
+                            if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
+                                missionGDoc.forEach(item => {
+                                    if(item.title === stmparr.title){
+                                        item.ownerstatus = true ;
+                                    }
+                                })
+                            }
+                        } catch(err) {
+                            console.log(err);
                         }
-                        while(strarr.indexOf('""')>0){
-                            strarr = strarr.replace('""','"');
-                        }
-                        while(strarr.indexOf('":","')>0){
-                            strarr = strarr.replace('":","','":"","');
-                        }
-                        //console.log(strarr);
-                        stmparr = eval("(" + strarr + ")");
-                        if(stmparr.score.length==7){
-                            stmparr.score = stmparr.score.replace(/5/g,"Y");
-                            stmparr.score = stmparr.score.replace(/3/g,"D");
-                            stmparr.score = stmparr.score.replace(/1/g,"N");
-                        }
-                        //console.log(JSON.parse(prpo2[i]));
-                        if (prpo2.length-1 - i <= privatePortalDisplay2 ) {
-                            stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
-                        }
-                        if(stmparr.title === "石中女"){
-                            console.log(stmparr.user);console.log(userEmail);
-                        }
-                        if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
-                            missionGDoc.forEach(item => {
-                                if(stmparr.title === "石中女"){
-                                    console.log(item.title);
-                                }
-                                if(item.title === stmparr.title){
+                    }
+                    stmp+="</tbody></table>";
+                    //console.log("privatePortal1",$("#privatePortal1"));
+                    $("#privatePortal1").replaceWith(stmp);
+                    //console.log("stmp",stmp);
+                    //console.log("privatePortal1",$("#privatePortal1"));
+                }
+                //       }
+
+                let prpo2 = JSON.parse(localStorage.getItem('Reviewed2'));
+                //console.log(prpo2);
+                //console.log(prpo2[0]);
+                stmp = "<table style='width:100%'><thead><tr>"
+                    +"<th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th>"
+                    +"<th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th>"
+                    +"<th style='width:40%'>时间</th></tr></thead>";
+                if (prpo2!=null){
+                    let strarr ="";
+                    let stmparr=[];
+                    stmp+="<tbody>";
+                    //console.log(prpo2.length);
+                    for(let i=prpo2.length-1;i>=0;i--){
+                        strarr = prpo2[i];
+                        try{
+                            while(strarr.indexOf("undefined")>0){
+                                strarr = strarr.replace("undefined","0");
+                            }
+                            while(strarr.indexOf('""')>0){
+                                strarr = strarr.replace('""','"');
+                            }
+                            while(strarr.indexOf('":","')>0){
+                                strarr = strarr.replace('":","','":"","');
+                            }
+                            //console.log(strarr);
+                            stmparr = eval("(" + strarr + ")");
+                            if(stmparr.score.length==7){
+                                stmparr.score = stmparr.score.replace(/5/g,"Y");
+                                stmparr.score = stmparr.score.replace(/3/g,"D");
+                                stmparr.score = stmparr.score.replace(/1/g,"N");
+                            }
+                            //console.log(JSON.parse(prpo2[i]));
+                            if (prpo2.length-1 - i <= privatePortalDisplay2 ) {
+                                stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
+                            }
+                            if(stmparr.title === "石中女"){
+                                console.log(stmparr.user);console.log(userEmail);
+                            }
+                            if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
+                                missionGDoc.forEach(item => {
                                     if(stmparr.title === "石中女"){
                                         console.log(item.title);
                                     }
-                                    item.ownerstatus = true;
-                                }
-                            })
+                                    if(item.title === stmparr.title){
+                                        if(stmparr.title === "石中女"){
+                                            console.log(item.title);
+                                        }
+                                        item.ownerstatus = true;
+                                    }
+                                })
+                            }
+                        } catch (err) {
+                            console.log(err);
                         }
-                    } catch (err) {
-                        console.log(err);
                     }
+                    stmp+="</tbody></table>";
+                    $("#privatePortal2").replaceWith(stmp);
+                    //console.log(prpo[0].title);
                 }
-                stmp+="</tbody></table>";
-                $("#privatePortal2").replaceWith(stmp);
-                //console.log(prpo[0].title);
-            }
-            //console.log("missionlist1",missionlist1);
-            //需要做的，将missionGDoc替换missionlist1进行显示，已审等需要设置临时变量，在生成smistmp时替换掉
-            //再检查上面对missionlist1的操作，是否无用，可以删除
-            /*
+                //console.log("missionlist1",missionlist1);
+                //需要做的，将missionGDoc替换missionlist1进行显示，已审等需要设置临时变量，在生成smistmp时替换掉
+                //再检查上面对missionlist1的操作，是否无用，可以删除
+                /*
             for(let k=0;k<missionlist1.length;k++){
                 //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪计划
                 if(missionlist1[k][9].indexOf(userEmail)>=0){ missionlist1[k][4] = "O";}//自己
@@ -2223,28 +2244,29 @@
                     +"</tr>";
             }
             */
-            missionGDoc.forEach(item => {
-                smistmp+="<tr><td>"+item.title+"</a></td>"
-                    +"<td>"+(item.status === "通过" ? "✓" : "" )+"</td>"
-                    +'<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.lat+','+item.lng+"</a></td>"
-                    +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.types+"</a></td>"
-                    +"<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td><td>"+ (item.ownerstatus === true ? '✓' : '') +"</td>"+
-                    "<td><a href='"+durl+"/portal/portaluseremail/portal."+item.portalID+".useremail.json'  target='_blank'>"+item.timestamp.slice(0,19)+"</a></td>"
-                    +"<td>"+item.lat+"</td>"+"<td>"+item.lng+"</td>"+"<td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
-                    +"</tr>";
-            });
-            let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
-            //console.log("missionPortal1",$("#missionPortal1"));
-            smistmp+="</tbody></table>";
-            const parse = new DOMParser();
-            let smisssss=parse.parseFromString(smistmp,"text/html");
-            document.querySelector("#missionPortal1").innerHTML = smisssss.body.innerHTML;
-            //console.log(smisssss.body.innerHTML);
-            //console.log("smistmp",smistmp);
-            $("#missionuser").replaceWith(sultmp);
-            //console.log(smisssss);
-        } catch(e){console.log(e);}
-    }
+                missionGDoc.forEach(item => {
+                    smistmp+="<tr><td>"+item.title+"</a></td>"
+                        +"<td>"+(item.status === "通过" ? "✓" : "" )+"</td>"
+                        +'<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.lat+','+item.lng+"</a></td>"
+                        +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.types+"</a></td>"
+                        +"<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td><td>"+ (item.ownerstatus === true ? '✓' : '') +"</td>"+
+                        "<td><a href='"+durl+"/portal/portaluseremail/portal."+item.portalID+".useremail.json'  target='_blank'>"+item.timestamp.slice(0,19)+"</a></td>"
+                        +"<td>"+item.lat+"</td>"+"<td>"+item.lng+"</td>"+"<td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
+                        +"</tr>";
+                });
+                console.log('homepage',missionGDoc);
+                let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
+                //console.log("missionPortal1",$("#missionPortal1"));
+                smistmp+="</tbody></table>";
+                const parse = new DOMParser();
+                let smisssss=parse.parseFromString(smistmp,"text/html");
+                document.querySelector("#missionPortal1").innerHTML = smisssss.body.innerHTML;
+                //console.log(smisssss.body.innerHTML);
+                //console.log("smistmp",smistmp);
+                $("#missionuser").replaceWith(sultmp);
+                //console.log(smisssss);
+            } catch(e){console.log(e);}
+        }
 
     function showReviewedHomebak(){
         //console.log("missionlist",missionlist);
