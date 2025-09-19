@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      2.0
+// @version      2.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -655,7 +655,7 @@
         if(pdata.type!="EDIT") return;
         let iplan = null;let tmptext = "";
         //任务里有：其它瞎选，经纬度按任务挪
-        missionDGoc.forEach( item => {
+        missionGDoc.forEach( item => {
             if(item.id === pdata.id){
             } else if(item.title === pdata.title){
                 if(item.moveoptions === "右") iplan =10;
