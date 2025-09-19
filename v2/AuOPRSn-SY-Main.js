@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main-New
 // @namespace    AuOPR
-// @version      5.1
+// @version      5.1.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1775,7 +1775,8 @@
                             stmparr = eval("(" + strarr + ")");
                             if(stmparr.user==userEmail){
                                 missionGDoc.forEach(item => {
-                                    if(item.title === stmparr.title){
+                                    if(item.title === stmparr.title &
+                                       (new Date(item.responsedate).getTime() <= new Date(stmparr.dt.slice(0,10)).getTime() + 5*24*60*60*1000 )){
                                         item.ownerstatus = true ;
                                     }
                                 })
@@ -1805,7 +1806,8 @@
                             stmparr = eval("(" + strarr + ")");
                             if(stmparr.user==userEmail){
                                 missionGDoc.forEach(item => {
-                                    if(item.title === stmparr.title){
+                                    if(item.title === stmparr.title &
+                                       (new Date(item.responsedate).getTime() <= new Date(stmparr.dt.slice(0,10)).getTime() + 5*24*60*60*1000 )){
                                         item.ownerstatus = true ;
                                     }
                                 })
@@ -1827,7 +1829,11 @@
                         if(item.ownerstatus){
                             tmmiss1+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
                         } else {
-                            tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                            if(item.status === "审核"){
+                                tmmiss2+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                            } else {
+                                tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                            }
                         }
                     }
                     else {
@@ -2144,7 +2150,14 @@
                             //console.log(usernamelist);console.log(stmparr.user);
                             if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
                                 missionGDoc.forEach(item => {
-                                    if(item.title === stmparr.title){
+                                    if(item.title === stmparr.title & item.title === "大黄蜂"){
+                                     console.log(item.responsedate);
+                                     console.log(stmparr.dt);
+                                     console.log(new Date(item.responsedate).getTime());
+                                    console.log(new Date(stmparr.dt.slice(0,10)).getTime() - 5*24*60*60*1000 );
+                                    }
+                                    if(item.title === stmparr.title &
+                                       (new Date(item.responsedate).getTime() <= new Date(stmparr.dt.slice(0,10)).getTime() + 5*24*60*60*1000 )){
                                         item.ownerstatus = true ;
                                     }
                                 })
@@ -2204,7 +2217,8 @@
                                     if(stmparr.title === "石中女"){
                                         console.log(item.title);
                                     }
-                                    if(item.title === stmparr.title){
+                                    if(item.title === stmparr.title &
+                                       (new Date(item.responsedate).getTime() <= new Date(stmparr.dt.slice(0,10)).getTime() + 5*24*60*60*1000 )){
                                         if(stmparr.title === "石中女"){
                                             console.log(item.title);
                                         }
