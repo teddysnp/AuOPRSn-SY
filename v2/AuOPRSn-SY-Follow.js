@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      1.6.3
+// @version      2.0
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -28,19 +28,100 @@
     let isUserClick = false ;
     let iautoman = null;
     let mywin = window;
-    let missionlist = [];
+    //let missionlist = [];
+    let missionGDoc = []; //从google doc读取的任务列表
+    let dURL = "https://script.google.com/macros/s/AKfycbwlUEhAm4l8kI617UcNDw2CU7xFR3GGPAMUECt6L5RV8cs4KELQsC6siB_7xwk8JTzpMg/exec";
 
     getLocalMissionList();
+    getLocalGDocMissionList();
 
-    function getLocalMissionList(){
-        let miss = localStorage.currentmission;
+    function getLocalGDocMissionList(){
+        let miss = localStorage.missionGDoc;
         if (miss) {
-            missionlist = eval("(" + miss + ")");
+            missionGDoc = JSON.parse(miss);
             //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
-            console.log("follow-mission",missionlist);
+            console.log("follow-missionGDoc",missionGDoc);
         }
     }
+    function getLocalMissionList(){
+        /*
+        let miss = localStorage.currentmission;
+        if (miss) {
+            missionGDoc = JSON.parse(miss);
+            //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
+            console.log("follow-missionGDoc",missionGDoc);
+        }*/
+    }
+    //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
+    function getMissionFromGoogleDoc() {
+        const url = dURL+'?status=mission';
+        if (!url) { return; }
 
+        $.ajax({
+            url, type: 'GET', dataType: 'text',
+            success: function (data, status, header) {
+                try {
+                    let markercollection = JSON.parse(data);
+                    // 筛选出status为'提交'或'审核'的元素
+                    let filteredMarkers = markercollection.filter(item => {
+                        // 保留status为'提交'或'审核'的项
+                        return item.status === '提交' || item.status === '审核';
+                    });
+
+                    console.log('filteredMarkers',filteredMarkers);
+                    missionGDoc = filteredMarkers;
+                    localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
+
+                    //借用全局任务，初始化一下当前用户审的状态
+                    missionGDoc.forEach(item => {
+                        item.ownerstatus = "";
+                    });
+
+                    console.log("missionGDoc",missionGDoc);
+
+                    let testdata = filteredMarkers.filter(item => {
+                        return item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b" ;
+                    });
+                    if(testdata.length === 1){
+                        //console.log('testdata',JSON.stringify(testdata[0]));
+                        testdata[0].status = "通过" ;
+                        //testSaveToDoc(testdata[0]);
+                    }
+
+                } catch (e) {
+                    console.log(e);
+                    alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                    return;
+                }
+            },
+            error: function (x, y, z) {
+                console.log('Err:', x, y, z);
+                alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+            }
+        })
+    }
+    //更新任务数据至Google Doc , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
+    function saveToGDoc(sdata){
+
+        $.ajax({
+            url: dURL, // 确保是最新部署的 GAS 链接
+            type: "POST",
+            // 核心：将对象转为 URL 编码字符串（适配 x-www-form-urlencoded 格式）
+            data: $.param(sdata),
+            // 核心：指定正确的 Content-Type（GAS 能自动解析该格式）
+            contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+            // 不需要禁用 processData（默认 true，$.param 已处理数据，无需额外处理）
+            processData: true,
+            success: function (data, status) {
+                console.log("请求成功，响应数据：", data);
+                // 此处可添加业务逻辑（如提示成功）
+            },
+            error: function (xhr, status, error) {
+                console.error("请求失败：", status, "错误信息：", xhr.responseText);
+                alert("更新任务失败！错误：" + xhr.responseText);
+            }
+        });
+    };
     listenLinkClick();
     //监听页面点击，获取是否人工点击
     function listenLinkClick(){
@@ -387,6 +468,7 @@
                     return;
                 }
                 portalData = json.result;
+                if(!portalData) return;
                 console.log("开始新审核:",portalData.title);
                 console.log("原始po数据:",portalData);
 //                if(!portalData.id || portalData.id==null) return;
@@ -401,124 +483,98 @@
 
     //申请页面
     function injectManage() {
-        let miss1 = localStorage.currentmissiontitle;
-        //console.log(miss);
-        if(miss1){
-            let miss = JSON.parse(miss1);
-            let title=durl+"/mission/mission."+miss.title+".json";
-            console.log(title);
-            let resp1 = U_XMLHttpRequest("GET",title)
-            .then(res=>{
-                //console.log("res",res);
-                if(!res) {
+
+        awaitElement(() => document.querySelector('app-submissions'))
+            .then((ref) => {
+            try {
+                const response = this.response;
+                const json = JSON.parse(response);
+                if (!json) return;
+                if (json.captcha || json==null) {
                     return;
                 }
-                localStorage.setItem("currentmission",res);
-                missionlist =  eval("(" + res + ")");
-                //console.log(JSON.stringify(missionlist));
-                awaitElement(() => document.querySelector('app-submissions'))
-                    .then((ref) => {
-                    try {
-                        const response = this.response;
-                        const json = JSON.parse(response);
-                        if (!json) return;
-                        if (json.captcha || json==null) {
-                            return;
+                let pData = json.result;
+                console.log("pData",pData);
+                let missionGDocstr = localStorage.missionGDoc;
+                if(missionGDocstr) {missionGDoc = JSON.parse(missionGDocstr);} else {return;}
+
+                missionGDoc.forEach(item => {
+                });
+
+                //console.log("missionGDoc",missionGDoc);
+                if(pData.submissions){
+                    missionGDoc.forEach(item => {
+                        //console.log('item',item);
+                        let isave=0;
+                        let iphoto=0;
+                        if(item.types === "图片"){
+                            console.log(item.types,"图片");
                         }
-                        let pData = json.result;
-                        console.log("missionlist",missionlist);
-                        console.log("pData",pData);
-                        if(pData.submissions){
-                            let isave=0;
-                            for(let j=0;j<missionlist.length;j++){
-                                let iphoto=0;
-                                if(missionlist[j][3]=="图片"){
-                                    console.log(missionlist[j],"图片");
+                        for(let i=0;i<pData.submissions.length;i++){
+                            //console.log("申请:",pData.submissions[i]);
+                            //1分钟的时间戳值:60000 20分钟是1200000
+                            if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
+                            {
+                                if(item.title === "重型皮带轮" ){
+                                    console.log(pData.submissions[i]);
                                 }
-                                for(let i=0;i<pData.submissions.length;i++){
-                                    //console.log("申请:",pData.submissions[i]);
-                                    //1分钟的时间戳值:60000 20分钟是1200000
-                                    if( (missionlist[j][0]==pData.submissions[i].title) || ( ( missionlist[j][0]==pData.submissions[i].poiData.title) ) )
-                                    {
-                                        //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
-                                        if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (missionlist[j][5] + " 00:00:00").getTime() - 60000*60*24*3 ) )
-                                        {
-                                            //console.log("任务：",missionlist[j]);
-                                            //console.log("申请:",pData.submissions[i]);
-                                            //"NOMINATION" "ACCEPTED" "REJECTED"
-                                            //通过或拒绝
-                                            //console.log("accept",JSON.stringify(missionlist));
-                                            //console.log("accept",JSON.stringify(missionlist[j][6]));
-                                            //console.log("status",pData.submissions[i].status);
-                                            if(pData.submissions[i].type=="PHOTO"){
-                                                if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED")) { iphoto+=0; }
-                                                //开审
-                                                if(pData.submissions[i].status == "VOTING") { iphoto+=1; }
-                                            } else {
-                                                if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & missionlist[j][6]!="ok") {
-                                                    missionlist[j][6]="ok";
-                                                    //console.log("accept?",JSON.stringify(missionlist[j][6]));
-                                                    //console.log("accept?",JSON.stringify(missionlist));
-                                                    isave=1;
-                                                    console.log("isave1");
-                                                }
-                                                //开审
-                                                if(pData.submissions[i].status == "VOTING" & missionlist[j][2]!="true") {
-                                                    missionlist[j][2]="true";
-                                                    missionlist[j][6]="";
-                                                    isave=1;
-                                                    console.log("isave2");
-                                                }
-                                            }
-                                            //审核人写错
-                                            if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & missionlist[j][9]!=useremail) {
-                                                missionlist[j][9] = useremail ;
-                                                missionlist[j][6]="";//图片
-                                                isave=1;
-                                                console.log("isave3");
-                                            }
-                                            //更新经纬度、id
-                                            if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") &
-                                               (pData.submissions[i].lat != missionlist[j][7] || pData.submissions[i].lng != missionlist[j][8] )){
-                                                console.log("ptitle",pData.submissions[i].title);
-                                                console.log("mtitle",JSON.stringify(missionlist[j][0]));
-                                                console.log("plat",JSON.stringify(pData.submissions[i].lat));
-                                                console.log("mlat",JSON.stringify(missionlist[j][7]));
-                                                console.log("plng",JSON.stringify(pData.submissions[i].lng));
-                                                console.log("mlng",JSON.stringify(missionlist[j][8]));
-                                                missionlist[j][7] = pData.submissions[i].lat;missionlist[j][8] = pData.submissions[i].lng;
-                                                isave=1;
-                                                console.log("isave4");
-                                            }
-                                            //console.log(missionlist);
+                                //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
+                                if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - 60000*60*24*3 ) )
+                                {
+                                    if(pData.submissions[i].types == "PHOTO"){
+                                        if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED")) { iphoto+=0; }
+                                        //开审
+                                        if(pData.submissions[i].status == "VOTING") { iphoto+=1; }
+                                    } else {
+                                        if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & item.status != "通过") {
+                                            item.status = "通过";
+                                            isave=1;
+                                            console.log("isave1");
+                                        }
+                                        //开审
+                                        if(pData.submissions[i].status == "VOTING" & item.status != "审核") {
+                                            item.status = "审核";
+                                            isave=1;
+                                            console.log("isave2");
                                         }
                                     }
-                                }
-                                if(iphoto>0){ missionlist[j][6]=""; isave=1;}
-                                //console.log(isave);
-                                //更新云中任务
-                                if(isave==1){
-                                    if(!missionlist){ return;}
-                                    let miss=localStorage.currentmissiontitle;
-                                    let ititle=null;
-                                    if(miss) ititle=JSON.parse(miss).title;
-                                    if(ititle) {
-                                        //console.log(missionlist);
-                                        setTimeout(function(){
-                                            localStorage.setItem("currentmission",JSON.stringify(missionlist));
-                                            //console.log(JSON.stringify(missionlist));
-                                            gmrequest("PUT",surl,"mission/mission."+ititle+"",JSON.stringify(missionlist));
-                                        },500);
+                                    //审核人写错
+                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & item.submitter != useremail) {
+                                        item.submitter = useremail ;
+                                        isave=1;
+                                        console.log("isave3");
+                                    }
+                                    //更新经纬度、id
+                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") &
+                                       (pData.submissions[i].lat != item.lat || pData.submissions[i].lng != item.lng )){
+                                        console.log("ptitle",pData.submissions[i].title);
+                                        console.log("mtitle",JSON.stringify(item.title));
+                                        console.log("plat",JSON.stringify(pData.submissions[i].lat));
+                                        console.log("mlat",JSON.stringify(item.lat));
+                                        console.log("plng",JSON.stringify(pData.submissions[i].lng));
+                                        console.log("mlng",JSON.stringify(item.lng));
+                                        item.lat = pData.submissions[i].lat;item.lng = pData.submissions[i].lng;
+                                        isave=1;
+                                        console.log("isave4");
                                     }
                                 }
                             }
                         }
-                    } catch (e) {
-                        console.log(e);
-                    }
-                });
-            });
-        }
+                        if(iphoto>0  & item.status === "提交" & item.types ==="图片"){ item.status = "审核"; isave=1;} if(iphoto === 0 & item.status === "审核"  & item.types ==="图片"){ item.status = "通过"; isave=1;}
+                        console.log(item.title +':isave',isave);
+                        //更新云中任务
+                        if(isave==1){
+                            setTimeout(function(){
+                                localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
+                                saveToGDoc(item);
+                            },500);
+                        }
+                    })
+                }
+            } catch (e) {
+                console.log(e);
+            }
+        });
     }
 
     //NEW:根据标题名有重合，给提示是否重复，并加20秒倒计时
@@ -526,14 +582,14 @@
         if(pData.nearbyPortals.find(p=>{return p.title==pData.title})){
             setTimeout(function(){
                 let iauto = document.getElementById("idautolabel");
-                console.log(iauto);
+                //console.log(iauto);
                 let sc = document.getElementById("idcountdown");
                 sc.textContent = sc.textContext + "+20";
                 if (iauto)
                 {
                     if (iauto.textContent == "自动"){
                         let ibtn = document.getElementById("btnauto");
-                        console.log(ibtn);
+                        //console.log(ibtn);
                         if (ibtn) {
                             //可能重复po后，改手动(不再改手动)
                             //ibtn.click();
@@ -560,9 +616,9 @@
     function photoReview(pdata){
         if(pdata.type!="PHOTO") return;
         let iall = true;let tmptext = "";
-        for(let i=0;i<missionlist.length;i++){
+        missionGDoc.forEach(item => {
             //任务里有，全选：photo只能做到全选
-            if(missionlist[i][0]==pdata.title){
+            if(item.id === pdata.id){
                 const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
                 if(photoall.className.indexOf("photo-card--reject")==-1){
                     photoall.click();
@@ -570,7 +626,15 @@
                 tmptext = "任务po:全选";
                 iall = false;
             }
-        }
+            else if(item.title === pdata.title){
+                const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
+                if(photoall.className.indexOf("photo-card--reject")==-1){
+                    photoall.click();
+                }
+                tmptext = "任务po:全选";
+                iall = false;
+            }
+        })
         if(iall){
             const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
             if (photo)
@@ -590,12 +654,16 @@
     function editReview(pdata){
         if(pdata.type!="EDIT") return;
         let iplan = null;let tmptext = "";
-        for(let i=0;i<missionlist.length;i++){
-            //任务里有：其它瞎选，经纬度按任务挪
-            if(missionlist[i][0]==pdata.title){
-                if(missionlist[i][11]) iplan = missionlist[i][11];
+        //任务里有：其它瞎选，经纬度按任务挪
+        missionDGoc.forEach( item => {
+            if(item.id === pdata.id){
+            } else if(item.title === pdata.title){
+                if(item.moveoptions === "右") iplan =10;
+                if(item.moveoptions === "下") iplan =20;
+                if(item.moveoptions === "左") iplan =parseInt(item.moveplace);
+                if(item.moveoptions === "上") iplan =parseInt(item.moveplace) + 10;
             }
-        }
+        })
 
         //标题：点第一个
         let icnt2 = 0;
