@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      2.1
+// @version      2.1.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -32,8 +32,12 @@
     let missionGDoc = []; //从google doc读取的任务列表
     let dURL = "https://script.google.com/macros/s/AKfycbwlUEhAm4l8kI617UcNDw2CU7xFR3GGPAMUECt6L5RV8cs4KELQsC6siB_7xwk8JTzpMg/exec";
 
-    getLocalMissionList();
-    getLocalGDocMissionList();
+    mywin.onload = function() {
+        //console.log("onload","getMission");
+        missionGDoc = JSON.parse(localStorage.missionGDoc);
+        getLocalMissionList();
+        getLocalGDocMissionList();
+    }
 
     function getLocalGDocMissionList(){
         let miss = localStorage.missionGDoc;
@@ -52,53 +56,58 @@
             console.log("follow-missionGDoc",missionGDoc);
         }*/
     }
-    //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
+    // 改造：将 getMissionFromGoogleDoc 改为返回 Promise 的函数
     function getMissionFromGoogleDoc() {
-        const url = dURL+'?status=mission';
-        if (!url) { return; }
-
-        $.ajax({
-            url, type: 'GET', dataType: 'text',
-            success: function (data, status, header) {
-                try {
-                    let markercollection = JSON.parse(data);
-                    // 筛选出status为'提交'或'审核'的元素
-                    let filteredMarkers = markercollection.filter(item => {
-                        // 保留status为'提交'或'审核'的项
-                        return item.status === '提交' || item.status === '审核';
-                    });
-
-                    console.log('filteredMarkers',filteredMarkers);
-                    missionGDoc = filteredMarkers;
-                    localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
-
-                    //借用全局任务，初始化一下当前用户审的状态
-                    missionGDoc.forEach(item => {
-                        item.ownerstatus = "";
-                    });
-
-                    console.log("missionGDoc",missionGDoc);
-
-                    let testdata = filteredMarkers.filter(item => {
-                        return item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b" ;
-                    });
-                    if(testdata.length === 1){
-                        //console.log('testdata',JSON.stringify(testdata[0]));
-                        testdata[0].status = "通过" ;
-                        //testSaveToDoc(testdata[0]);
-                    }
-
-                } catch (e) {
-                    console.log(e);
-                    alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
-                    return;
-                }
-            },
-            error: function (x, y, z) {
-                console.log('Err:', x, y, z);
-                alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+        // 返回 Promise 对象，包裹异步请求逻辑
+        return new Promise((resolve, reject) => {
+            const url = dURL + '?status=mission';
+            if (!url) {
+                reject(new Error("请求地址为空")); // 地址无效时触发失败
+                return;
             }
-        })
+
+            $.ajax({
+                url, type: 'GET', dataType: 'text',
+                success: function (data, status, header) {
+                    try {
+                        let markercollection = JSON.parse(data);
+                        // 筛选状态为'提交'或'审核'的元素
+                        let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
+                        console.log('filteredMarkers', filteredMarkers);
+                        missionGDoc = filteredMarkers;
+                        localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
+
+                        // 初始化 ownerstatus 字段
+                        missionGDoc.forEach(item => {
+                            item.ownerstatus = "";
+                        });
+
+                        console.log("missionGDoc", missionGDoc);
+
+                        // 测试数据修改（保留原逻辑）
+                        let testdata = filteredMarkers.filter(item => item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b" );
+                        if (testdata.length === 1) {
+                            testdata[0].status = "通过";
+                            // testSaveToDoc(testdata[0]); // 如需执行，可在这里调用
+                        }
+
+                        // 数据处理完成，触发 Promise 成功，返回处理后的数据
+                        resolve(missionGDoc);
+
+                    } catch (e) {
+                        console.log(e);
+                        alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                        reject(e); // 解析/处理失败时触发 Promise 失败
+                    }
+                },
+                error: function (x, y, z) {
+                    const errorMsg = `请求失败: ${x.status} - ${y}`;
+                    console.log('Err:', errorMsg, x, z);
+                    alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                    reject(new Error(errorMsg)); // AJAX 请求失败时触发 Promise 失败
+                }
+            });
+        });
     }
     //更新任务数据至Google Doc , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
     function saveToGDoc(sdata){
@@ -978,8 +987,8 @@
                 const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
                 const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
                 if(rdata.rejectPhotos.length==0){
-                    if(photoall.className.indexOf("photo-card--reject")==-1){
-                        setTimeout(function(){ photoall.click(); },500);
+                    if(photoall.className.indexOf("photo-card--reject") === -1){
+                        setTimeout(function(){ console.log('photoall',photoall);photoall.parentNode.parentNode.click(); },500);
                         tmptext = "照抄网络审核：全选";
                     }
                 } else{
