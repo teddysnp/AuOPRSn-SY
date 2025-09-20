@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      2.1.3
+// @version      2.1.4
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -531,6 +531,7 @@
                                 //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
                                 if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - 60000*60*24*3 ) )
                                 {
+                                    let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
                                     if(pData.submissions[i].types == "PHOTO"){
                                         if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED")) { iphoto+=0; }
                                         //开审
