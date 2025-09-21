@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      2.1.4
+// @version      2.1.5
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -103,7 +103,12 @@
                 error: function (x, y, z) {
                     const errorMsg = `请求失败: ${x.status} - ${y}`;
                     console.log('Err:', errorMsg, x, z);
-                    alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                    createNotify("更新任务错误", {
+                        body: "更新任务文档失败！" +errorMsg,
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                        requireInteraction: false
+                    });
+                    //alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
                     reject(new Error(errorMsg)); // AJAX 请求失败时触发 Promise 失败
                 }
             });
@@ -1067,6 +1072,9 @@
                                     }
                                 }
                             },500);
+                            const foundItem = missionGDoc.find(item => item.portalid === rdata.id);
+                            let idscore = document.querySelector("span[id='idscore']");
+                            idscore.textContent = foundItem ? foundItem.moveoptions + foundItem.moveplace : "" ;
                         }
                         //滚回顶部
                         setTimeout(function(){
