@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AuOPRSn-SY-Main-New
+// @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      5.1.1
+// @version      5.1.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -410,9 +410,10 @@
                     }
                     return;
                 }
-                if(json==null) {
+                if(json === null) {
                     return;
                 }
+                console.log('portalData',portalData);
                 uploadReviewMark(portalData);
                 expireTime = portalData.expires;
                 initTimer(ref.parentNode.parentNode, portalData.expires ,portalData);
@@ -1261,7 +1262,7 @@
         let ssc=document.querySelector("span[id='idscore']");
         let sscore="";
         let pdata = JSON.parse(data);
-        console.log("post审核结果:",pdata);
+        console.log("Main-saveReviewtoLocal:",pdata);
         if(pdata){
             if(pdata.type=="NEW"){
                 if(pdata.duplicate) {
@@ -1750,6 +1751,10 @@
     //在审核页review显示审过的po
     function showReviewedReview()
     {
+        if(missionGDoc.length === 0)
+        {
+            missionGDoc = JSON.parse(localStorage.missionGDoc);
+        }
         try{
             const retitle = document.getElementById("latestpo");
             //console.log("retitle",retitle);
@@ -2047,6 +2052,8 @@
             // 捕获 getMissionFromGoogleDoc 中的所有错误（地址无效、请求失败、解析错误等）
             console.log("getDisplay 执行失败：", error);
             // 可选：进一步处理错误（如重试机制）
+            //刷新窗口
+            mywin.location.reload();
         }
     }
     function showReviewedHome1()
@@ -2151,10 +2158,10 @@
                             if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
                                 missionGDoc.forEach(item => {
                                     if(item.title === stmparr.title & item.title === "大黄蜂"){
-                                     console.log(item.responsedate);
-                                     console.log(stmparr.dt);
-                                     console.log(new Date(item.responsedate).getTime());
-                                    console.log(new Date(stmparr.dt.slice(0,10)).getTime() - 5*24*60*60*1000 );
+                                        //console.log(item.responsedate);
+                                        //console.log(stmparr.dt);
+                                        //console.log(new Date(item.responsedate).getTime());
+                                        //console.log(new Date(stmparr.dt.slice(0,10)).getTime() - 5*24*60*60*1000 );
                                     }
                                     if(item.title === stmparr.title &
                                        (new Date(item.responsedate).getTime() <= new Date(stmparr.dt.slice(0,10)).getTime() + 5*24*60*60*1000 )){
