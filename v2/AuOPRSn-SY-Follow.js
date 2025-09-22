@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      2.1.5
+// @version      2.1.6
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -536,6 +536,7 @@
                                 //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
                                 if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - 60000*60*24*3 ) )
                                 {
+                                    //pData.submissions.status === "NIANTIC_REVIEW" 系统审 !!!!!!!!!!!!!!!!!!!!!!!!!
                                     let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
                                     if(pData.submissions[i].types == "PHOTO"){
                                         if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED")) { iphoto+=0; }
@@ -995,7 +996,10 @@
                 const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
                 if(rdata.rejectPhotos.length==0){
                     if(photoall.className.indexOf("photo-card--reject") === -1){
-                        setTimeout(function(){ console.log('photoall',photoall);photoall.parentNode.parentNode.click(); },500);
+                        setTimeout(function(){ console.log('photoall',photoall);
+                                              photoall.parentNode.parentNode.click();
+                                              photoall.click();
+                                             },500);
                         tmptext = "照抄网络审核：全选";
                     }
                 } else{
@@ -1072,7 +1076,10 @@
                                     }
                                 }
                             },500);
-                            const foundItem = missionGDoc.find(item => item.portalid === rdata.id);
+                            //上面显示跟审挪po的情况
+                            const foundItem = missionGDoc.find(item => item.portalID === rdata.id);
+                            //console.log('findItem:missionGDoc',missionGDoc);
+                            //console.log('foundItem',foundItem);
                             let idscore = document.querySelector("span[id='idscore']");
                             idscore.textContent = foundItem ? foundItem.moveoptions + foundItem.moveplace : "" ;
                         }
