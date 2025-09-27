@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      5.1.2
+// @version      5.1.3
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -38,22 +38,23 @@
     let autoReview = null;
     let reviewPortalAuto = "true";
     let editGYMAuto = "true";//不再使用，删除时需与commitScoreEdit及监听XMLHttpRequest里一并删除
-    let postPeriod=[25,30];
-    let postTimeoutLimit = 60;//最后一分钟强制提交
+    let postPeriod=[25,30];  //自动提交前倒计时，将在此时间内随机生成一个，单位：秒
+    let postTimeoutLimit = 60;//剩最后一分钟强制提交
     //let submitCountDown = null;
     let userID = null;
     let userEmail = null;
     let performance = null;
     let submitButtonClicked = false;
     let scoreAlready = false;
-    let saveportalcnt1 = 500;
-    let saveportalcnt2 = 500;
-    let followPortalDisplay = 30;
-    let uploadPortalDisplay = 30;
+    let saveportalcnt1 = 500;  //本地保存池中审po数量，超过此数量将不保存，先进先出原则
+    let saveportalcnt2 = 500;  //本地保存池外审po数量，超过此数量将不保存，先进先出原则
+    let followPortalDisplay = 30;    //首页显示的跟审数量
+    let uploadPortalDisplay = 30;    //首页显示的上传数量
     let privatePortalDisplay1 = 50;  //首页列表中显示池中已审po数量
     let privatePortalDisplay2 = 50;  //首页列表中显示非池已审po数量
     let recentPo = 10;//首页显示最近审过的池中po数量
     let portalData = null;
+    //VIP区，此区内的portal将无条件五星，格式为：中心点纬度,中心点经度,纬度半径(1/10000),纬度半径(1/10000)
     let private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[42.2828685,125.738134,3408,5517],[41.755547,123.288777,940,1140],[41.81979911, 123.25708028,910,920],[41.810820,123.376373,547,1036]];
     let timer = null;
     let ttm = null;
@@ -66,11 +67,13 @@
     if(localStorage.captchasetting){
         needCaptcha = localStorage.captchasetting;
     }
+    //在cloudflare中上传的链接
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
     let cookie = localStorage.cfcookie;//上传权限
     let userEmailList1 = [];
     let userEmailList2 = [];
+    //上传任务po的Google Apps Scripts链接
     let dURL = "https://script.google.com/macros/s/AKfycbwlUEhAm4l8kI617UcNDw2CU7xFR3GGPAMUECt6L5RV8cs4KELQsC6siB_7xwk8JTzpMg/exec";
 
     const loginNotice = null;
@@ -129,14 +132,13 @@
         //console.log("onload","getMission");
         missionGDoc = JSON.parse(localStorage.missionGDoc);
         getMissionFromGoogleDoc();
-        getMission();
+        //getMission();
     }
 
     //更新任务数据至Google Doc , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
     function saveToGDoc(sdata){
-
         $.ajax({
-            url: dURL, // 确保是最新部署的 GAS 链接
+            url: dURL,
             type: "POST",
             // 核心：将对象转为 URL 编码字符串（适配 x-www-form-urlencoded 格式）
             data: $.param(sdata),
@@ -150,14 +152,18 @@
             },
             error: function (xhr, status, error) {
                 console.error("请求失败：", status, "错误信息：", xhr.responseText);
-                alert("更新任务失败！错误：" + xhr.responseText);
+                createNotify("错误", {
+                    body: "更新任务失败！错误：" + xhr.responseText,
+                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                    requireInteraction: false
+                });
             }
         });
     };
 
     //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
 
-    // 改造：将 getMissionFromGoogleDoc 改为返回 Promise 的函数
+    //从Google Doc读取数据
     function getMissionFromGoogleDoc() {
         // 返回 Promise 对象，包裹异步请求逻辑
         return new Promise((resolve, reject) => {
@@ -173,10 +179,7 @@
                     try {
                         let markercollection = JSON.parse(data);
                         // 筛选状态为'提交'或'审核'的元素
-                        let filteredMarkers = markercollection.filter(item =>
-                                                                      item.status === '提交' || item.status === '审核'
-                                                                     );
-
+                        let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
                         console.log('filteredMarkers', filteredMarkers);
                         missionGDoc = filteredMarkers;
                         localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
@@ -185,13 +188,10 @@
                         missionGDoc.forEach(item => {
                             item.ownerstatus = "";
                         });
-
-                        console.log("missionGDoc", missionGDoc);
+                        //console.log("missionGDoc", missionGDoc);
 
                         // 测试数据修改（保留原逻辑）
-                        let testdata = filteredMarkers.filter(item =>
-                                                              item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b"
-                                                             );
+                        let testdata = filteredMarkers.filter(item => item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b" );
                         if (testdata.length === 1) {
                             testdata[0].status = "通过";
                             // testSaveToDoc(testdata[0]); // 如需执行，可在这里调用
@@ -215,7 +215,6 @@
             });
         });
     }
-
 
     //测试保存数据至GAC,data为JSON数据格式
     function testSaveToDoc(data){
@@ -284,7 +283,8 @@
         XMLHttpRequest.prototype.open = function (method, url) {
 //            console.log(url);
 //            console.log(method);
-            if(url=="/api/v1/vault/loginconfig")
+            //提示需重新登录
+            if(url === "/api/v1/vault/loginconfig")
             {
                 console.log(url);
                 //不好使
@@ -308,7 +308,8 @@
                     messageNotice.alertShow();
                 }
             }
-            if (url == '/api/v1/vault/review' && method == 'GET') {
+            //审核，调用injectTimer
+            if (url === '/api/v1/vault/review' && method == 'GET') {
                 scoreAlready = false ;
                 let seditGYM = localStorage.editGYMAuto;
                 if(seditGYM) {editGYMAuto=seditGYM};
@@ -320,7 +321,8 @@
                 //timer=null;
                 this.addEventListener('load', injectTimer, false);
             }
-            if (url == '/api/v1/vault/review' && method == 'POST') {
+            //提交审核，保存数据至本地(使用saveReviewtoLocal)，并重置timer
+            if (url === '/api/v1/vault/review' && method == 'POST') {
                 let send = this.send;
                 let _this = this;
                 this.send = function (...data) {
@@ -336,7 +338,8 @@
                 }
             }
             //https://wayfarer.nianticlabs.com/api/v1/vault/review/skip  //7e221f605682750b87a54d393063b9c5
-            if (url == '/api/v1/vault/review/skip' && method == 'POST'){
+            //略过时，重置timer
+            if (url === '/api/v1/vault/review/skip' && method == 'POST'){
                 let send = this.send;
                 let _this = this;
                 this.send = function (...data) {
@@ -347,13 +350,15 @@
                     return send.apply(_this,data);
                 }
             }
-            if (url == '/api/v1/vault/profile' && method == 'GET') {
+            //初始的时候，保存当前用户的email
+            if (url === '/api/v1/vault/profile' && method == 'GET') {
                 if(!userEmail) {
                     userEmail = getUser();
                 }
                 this.addEventListener('load', getUserList, false);
             }
-            if (url == '/api/v1/vault/home' && method == 'GET') {
+            //首页，显示审po列表
+            if (url === '/api/v1/vault/home' && method == 'GET') {
                 //console.log(loginNotice);
                 this.addEventListener('load', showReviewedHome, false);
             }
@@ -361,6 +366,7 @@
         };
     })(XMLHttpRequest.prototype.open);
 
+    //循环10次，用于等待某项加载完成
     const awaitElement = get => new Promise((resolve, reject) => {
         let triesLeft = 10;
         const queryLoop = () => {
@@ -395,7 +401,7 @@
                 portalData = json.result;
                 //console.log("injectTimer:needCaptcha",needCaptcha);
                 if (json.captcha) {
-                    if(needCaptcha=="true"){
+                    if(needCaptcha === "true"){
                         createNotify("需要验证", {
                             body: "需要验证！",
                             icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
@@ -414,7 +420,7 @@
                     return;
                 }
                 console.log('portalData',portalData);
-                uploadReviewMark(portalData);
+                uploadReviewMark(portalData);  //上传数据至用户打卡
                 expireTime = portalData.expires;
                 initTimer(ref.parentNode.parentNode, portalData.expires ,portalData);
             } catch (e) {
@@ -446,7 +452,7 @@
             let ltimerlabel2 = document.getElementById("idltimerlabel");
             let countdown = document.getElementById("idcountdown");
             //console.log("countdown",countdown);
-            if(countdown == null){  //标签不存在则创建
+            if(countdown === null){  //标签不存在则创建
                 let loc = "";
                 loc =getLocation(portalData1);
                 //共注入五部份 divall为总 dvauto dv divuser divcountdown divaddrscore
@@ -695,12 +701,15 @@
                         }
                         //console.log(Math.ceil((expiry - new Date().getTime())) < ilimit);
                         //console.log("autoReview",autoReview);
-                        if(( autoReview=="true") || ( autoReview=="false" & ( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit)) ){
+                        if(( autoReview === "true") || ( autoReview === "false" & ( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit)) ){
                             //console.log(( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit) );
                             //console.log(Math.ceil((expiry - new Date().getTime()) / 1000));
                             //console.log(ilimit);
                             //console.log(false || false);
-                            if(submitCountDown<=0){  //倒计时0，提交
+                            if(submitCountDown <= 0){  //倒计时0，提交
+                                //如果秒数负数太多，且提交按钮不可用，则reload
+                                if(submitCountDown <= -60){
+                                }
                                 if(portalData){
                                     setTimeout(function(){
                                         clearInterval(ttm);
@@ -796,7 +805,7 @@
                                     }
                                 }
                             }
-                            if(autoReview=="true") {
+                            if(autoReview === "true") {
                                 submitCountDown--;
                                 //console.log("switch",autoReview);
                                 dvautolabel.textContent = '自动';
@@ -981,6 +990,7 @@
         });
     }
 
+    //原用于在界面输入cookie，用于上传验证 ， 现cookie保存于options3文件中
     saveCookie = function () {
         let scookie = document.querySelector("input[id='txtCookie']");
         console.log('scookie',scookie);
@@ -2814,7 +2824,7 @@
     initUserEmailList();
     function initUserEmailList(){
         userEmailList1=["snpsl;snp66666@gmail.com;open chrome 1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;","tydtyd;tydtyd@gmail.com;",
-                        "kingsnan;zhangnan107107@gmail.com;","18kpt;sunkpty@gmail.com;","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;open chrome 23",
+                        "kingsnan;zhangnan107107@gmail.com;","18kpt;sunkpty@gmail.com;","zhangnan007;zhangnan_007@outlook.com;","znan008Uni163-11.35;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;open chrome 23",
                        "pkpkqq01;pkpkqq01@gmail.com;","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;","poketydf02;poketydf02@gmail.com;","poketydf03;poketydf03@gmail.com;",
                        "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;","pokepokem01;pokepokem01@outlook.com;",
                        "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
