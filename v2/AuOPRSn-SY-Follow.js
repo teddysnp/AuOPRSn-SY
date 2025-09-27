@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      2.1.6
+// @version      2.1.7
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -103,8 +103,8 @@
                 error: function (x, y, z) {
                     const errorMsg = `请求失败: ${x.status} - ${y}`;
                     console.log('Err:', errorMsg, x, z);
-                    createNotify("更新任务错误", {
-                        body: "更新任务文档失败！" +errorMsg,
+                    createNotify("读取任务错误", {
+                        body: "读取任务文档失败！" +errorMsg,
                         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                         requireInteraction: false
                     });
@@ -132,7 +132,11 @@
             },
             error: function (xhr, status, error) {
                 console.error("请求失败：", status, "错误信息：", xhr.responseText);
-                alert("更新任务失败！错误：" + xhr.responseText);
+                    createNotify("更新任务错误", {
+                        body: "更新任务文档失败！" +errorMsg,
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                        requireInteraction: false
+                    });
             }
         });
     };
@@ -997,6 +1001,7 @@
                 if(rdata.rejectPhotos.length==0){
                     if(photoall.className.indexOf("photo-card--reject") === -1){
                         setTimeout(function(){ console.log('photoall',photoall);
+                                              //以下，不一定哪个会被点击，很奇怪
                                               photoall.parentNode.parentNode.click();
                                               photoall.click();
                                              },500);
