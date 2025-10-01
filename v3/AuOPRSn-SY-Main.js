@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.1
+// @version      6.0.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -71,7 +71,7 @@
     //在cloudflare中上传的链接
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
-    let cookie = localStorage.cfcookie;//上传权限
+    //let cookie = localStorage.cfcookie;//上传权限  使用cloudflare的worker后，不再使用cookie
     let userEmailList1 = [];
     let userEmailList2 = [];
     //上传任务po的Google Apps Scripts链接
@@ -91,6 +91,31 @@
             requireInteraction: false
         });
         localStorage.setItem("Warning",1);
+    }
+
+    console.log("mywin",mywin.location);
+    mywin.onload = async function() {
+        //createStatusPanel();
+        //console.log("onload","getMission");
+            // 先获取用户信息并等待完成
+        const restext = await getUser();
+
+        // 处理用户信息
+        userEmail = restext.result.socialProfile.email;
+        performance = restext.result.performance;
+
+        if (userEmail) {
+            localStorage.setItem("currentUser", userEmail);
+            document.title = userEmail;
+        }
+
+        console.log("最终获取到的用户邮箱：", userEmail);
+        missionGDoc = JSON.parse(localStorage.missionGDoc);
+        //console.log(mywin.location.href);
+        if(mywin.location.href != "https://wayfarer.nianticlabs.com/new/showcase")
+        {
+            await getMissionFromGoogleDoc();
+        }
     }
 
     // 配置 - CloudFlare
@@ -135,7 +160,6 @@
             console.log(`解析响应失败: ${e.message}`);
         }
     }
-
     // 列出R2中的文件
     function listR2Files(folderPath) {
         const listContainer = document.getElementById('fileList');
@@ -214,7 +238,6 @@
             }
         });
     }
-
     // 读取指定的JSON文件
     function readR2File(fileName) {
         return new Promise((res, err) => {
@@ -264,64 +287,7 @@
             console.log('Promise', e)});
     }
 
-    //使用cookie方式上传文件
-    function uploadFile(pmethod,pfilename,pdata){
-        switch(pmethod){
-            case "PUT":
-//                return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method:     "PUT",
-                    url:        surl+pfilename,
-                    data:       pdata,
-                    anonymous:  true,
-                    cookie:     cookie,
-                    headers: {
-                        "Content-Type": "application/json",
-                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
-                    },
-                    onload: function(res){
-                        console.log(res)
-                        if(res.status === 200){
-                            console.log('上传: '+pfilename+" 成功");
-                        }else{
-                            console.log('上传失败:',surl+pfilename)
-                        }
-                    },
-                    onerror : function(err){
-                        console.log('上传错误',surl+pfilename)
-                        console.log(err)
-                    }
-//                    onload: resolve,
-//                    onerror: reject
-                });
-//                                                        });
-            case "GET":
-            default:
-        }
-    }
-
-    console.log("mywin",mywin.location);
-    mywin.onload = async function() {
-        //createStatusPanel();
-        //console.log("onload","getMission");
-            // 先获取用户信息并等待完成
-        const restext = await getUser();
-
-        // 处理用户信息
-        userEmail = restext.result.socialProfile.email;
-        performance = restext.result.performance;
-
-        if (userEmail) {
-            localStorage.setItem("currentUser", userEmail);
-            document.title = userEmail;
-        }
-
-        console.log("最终获取到的用户邮箱：", userEmail);
-        missionGDoc = JSON.parse(localStorage.missionGDoc);
-        await getMissionFromGoogleDoc();
-    }
-
-    //更新任务数据至Google Doc , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
+    //更新任务数据至Google DOC , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
     function saveToGDoc(sdata){
         $.ajax({
             url: dURL,
@@ -346,10 +312,7 @@
             }
         });
     };
-
     //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
-
-    //从Google Doc读取数据
     function getMissionFromGoogleDoc() {
         // 返回 Promise 对象，包裹异步请求逻辑
         return new Promise((resolve, reject) => {
@@ -405,41 +368,6 @@
     //测试保存数据至GAC,data为JSON数据格式
     function testSaveToDoc(data){
         saveToGDoc(data);
-    }
-
-    //google doc 完全取代后，不再使用
-    function getMission(){
-        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission.list.json")
-        .then(res=>{
-            console.log("读取网络任务");
-            //console.log("res",res);
-            if(!res) {
-                setTimeout(function(){
-                    console.log("onload","未找到任务列表");
-                },1000);
-                return;
-            }
-            let miss = JSON.parse(res)[0];
-            //console.log(miss);
-            if(miss){
-                let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+miss.title+".json";
-                console.log(miss.title);
-                let resp1 = U_XMLHttpRequest("GET",title)
-                .then(res=>{
-                    //console.log("res",res);
-                    if(!res) {
-                        setTimeout(function(){
-                            console.log("onload","未找到任务列表");
-                        },1000);
-                        return;
-                    }
-                    localStorage.setItem("currentmissiontitle",JSON.stringify(miss));
-                    localStorage.setItem("currentmission",res);
-                    missionlist =  eval("(" + res + ")");
-                    //console.log(JSON.stringify(missionlist));
-                });
-            }
-        });
     }
 
     // 修复XMLHttpRequest封装，仅在请求完成（readyState=4）时处理响应
@@ -1184,15 +1112,6 @@
         });
     }
 
-    //原用于在界面输入cookie，用于上传验证 ， 现cookie保存于options3文件中
-    saveCookie = function () {
-        let scookie = document.querySelector("input[id='txtCookie']");
-        console.log('scookie',scookie);
-        let txtcookie=scookie.value;
-        console.log('txtcookie',txtcookie);
-        localStorage.setItem("cfcookie",txtcookie);
-    }
-
     saveNextAutoSetting = function(){
         let cbx = document.querySelector("input[id='idnextauto']");
         //      console.log(cbx.checked);
@@ -1221,7 +1140,7 @@
     function getUser() {
         return U_XMLHttpRequest("GET", "https://wayfarer.nianticlabs.com/api/v1/vault/properties")
             .then(res => {
-            console.log("getUser 响应内容：", res);
+            //console.log("getUser 响应内容：", res);
             if (!res) {
                 throw new Error("响应内容为空");
             }
@@ -1269,25 +1188,6 @@
                             item.portalID = portaldata.id;item.responsedate = formatDate(new Date(),"yyyy-MM-dd");
                             saveToGDoc(item);
 
-                            /*
-                        for(let i=0;i<missionlist.length;i++){
-                            if(missionlist[i][0]==portaldata.title){
-                                if(preview == "false" || preview == "✗" || missionlist[i][10] == null || missionlist[i][10]=="") {
-                                    console.log("update1",missionlist);
-                                    //missionlist[i][5]=formatDate(new Date(),"yyyy-MM-dd");
-                                    missionlist[i][12]=formatDate(new Date(),"yyyy-MM-dd");
-                                    missionlist[i][2]="true";
-                                    missionlist[i][10]=portaldata.id;
-                                    console.log("update1",missionlist);
-                                    if(miss){
-                                        console.log("ititle",ititle);
-                                        if(miss) uploadFile("PUT","mission/mission."+ititle+".json",JSON.stringify(missionlist));
-                                        console.log("更新任务为开审",portaldata.title);
-                                    }
-                                }
-                            }
-                        }*/
-
                             console.log("读取用户打卡");
                             //console.log("res",res);
                             if(!res) {
@@ -1329,141 +1229,6 @@
                     return ; //找到一个，就不进行下一个循环
                 }
             });
-        } catch(e) {
-            console.log(e);
-        }
-    }
-    //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
-    function uploadReviewMarkbak(portaldata){
-        try{
-            if(!missionlist){ return;}
-            let miss=localStorage.currentmissiontitle;
-            let ititle=null;
-            if(miss) ititle=JSON.parse(miss).title;
-            let pname = null; let preview=null;let mid = null;
-            for(let i=0;i<missionlist.length;i++){
-                if(missionlist[i][0] == portaldata.title) {
-                    if(Math.abs(missionlist[i][7]-portaldata.lat)<=0.001 & Math.abs(missionlist[i][8]-portaldata.lng)<=0.01) {
-                        pname = portaldata.title;preview=missionlist[i][2];mid=missionlist[i][10];
-                    }
-                }
-            }
-            if(pname == null) {return;}
-
-            if(portaldata.id){
-                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+ititle+".portallist.json")
-                .then(res=>{
-                    console.log("读取任务po列表");
-                    //console.log("res",res);
-                    if(!res) {
-                        setTimeout(function(){
-                            console.log("读取任务po列表","未找到任务po列表记录");
-                            //保存任务id :
-                            let susermark='[{"id":"' + portaldata.id +'",'
-                            +'"title":"' + portaldata.title +'",'
-                            + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
-                            +'"type":"'+portaldata.type+'",'
-                            +'"lat":'+portaldata.lat+','
-                            +'"lng":'+portaldata.lng+','
-                            +'"imageUrl":"'+portaldata.imageUrl+'",'
-                            +'"supportingImageUrl":"'+portaldata.supportingImageUrl+'",'
-                            +'"streetAddress":"'+portaldata.streetAddress+'"'
-                            + "}]";
-                            if(ititle) {
-                                uploadFile("PUT","mission/mission."+ititle+".portallist.json",susermark);
-                            } else {
-                                console.log("错误：","未获取任务名！");
-                            }
-                        },1000);
-                        return;
-                    } else {
-                        //console.log("res",res);
-                        const dupload = JSON.parse(res);
-                        let isave=0;
-                        for(let i=0;i<dupload.length;i++){
-                            if(dupload[i].id == portaldata.id) {
-                                console.log("存过portal了");
-                                isave=1;
-                            }
-                        }
-                        if(isave==0){
-                            //console.log(dupload);
-                            let dupdata = dupload ;
-                            //dupdata.push(dupload);
-                            let susermark={id:portaldata.id,title:portaldata.title,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),type:portaldata.type,
-                                           lat:portaldata.lat,lng:portaldata.lng,imageUrl:portaldata.imageUrl,supportingImageUrl:portaldata.supportingImageUrl,streetAddress:portaldata.streetAddress};
-                            dupdata.push(susermark);
-                            //console.log(dupdata);
-                            //console.log(JSON.stringify(dupdata));
-                            if(ititle) {
-                                uploadFile("PUT","mission/mission."+ititle+".portallist.json",JSON.stringify(dupdata));
-                            } else
-                            {
-                                console.log("错误：","未获取任务名！");
-                            }
-                        }
-                    }
-                },err=>{
-                    console.log(err);
-                });
-
-                console.log("任务po，保存用户审核打卡...");
-                let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
-                .then(res=>{
-                    //如果任务未开审，则更新任务为开审并加id
-                    //console.log("preview",preview);
-                    for(let i=0;i<missionlist.length;i++){
-                        if(missionlist[i][0]==portaldata.title){
-                            if(preview == "false" || preview == "✗" || missionlist[i][10] == null || missionlist[i][10]=="") {
-                                console.log("update1",missionlist);
-                                //missionlist[i][5]=formatDate(new Date(),"yyyy-MM-dd");
-                                missionlist[i][12]=formatDate(new Date(),"yyyy-MM-dd");
-                                missionlist[i][2]="true";
-                                missionlist[i][10]=portaldata.id;
-                                console.log("update1",missionlist);
-                                if(miss){
-                                    console.log("ititle",ititle);
-                                    if(miss) uploadFile("PUT","mission/mission."+ititle+".json",JSON.stringify(missionlist));
-                                    console.log("更新任务为开审",portaldata.title);
-                                }
-                            }
-                        }
-                    }
-
-                    console.log("读取用户打卡");
-                    //console.log("res",res);
-                    if(!res) {
-                        setTimeout(function(){
-                            console.log("读取用户打卡","未找到用户打卡记录");
-                            //保存任务id :
-                            let susermark='[{"useremail":"' + userEmail +'",'
-                            + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
-                            +'"performance":"' + performance +'"'
-                            + "}]";
-                            uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
-                        },1000);
-                        return;
-                    } else {
-                        const dupload = JSON.parse(res);
-                        for(let i=0;i<dupload.length;i++){
-                            if(dupload[i].useremail == userEmail) {
-                                console.log("存过打卡了");
-                                return;
-                            }
-                        }
-                        //console.log(dupload);
-                        let dupdata = dupload ;
-                        //dupdata.push(dupload);
-                        let susermark={useremail:userEmail,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),performance:performance};
-                        dupdata.push(susermark);
-                        //console.log(dupdata);
-                        //console.log(JSON.stringify(dupdata));
-                        uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
-                    }
-                },err=>{
-                    console.log(err);
-                });
-            }
         } catch(e) {
             console.log(e);
         }
