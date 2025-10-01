@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      3.0.0
+// @version      3.0.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -628,8 +628,8 @@
                             //1分钟的时间戳值:60000 20分钟是1200000
                             if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
                             {
-                                if(item.title === "重型皮带轮" ){
-                                    console.log(pData.submissions[i]);
+                                if(item.title === "山与井" || pData.submissions[i].title === "山与井"){
+                                    console.log("injectManage-NotPHOTO-item",item);console.log("injectManage-NotPHOTO-pData.submissions[i]",pData.submissions[i]);
                                 }
                                 //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
                                 if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - 60000*60*24*3 ) )
@@ -637,27 +637,28 @@
                                     //pData.submissions.status === "NIANTIC_REVIEW" 系统审 !!!!!!!!!!!!!!!!!!!!!!!!!
                                     let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
                                     if(pData.submissions[i].types == "PHOTO"){
-                                        if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED")) { iphoto+=0; }
+                                        if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED"))
+                                        { iphoto+=0; }
                                         //开审
                                         if(pData.submissions[i].status == "VOTING") { iphoto+=1; }
                                     } else {
                                         if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & item.status != "通过") {
                                             item.status = "通过";
                                             isave=1;
-                                            console.log("isave1");
+                                            console.log("injectManage-NotPHOTO-","isave1:通过");
                                         }
                                         //开审
                                         if(pData.submissions[i].status == "VOTING" & item.status != "审核") {
                                             item.status = "审核";
                                             isave=1;
-                                            console.log("isave2");
+                                            console.log("isave2：审核");
                                         }
                                     }
                                     //审核人写错
                                     if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & item.submitter != useremail) {
                                         item.submitter = useremail ;
                                         isave=1;
-                                        console.log("isave3");
+                                        console.log("isave3：更新邮箱");
                                     }
                                     //更新经纬度、id
                                     if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") &
@@ -670,12 +671,23 @@
                                         console.log("mlng",JSON.stringify(item.lng));
                                         item.lat = pData.submissions[i].lat;item.lng = pData.submissions[i].lng;
                                         isave=1;
-                                        console.log("isave4");
+                                        console.log("isave1：更新经纬度及id");
                                     }
+                                }
+                                if(iphoto>0 & item.status === "提交" & item.types ==="图片")
+                                {
+                                    item.status = "审核";
+                                    isave=1;
+                                    console.log("isave1：多图片更新为审核");
+                                }
+                                if(iphoto === 0 & item.status === "审核" & item.types ==="图片")
+                                {
+                                    item.status = "通过";
+                                    isave=1;
+                                    console.log("isave1：多图片更新为通过");
                                 }
                             }
                         }
-                        if(iphoto>0  & item.status === "提交" & item.types ==="图片"){ item.status = "审核"; isave=1;} if(iphoto === 0 & item.status === "审核"  & item.types ==="图片"){ item.status = "通过"; isave=1;}
                         console.log(item.title +':isave',isave);
                         //更新云中任务
                         if(isave==1){
@@ -731,9 +743,12 @@
     function photoReview(pdata){
         //console.log("follow-photoReview",pdata);
         if(pdata.type!="PHOTO") return;
-        let iall = true;let tmptext = "";
+        let tmptext = "";
+        let shouldBreak = false ;
         missionGDoc.forEach(item => {
             //任务里有，全选：photo只能做到全选
+            //console.log("photoReview-item",item);console.log("photoReview-pdata",pdata);
+            if (shouldBreak) return;
             if(item.id === pdata.id){
                 const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
                 if(photoall.className.indexOf("photo-card--reject")==-1){
@@ -742,7 +757,7 @@
                     photoall.click();
                 }
                 tmptext = "任务po:全选";
-                iall = false;
+                shouldBreak = true;
             }
             else if(item.title === pdata.title){
                 const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
@@ -752,11 +767,11 @@
                     photoall.click();
                 }
                 tmptext = "任务po:全选";
-                iall = false;
+                shouldBreak = true;
             }
         })
-        //console.log("follow-iall",iall);
-        if(iall){
+        console.log("follow-shouldBreak",shouldBreak);
+        if(!shouldBreak){
             const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
             if (photo)
             {
