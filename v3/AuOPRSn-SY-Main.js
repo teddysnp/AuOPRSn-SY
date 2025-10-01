@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.0.1
+// @version      6.0.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1247,6 +1247,8 @@
     //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
     function uploadReviewMark(portaldata){
         try{
+            console.log("uploadReviewMark:portaldata",portaldata);
+            console.log("uploadReviewMark:missionGDoc",missionGDoc);
             if(!missionGDoc){ return;}
             let pname = null; let preview=null;
             missionGDoc.forEach(item => {
