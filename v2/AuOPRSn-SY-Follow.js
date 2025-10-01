@@ -579,10 +579,10 @@
                                         console.log("isave4");
                                     }
                                 }
+                                if(iphoto>0  & item.status === "提交" & item.types ==="图片"){ item.status = "审核"; isave=1;} if(iphoto === 0 & item.status === "审核"  & item.types ==="图片"){ item.status = "通过"; isave=1;}
+                                console.log(item.title +':isave',isave);
                             }
                         }
-                        if(iphoto>0  & item.status === "提交" & item.types ==="图片"){ item.status = "审核"; isave=1;} if(iphoto === 0 & item.status === "审核"  & item.types ==="图片"){ item.status = "通过"; isave=1;}
-                        console.log(item.title +':isave',isave);
                         //更新云中任务
                         if(isave==1){
                             setTimeout(function(){
