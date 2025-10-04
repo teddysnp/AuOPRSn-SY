@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.2
+// @version      6.0.3
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -14,7 +14,7 @@
 (function() {
     //变量区
     let mywin = window;
-    //如果任务中没有，可以修改此处应急
+    //如果任务中没有，可以修改此处应急，遇到下列名称的po时，会当成池中po进行审核
     let gpausePortal=["白白的鹅111","腾飞111","无锡记忆——河边洗衣三少妇11。","Curved monument11"];
     let gpausePortalString=["重复了-白白的大鹅","重复了-马踏飞燕","重复了-洗刷刷","重复了"];
     let mission ={  //名称,位置,开始,类型,已审,时间
@@ -31,20 +31,21 @@
                         //7-lat;8-lng;9-submitter:email;10-:portal ID;11-moveoptions+moveplace:1-10 11-20;12-:开审日期 yyyy-mm-dd
     let privatePortal = ["占位po"];
     let editGYMPhoto = ["重型皮带轮"];//不再使用，将同commitScorePhoto一并删除
+    //早期有错误无法审核的po
     let errPortal = ["b7a1c45e923048e0be225bbc264f9161","08196910e908e2613194624f7c04a46e"];
 
     let tryNumber = 10;
     let expireTime = null;
-    let reviewTime = 20;  //审po时间为20分钟
+    let reviewTime = 20;  //审po时间为20分钟，用于倒计时
     let autoReview = null;
     let reviewPortalAuto = "true";
     let editGYMAuto = "true";//不再使用，删除时需与commitScoreEdit及监听XMLHttpRequest里一并删除
     let postPeriod=[25,30];  //自动提交前倒计时，将在此时间内随机生成一个，单位：秒
-    let postTimeoutLimit = 60;//剩最后一分钟强制提交
+    let postTimeoutLimit = 60;//剩余时间小于postTimeoutLimit时将强制提交，单位：秒
     //let submitCountDown = null;
     let userID = null;
-    let userEmail = null;
-    let performance = null;
+    let userEmail = null;//用户邮箱，在加载时从网络读取，用于识别当前用户，并做为审po关键标识用于审核、更新和保存
+    let performance = null;//用户评价，展示用
     let submitButtonClicked = false;
     let scoreAlready = false;
     let saveportalcnt1 = 500;  //本地保存池中审po数量，超过此数量将不保存，先进先出原则
@@ -54,7 +55,7 @@
     let privatePortalDisplay1 = 50;  //首页列表中显示池中已审po数量
     let privatePortalDisplay2 = 50;  //首页列表中显示非池已审po数量
     let recentPo = 10;//首页显示最近审过的池中po数量
-    let portalData = null;
+    let portalData = null;//当前审核的portal数据
     //VIP区，此区内的portal将无条件五星，格式为：中心点纬度,中心点经度,纬度半径(1/10000),纬度半径(1/10000)
     let private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[42.2828685,125.738134,3408,5517],[41.755547,123.288777,940,1140],[41.81979911, 123.25708028,910,920],[41.810820,123.376373,547,1036]];
     let timer = null;
@@ -72,8 +73,8 @@
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
     //let cookie = localStorage.cfcookie;//上传权限  使用cloudflare的worker后，不再使用cookie
-    let userEmailList1 = [];
-    let userEmailList2 = [];
+    let userEmailList1 = [];//审核员列表，用于显示
+    let userEmailList2 = [];//审核员列表，用于显示
     //上传任务po的Google Apps Scripts链接
     let dURL = "https://script.google.com/macros/s/AKfycbwlUEhAm4l8kI617UcNDw2CU7xFR3GGPAMUECt6L5RV8cs4KELQsC6siB_7xwk8JTzpMg/exec";
 
@@ -97,7 +98,7 @@
     mywin.onload = async function() {
         //createStatusPanel();
         //console.log("onload","getMission");
-            // 先获取用户信息并等待完成
+        // 先获取用户信息并等待完成
         const restext = await getUser();
 
         // 处理用户信息
@@ -112,6 +113,7 @@
         console.log("最终获取到的用户邮箱：", userEmail);
         missionGDoc = JSON.parse(localStorage.missionGDoc);
         //console.log(mywin.location.href);
+        //如果是在展示页，那么获取用户的动作在XMLHttpRequest-showReviewedHome中完成
         if(mywin.location.href != "https://wayfarer.nianticlabs.com/new/showcase")
         {
             await getMissionFromGoogleDoc();
@@ -403,8 +405,8 @@
     //监听http请求，不同的页面实现不同功能
     (function (open) {
         XMLHttpRequest.prototype.open = function (method, url) {
-            console.log(url);
-//            console.log(method);
+            //console.log(url);
+            //console.log(method);
             //提示需重新登录
             if(url === "/api/v1/vault/loginconfig")
             {
@@ -539,6 +541,11 @@
                     return;
                 }
                 if(json === null) {
+                    console.log("injectTimer:json为空",json);
+                    return;
+                }
+                if(portalData === null) {
+                    console.log("injectTimer:portalData为空",portalData);
                     return;
                 }
                 console.log('portalData',portalData);
@@ -729,7 +736,7 @@
                 divall.appendChild(spblank);
                 divall.appendChild(divaddscore);
 
-                if(portalData1.type=="NEW") {updateAddress(divaddr);}
+                if(portalData1.type === "NEW") {updateAddress(divaddr);}
                 switch(loc){
                     case "池中":
                         divloc.style="justify-content: flex-start;color:red";break;
@@ -740,6 +747,7 @@
                     default :
                         divloc.style="justify-content: flex-start;";
                 }
+
 
                 divloc.textContent = "定位："+loc +".||.经纬："+portalData1.lat+","+portalData1.lng;
                 //兼容Wayfarer Review Timer
@@ -1074,7 +1082,7 @@
                         for(let i=0;i<userlist.length - 1;i++){
                             if(userlist[i].indexOf("@") == -1) {
                                 if(localuserlist.indexOf(userlist[i])>=0){
-                                    suser+="<input type='checkbox' class='cbxusername' checked='checked' id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
+                                    suser+="<input type='checkbox' class='cbxusername' checked=true id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
                                 } else {
                                     suser+="<input type='checkbox' class='cbxusername' id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
                                 }
@@ -1592,12 +1600,21 @@
             }
         }
         //任务列表判断
+        //console.log(`判断池中`,portal);
+        missionGDoc.forEach(item => {
+            //console.log(`判断池中$item`,item);
+            if((item.title === portal.title || item.id === portal.id) & (Math.abs(portal.lat-item.lat)<=0.001) & (Math.abs(portal.lng-item.lng)<=0.001)){
+                console.log("位置判断missionGDoc：池中");
+                ibaserate = "池中";
+            }
+        })
+        /*
         for (let i=0;i<missionlist.length;i++){
             if(missionlist[i][0]===portal.title & (Math.abs(portal.lat-missionlist[i][7])<=0.001) & (Math.abs(portal.lng-missionlist[i][8])<=0.001)){
                 console.log("位置判断：池中");
                 return "池中";
             }
-        }
+        }*/
         return ibaserate;
     }
 
@@ -2013,15 +2030,79 @@
                 let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
                 //console.log("missionPortal1",$("#missionPortal1"));
                 smistmp+="</tbody></table>";
-                const parse = new DOMParser();
-                let smisssss=parse.parseFromString(smistmp,"text/html");
-                document.querySelector("#missionPortal1").innerHTML = smisssss.body.innerHTML;
+                // 使用const声明变量，避免意外修改
+                const parser = new DOMParser();
+                // 确保smistmp是有效的字符串，避免解析错误
+                if (typeof smistmp === 'string' && smistmp.trim() !== '') {
+                    try {
+                        // 解析HTML字符串
+                        const doc = parser.parseFromString(smistmp, "text/html");
+                        // 获取目标元素
+                        const missionPortal = document.querySelector("#missionPortal1");
+
+                        if (missionPortal) {
+                            // 插入解析后的内容
+                            missionPortal.innerHTML = doc.body.innerHTML;
+                            console.log("HTML内容已成功插入到missionPortal1");
+                        } else {
+                            console.error("未找到id为missionPortal1的元素");
+                        }
+                    } catch (error) {
+                        console.error("解析HTML时发生错误:", error);
+                    }
+                } else {
+                    console.warn("smistmp不是有效的HTML字符串，无法解析");
+                }
                 //console.log(smisssss.body.innerHTML);
                 //console.log("smistmp",smistmp);
-                $("#missionuser").replaceWith(sultmp);
+                replaceElement("#missionuser", sultmp);
+                //$("#missionuser").replaceWith(sultmp);
                 //console.log(smisssss);
             } catch(e){console.log(e);}
         }
+
+    // 通用元素替换函数replaceElement
+    // selector: 目标元素的选择器（如 "#missionuser", ".content" 等）
+    // replacement: 用于替换的内容（HTML字符串或DOM元素）
+    // 使用示例
+    {
+    // 替换 #missionuser 元素
+    // replaceElement("#missionuser", '<div class="new-mission">新的任务内容</div>');
+
+    // 替换 .old-content 元素
+    // replaceElement(".old-content", '<p>这是新内容</p>');
+
+    // 也可以替换为DOM元素
+    // const newDiv = $('<div>动态创建的元素</div>');
+    // replaceElement("#container", newDiv);
+    }
+    function replaceElement(selector, replacement) {
+        // 缓存目标元素
+        const $target = $(selector);
+
+        // 检查目标元素是否存在
+        if ($target.length === 0) {
+            console.error(`未找到符合选择器 "${selector}" 的元素，无法替换`);
+            return false;
+        }
+
+        // 检查替换内容是否有效
+        if (replacement === undefined || replacement === null) {
+            console.warn(`替换内容为${replacement}，将清空元素`);
+            $target.empty();
+            return true;
+        }
+
+        try {
+            // 执行替换操作
+            $target.replaceWith(replacement);
+            console.log(`符合选择器 "${selector}" 的元素已成功替换`);
+            return true;
+        } catch (error) {
+            console.error(`替换符合选择器 "${selector}" 的元素时发生错误:`, error);
+            return false;
+        }
+    }
 
     function findUserEmail(userreview,UEmailList){
         try{
