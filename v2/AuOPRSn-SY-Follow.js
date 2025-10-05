@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      2.1.7
+// @version      3.0.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
+// @connect      work-wayfarer.tydtyd.workers.dev
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
@@ -22,7 +23,7 @@
 
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
-    let cookie = localStorage.cfcookie;
+    //let cookie = localStorage.cfcookie;  使用cloudflare的worker后，不再使用cookie
     let useremail = "";
     let tmpfollow={id:null,title:null,lat:null,lng:null,review:null};
     let isUserClick = false ;
@@ -56,7 +57,7 @@
             console.log("follow-missionGDoc",missionGDoc);
         }*/
     }
-    // 改造：将 getMissionFromGoogleDoc 改为返回 Promise 的函数
+    //从google doc 读取任务
     function getMissionFromGoogleDoc() {
         // 返回 Promise 对象，包裹异步请求逻辑
         return new Promise((resolve, reject) => {
@@ -133,7 +134,7 @@
             error: function (xhr, status, error) {
                 console.error("请求失败：", status, "错误信息：", xhr.responseText);
                     createNotify("更新任务错误", {
-                        body: "更新任务文档失败！" +errorMsg,
+                        body: "更新任务文档失败！" +xhr.responseText,
                         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                         requireInteraction: false
                     });
@@ -176,64 +177,96 @@
         });
     }
 
-    //上传json审核至cloudflare
-    function gmrequest(pmethod,purl,pid,pdata){
-        cookie = localStorage.cfcookie;
-        switch(pmethod){
-            case "PUT":
-//                return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method:     "PUT",
-                    url:        purl+pid+".json",
-                    data:       pdata,
-                    anonymous:  true,
-                    cookie:     cookie,
-                    headers: {
-                        "Content-Type": "application/json",
-                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
-                    },
-                    onload: function(res){
-                        let restext = null;
-                        try {
-                            restext = JSON.parse(res.responseText);
-                        } catch(e) {
-                            console.log(e);
+    // 配置 - CloudFlare
+    const CONFIG = {
+        WORKER_URL: 'https://work-wayfarer.tydtyd.workers.dev',
+        SECRET_KEY: 'warfarer-review', // 与Worker中相同的密钥
+        DEFAULT_FOLDER: 'defaultpath/' // 本地指定的存储路径，可随时修改
+    };
+    // 上传数据到R2   uploadDataToR2(folderPath:路径 , fileName:文件名 , data:json数据)
+    function uploadDataToR2(folderPath,fileName,data) {
+        try {
+            console.log(`正在上传数据:${folderPath}`);
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: CONFIG.WORKER_URL,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Secret-Key': CONFIG.SECRET_KEY
+                },
+                data: JSON.stringify({
+                    folderPath: folderPath,
+                    fileName: fileName,
+                    data: data
+                }),
+                onload: function(response) {
+                    try {
+                        const result = JSON.parse(response.responseText);
+                        if (result.success) {
+                            console.log(`数据上传成功: ${result.fullPath}`);
+                        } else {
+                            console.log(`上传失败: ${result.error || result.details}`);
                         }
-                        if(res.status === 200){
-                            if (restext.success) {
-                                console.log("postjson",restext);
-                                //success:false情况
-                                //修改首页上传显示  绿：1d953f
-                                let iup = document.getElementById("iduplabel");
-                                if(iup) iup.style="font-weight:bold;color:#1d953f";
-                                console.log(purl+pid+".json");
-                                console.log('审核记录上传成功:'+pid)
-                            } else {
-                                console.log("postjson",restext);
-                                let iup = document.getElementById("iduplabel");
-                                if(iup) iup.style="font-weight:bold;color:red";
-                                console.log('审核记录上传失败:'+pid)
-                            }
-                        }else{
-                            let iup = document.getElementById("iduplabel");
-                            if(iup) iup.style="font-weight:bold;color:red";
-                            console.log('审核记录上传失败:'+pid)
-                        }
-                    },
-                    onerror : function(err){
-                        //修改首页上传显示
-                        let iup = document.getElementById("iduplabel");
-                        if(iup) iup.style="font-weight:bold;color:red";
-                        console.log('审核记录上传错误:'+pid)
-                        console.log(err)
+                    } catch (e) {
+                        console.log(`解析响应失败: ${e.message}`);
                     }
-//                    onload: resolve,
-//                    onerror: reject
-                });
-//                                                        });
-            case "GET":
-            default:
+                },
+                onerror: function(error) {
+                    console.log(`解析响应失败: ${error.message}`);
+                }
+            });
+        } catch (e) {
+            console.log(`解析响应失败: ${e.message}`);
         }
+    }
+    // 读取指定的JSON文件
+    function readR2File(fileName) {
+        return new Promise((res, err) => {
+            console.log(`正在读取文件: ${fileName.split('/').pop()}`);
+
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: `${CONFIG.WORKER_URL}/read?file=${encodeURIComponent(fileName)}`,
+                headers: {
+                    'X-Secret-Key': CONFIG.SECRET_KEY
+                },
+                // 新增：打印发送的请求信息
+                onsend: function() {
+                    console.log('发送请求:', {
+                        url: this.url,
+                        headers: this.headers
+                    });
+                },
+                onload: function(response) {
+                    console.log('收到响应:', {
+                        status: response.status,
+                        responseText: response.responseText.substring(0, 200) // 只显示前200字符
+                    });
+                    try {
+                        const result = JSON.parse(response.responseText);
+                        if (result.success) {
+                            showLog(`成功读取文件: ${result.fileName.split('/').pop()}`,false);
+                            res(result);
+                        } else {
+                            console.log('result',result);
+                            showLog(`读取失败: ${result.error}`, true);
+                            err(result);
+                        }
+                    } catch (e) {
+                        console.log('e',e);
+                        showLog(`解析文件内容失败: ${e.message}`, true);
+                        err(e);
+                    }
+                },
+                onerror: function(error) {
+                    err(error);
+                    console.log('请求错误：',error);
+                    showLog(`连接失败: ${error.message}`, true);
+                }
+            });
+        }).catch(e => {
+            showLog(`解析文件内容失败: ${e.message}`, true);
+            console.log('Promise', e)});
     }
 
     function U_XMLHttpRequest(method, url) {
@@ -525,48 +558,61 @@
                     missionGDoc.forEach(item => {
                         //console.log('item',item);
                         let isave=0;
-                        let iphoto=0;
+                        let iphoto=0;let iphoto1=0;
                         if(item.types === "图片"){
-                            console.log(item.types,"图片");
+                            //console.log("injectManage-item",item);
                         }
                         for(let i=0;i<pData.submissions.length;i++){
                             //console.log("申请:",pData.submissions[i]);
                             //1分钟的时间戳值:60000 20分钟是1200000
                             if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
                             {
-                                if(item.title === "重型皮带轮" ){
-                                    console.log(pData.submissions[i]);
+                                if(item.title === "1905文化创意园" || pData.submissions[i].title === "1905文化创意园"){
+                                console.log("injectManage-item",item);
+                                console.log(`injectManage-pData.submissions[${i}]`,pData.submissions[i]);
+                                    console.log("injectManage-NotPHOTO-item",item);console.log("injectManage-NotPHOTO-pData.submissions[i]",pData.submissions[i]);
                                 }
                                 //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
                                 if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - 60000*60*24*3 ) )
                                 {
                                     //pData.submissions.status === "NIANTIC_REVIEW" 系统审 !!!!!!!!!!!!!!!!!!!!!!!!!
                                     let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
-                                    if(pData.submissions[i].types == "PHOTO"){
-                                        if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED")) { iphoto+=0; }
-                                        //开审
-                                        if(pData.submissions[i].status == "VOTING") { iphoto+=1; }
+                                    if(pData.submissions[i].type === "PHOTO"){
+                                        if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED"))
+                                        {
+                                            iphoto+=0;
+                                            console.log("iphoto+0");
+                                        }
+                                        //开审 : 否则也算开审，否则任务里可能不再显示，将来无法再更新成通过
+                                        if(pData.submissions[i].status === "VOTING") {
+                                            console.log("iphoto+1");
+                                            iphoto+=1;
+                                        }
+                                        if(pData.submissions[i].status === "NIANTIC_REVIEW") {
+                                            console.log("iphoto1+1");
+                                            iphoto1+=1;
+                                        }
                                     } else {
-                                        if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & item.status != "通过") {
+                                        if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED") & item.status != "通过") {
                                             item.status = "通过";
                                             isave=1;
-                                            console.log("isave1");
+                                            console.log("injectManage-NotPHOTO-","isave1:通过");
                                         }
                                         //开审
                                         if(pData.submissions[i].status == "VOTING" & item.status != "审核") {
                                             item.status = "审核";
                                             isave=1;
-                                            console.log("isave2");
+                                            console.log("isave2：审核");
                                         }
                                     }
                                     //审核人写错
-                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & item.submitter != useremail) {
+                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") & item.submitter != useremail) {
                                         item.submitter = useremail ;
                                         isave=1;
-                                        console.log("isave3");
+                                        console.log("isave3：更新邮箱");
                                     }
                                     //更新经纬度、id
-                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") &
+                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") &
                                        (pData.submissions[i].lat != item.lat || pData.submissions[i].lng != item.lng )){
                                         console.log("ptitle",pData.submissions[i].title);
                                         console.log("mtitle",JSON.stringify(item.title));
@@ -576,15 +622,33 @@
                                         console.log("mlng",JSON.stringify(item.lng));
                                         item.lat = pData.submissions[i].lat;item.lng = pData.submissions[i].lng;
                                         isave=1;
-                                        console.log("isave4");
+                                        console.log("isave1：更新经纬度及id");
                                     }
                                 }
-                                if(iphoto>0  & item.status === "提交" & item.types ==="图片"){ item.status = "审核"; isave=1;} if(iphoto === 0 & item.status === "审核"  & item.types ==="图片"){ item.status = "通过"; isave=1;}
-                                console.log(item.title +':isave',isave);
                             }
                         }
+                        console.log(`injectManage-iphoto:${iphoto}`);
+                        if(iphoto > 0 & item.status === "提交" & item.types ==="图片")
+                        {
+                            item.status = "审核";
+                            isave=1;
+                            console.log("isave1：多图片更新为审核");
+                        }
+                        if(iphoto === 0 & item.status === "审核" & item.types ==="图片")
+                        {
+                            if(iphoto1 > 0) {//只有官方审核，改为提交
+                                item.status = "提交";
+                                isave=1;
+                                console.log("isave5：多图片仅官方审核为提交");
+                            } else {
+                                item.status = "通过";
+                                isave=1;
+                                console.log("isave1：多图片更新为通过");
+                            }
+                        }
+                        console.log(item.title +':isave',isave);
                         //更新云中任务
-                        if(isave==1){
+                        if(isave === 1){
                             setTimeout(function(){
                                 localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
                                 saveToGDoc(item);
@@ -635,33 +699,50 @@
 
     //PHOTO:未找到网络审核，按任务中选/瞎选一个
     function photoReview(pdata){
+        //console.log("follow-photoReview",pdata);
         if(pdata.type!="PHOTO") return;
-        let iall = true;let tmptext = "";
+        let tmptext = "";
+        let shouldBreak = false ;
         missionGDoc.forEach(item => {
             //任务里有，全选：photo只能做到全选
+            //console.log("photoReview-item",item);console.log("photoReview-pdata",pdata);
+            if (shouldBreak) return;
             if(item.id === pdata.id){
                 const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
                 if(photoall.className.indexOf("photo-card--reject")==-1){
+                    //以下，不一定哪个会被点击，很奇怪
+                    photoall.parentNode.parentNode.click();
                     photoall.click();
                 }
                 tmptext = "任务po:全选";
-                iall = false;
+                shouldBreak = true;
             }
             else if(item.title === pdata.title){
                 const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
                 if(photoall.className.indexOf("photo-card--reject")==-1){
+                    //以下，不一定哪个会被点击，很奇怪
+                    photoall.parentNode.parentNode.click();
                     photoall.click();
                 }
                 tmptext = "任务po:全选";
-                iall = false;
+                shouldBreak = true;
             }
         })
-        if(iall){
+        console.log("follow-shouldBreak",shouldBreak);
+        if(!shouldBreak){
             const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
             if (photo)
             {
-                if(photo[0].className.indexOf("photo-card--reject")==-1) photo[0].click();
+                //console.log("follow-photo",photo[0]);
+                if(photo[0].className.indexOf("photo-card--reject") === -1) photo[0].click();
                 tmptext = "瞎选第一个";
+                //以下，不一定哪个会被点击，很奇怪
+                const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
+                if(photoall.className.indexOf("photo-card--reject")==-1){
+                    //以下，不一定哪个会被点击，很奇怪
+                    photoall.parentNode.parentNode.click();
+                    //photoall.click();
+                }
             }
         }
         setTimeout(function(){
@@ -807,87 +888,6 @@
         },1500);
     }
 
-    function scrollToBottom (){
-        console.log('scrollToBottom');
-        (function smoothscroll() {
-            const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
-            const clientHeight = document.documentElement.clientHeight; // 浏览器高度
-            const scrollHeight = document.documentElement.scrollHeight; // 总高度
-            if (scrollHeight - 10 > currentScroll + clientHeight) {
-                window.requestAnimationFrame(smoothscroll);
-                window.scrollTo(0, currentScroll + (scrollHeight - currentScroll - clientHeight) / 2);
-            }
-        })();
-    };
-    //EDIT位置编辑用的函数
-    function findArrayTwo(arr,title){
-        for(let i=0;i<arr.length;i++){
-            //            console.log("arr["+i+"]",arr[i]);
-            if(arr[i].indexOf(title)>=0){
-                return i;
-            }
-        }
-        return -1;
-    }
-    //返回排好序的挪po点集合
-    function getclickedbtn(ptstruct,iplan){
-        let ilen=ptstruct.length;
-        if (ilen<=0) return null;
-        if (ilen==1) return ptstruct[0].aria-describedby;
-        return resort(ptstruct,iplan);
-    }
-    //按挪的计划，对挪po点集合进行排序
-    function resort(ptstruct,iplan){
-        //    console.log(ptstruct[0].left);
-        if(iplan<=10){
-            for(let i=0;i<ptstruct.length;i++){
-                for(let j=0;j<ptstruct.length - 1;j++){
-                    let tmp = ptstruct[j];
-                    if(parseInt(ptstruct[j].left) > parseInt(ptstruct[j+1].left)){
-                        tmp = ptstruct[j];
-                        ptstruct[j]=ptstruct[j+1];
-                        ptstruct[j+1]=tmp;
-                    }
-                }
-            }
-        }
-        if(iplan>10){
-            for(let i=0;i<ptstruct.length;i++){
-                for(let j=0;j<ptstruct.length - 1;j++){
-                    let tmp = ptstruct[j];
-                    if(parseInt(ptstruct[j].top) > parseInt(ptstruct[j+1].top)){
-                        tmp = ptstruct[j];
-                        ptstruct[j]=ptstruct[j+1];
-                        ptstruct[j+1]=tmp;
-                    }
-                }
-            }
-        }
-        return ptstruct;
-    }
-    //得到挪po的点坐标集合，屏幕坐标
-    function getbtnStruct(ptbutton){
-        let ptall = [];
-        ptbutton.forEach((ptbtn) => {
-            let ptbtaria = ptbtn.getAttribute("aria-describedby");
-            let ptbtnatt = ptbtn.getAttribute('style');
-            while(ptbtnatt.indexOf(" ")>0) {
-                ptbtnatt = ptbtnatt.replace(" ","");
-            }
-            ptbtnatt = ptbtnatt.replaceAll(":",'":"');
-            ptbtnatt = ptbtnatt.replaceAll(";",'","');
-            ptbtnatt = ptbtnatt.replaceAll("px","");
-            ptbtnatt = '{"aria-describedby":"'+ptbtaria+'","'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
-            //                    ptbtnatt='{"'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
-            //      console.log(ptbtnatt);
-            ptbtnatt=JSON.parse(ptbtnatt);
-            //      console.log(ptbtnatt);
-            ptall.push(ptbtnatt);
-        })
-        //    console.log(ptall);
-        return ptall;
-    }
-
     //判断云端是否有审核记录，执行跟审或任务审
     function loadReviewData(pdata){
         //console.log(id);
@@ -897,27 +897,31 @@
         let id=pdata.id;
         tmpfollow.id = null; tmpfollow.title = null; tmpfollow.lat = null; tmpfollow.lng = null; tmpfollow.review = null;
         //console.log(durl+"/portal/portalreview/portal." +id +".json");
-        let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
+        //let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
+        //console.log("loadReviewData",pdata);console.log("id",id);
+        let resp = readR2File("portal/portalreview/portal." +id +".json")
         .then(res=>{
             //console.log("getjson",res);
             let idown = document.getElementById("idcountdownlabel");
             let ilabel = document.getElementById("iduserlabel");
             //getLocalMissionList();
+            console.log("follow-loadReviewData-res",res);
             if(!res) {
                 //修改首页下载显示
                 console.log("getjsonerr");
                 cloudReviewData = null;
                 setTimeout(function(){
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
-                    if(idown) idown.style="font-weight:bold;color:red";
+                    if(idown) idown.style="font-weight:bold;color:yellow";
                 },1000);
                 //未找到网络审核时，去判断是否有重复可能
-                if(pdata.type=="EDIT") editReview(pdata);
-                if(pdata.type=="PHOTO") photoReview(pdata);
-                if(pdata.type=="NEW") isDuplicate(pdata);
+                if(pdata.type === "EDIT") editReview(pdata);
+                if(pdata.type === "PHOTO") photoReview(pdata);
+                if(pdata.type === "NEW") isDuplicate(pdata);
                 return null;
             }
-            if(res.indexOf("Error 404")>=0) {
+            let restext = JSON.stringify(res.content);
+            if(restext.indexOf("Error 404")>=0) {
                 //修改首页下载显示
                 //中黄：ffe600
                 if(idown) idown.style="font-weight:bold;color:#ffe600";
@@ -932,7 +936,7 @@
                 if(pdata.type=="NEW") isDuplicate(pdata);
                 return null;
             }
-            if(res.indexOf("<!DOCTYPE html>")>=0){
+            if(restext.indexOf("<!DOCTYPE html>")>=0){
                 cloudReviewData = null;
                 setTimeout(function(){
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
@@ -947,11 +951,11 @@
             //  开头"(应该没有)  结尾:"(应该没有)  中间\"(应该无\)
             //20241106以后生成的审核记录应该无此问题
             let res1 = null;
-            if(res.substring(0,1)=='"')
+            if(restext.substring(0,1)=='"')
             {
-                res1=res.substring(1,res.length-1);
+                res1=restext.substring(1,restext.length-1);
                 res1=res1.replace(/\\/g,"");
-            } else res1=res;
+            } else res1=restext;
 
             //console.log("res1",JSON.parse(res1));
             let creviewdata = null;
@@ -1316,19 +1320,18 @@
             try{
                 console.log("saving...");
                 if(icloud==0 || icloud==2){
-                    if(cookie) {
-                        //保存至本地
-                        if(localpd.length==0){
-                            localStorage.setItem(useremail+"upload","["+JSON.stringify(tmpupload)+"]");
-                        } else {
-                            localpd.push(tmpupload);
-                            localStorage.setItem(useremail+"upload",JSON.stringify(localpd));
-                        }
-                        //上传至云端
-                        console.log("上传...",data.id);
-                        gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
-                        console.log("审核结束:",data.id);
+                    //保存至本地
+                    if(localpd.length==0){
+                        localStorage.setItem(useremail+"upload","["+JSON.stringify(tmpupload)+"]");
+                    } else {
+                        localpd.push(tmpupload);
+                        localStorage.setItem(useremail+"upload",JSON.stringify(localpd));
                     }
+                    //上传至云端
+                    console.log("上传...",data.id);
+                    //gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
+                    uploadDataToR2("portal/portalreview/","portal."+data.id+".json",data);
+                    console.log("审核结束:",data.id);
                 } else {
                     //保存审核记录至本地：以下未调试
                     let creviewlist =[];
@@ -1355,6 +1358,109 @@
             //let iup = document.getElementById("iduplabel");
             //if(iup) iup.style="font-weight:bold;color:#f6f5ec";
         }
+    }
+
+    function scrollToBottom (){
+        console.log('scrollToBottom');
+        (function smoothscroll() {
+            const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
+            const clientHeight = document.documentElement.clientHeight; // 浏览器高度
+            const scrollHeight = document.documentElement.scrollHeight; // 总高度
+            if (scrollHeight - 10 > currentScroll + clientHeight) {
+                window.requestAnimationFrame(smoothscroll);
+                window.scrollTo(0, currentScroll + (scrollHeight - currentScroll - clientHeight) / 2);
+            }
+        })();
+    };
+    //EDIT位置编辑用的函数
+    function findArrayTwo(arr,title){
+        for(let i=0;i<arr.length;i++){
+            //            console.log("arr["+i+"]",arr[i]);
+            if(arr[i].indexOf(title)>=0){
+                return i;
+            }
+        }
+        return -1;
+    }
+    //返回排好序的挪po点集合
+    function getclickedbtn(ptstruct,iplan){
+        let ilen=ptstruct.length;
+        if (ilen<=0) return null;
+        if (ilen==1) return ptstruct[0].aria-describedby;
+        return resort(ptstruct,iplan);
+    }
+    //按挪的计划，对挪po点集合进行排序
+    function resort(ptstruct,iplan){
+        //    console.log(ptstruct[0].left);
+        if(iplan<=10){
+            for(let i=0;i<ptstruct.length;i++){
+                for(let j=0;j<ptstruct.length - 1;j++){
+                    let tmp = ptstruct[j];
+                    if(parseInt(ptstruct[j].left) > parseInt(ptstruct[j+1].left)){
+                        tmp = ptstruct[j];
+                        ptstruct[j]=ptstruct[j+1];
+                        ptstruct[j+1]=tmp;
+                    }
+                }
+            }
+        }
+        if(iplan>10){
+            for(let i=0;i<ptstruct.length;i++){
+                for(let j=0;j<ptstruct.length - 1;j++){
+                    let tmp = ptstruct[j];
+                    if(parseInt(ptstruct[j].top) > parseInt(ptstruct[j+1].top)){
+                        tmp = ptstruct[j];
+                        ptstruct[j]=ptstruct[j+1];
+                        ptstruct[j+1]=tmp;
+                    }
+                }
+            }
+        }
+        return ptstruct;
+    }
+    //得到挪po的点坐标集合，屏幕坐标
+    function getbtnStruct(ptbutton){
+        let ptall = [];
+        ptbutton.forEach((ptbtn) => {
+            let ptbtaria = ptbtn.getAttribute("aria-describedby");
+            let ptbtnatt = ptbtn.getAttribute('style');
+            while(ptbtnatt.indexOf(" ")>0) {
+                ptbtnatt = ptbtnatt.replace(" ","");
+            }
+            ptbtnatt = ptbtnatt.replaceAll(":",'":"');
+            ptbtnatt = ptbtnatt.replaceAll(";",'","');
+            ptbtnatt = ptbtnatt.replaceAll("px","");
+            ptbtnatt = '{"aria-describedby":"'+ptbtaria+'","'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
+            //                    ptbtnatt='{"'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
+            //      console.log(ptbtnatt);
+            ptbtnatt=JSON.parse(ptbtnatt);
+            //      console.log(ptbtnatt);
+            ptall.push(ptbtnatt);
+        })
+        //    console.log(ptall);
+        return ptall;
+    }
+
+    // 自定义日志函数：替代console.log，将内容显示在面板 不是太好用，没使用，但函数接口在，不要删
+    function showLog(message, isError = false) {
+        // 创建单条日志元素
+        const logItem = document.createElement('div');
+        // 错误信息标红，普通信息白色
+        logItem.style.color = isError ? '#ff4444' : '#ffffff';
+        // 添加时间戳（可选，便于追溯）
+        const time = new Date().toLocaleTimeString();
+        logItem.textContent = `[${time}] ${message}`;
+
+        // 添加到面板（最新日志在最下面）
+        //statusContent.appendChild(logItem);
+
+        // 滚动到底部，确保能看到最新日志
+        //statusContent.scrollTop = statusContent.scrollHeight;
+
+        // 可选：保留最近20条日志，避免面板过长
+        //if (statusContent.children.length > 20) {
+        //statusContent.removeChild(statusContent.firstChild);
+        //}
     }
 
     //格式化日期函数
