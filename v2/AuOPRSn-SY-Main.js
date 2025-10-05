@@ -1,19 +1,20 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      5.1.3
+// @version      6.0.5
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
+// @connect      work-wayfarer.tydtyd.workers.dev
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nianticlabs.com
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
 (function() {
     //变量区
     let mywin = window;
-    //如果任务中没有，可以修改此处应急
+    //如果任务中没有，可以修改此处应急，遇到下列名称的po时，会当成池中po进行审核
     let gpausePortal=["白白的鹅111","腾飞111","无锡记忆——河边洗衣三少妇11。","Curved monument11"];
     let gpausePortalString=["重复了-白白的大鹅","重复了-马踏飞燕","重复了-洗刷刷","重复了"];
     let mission ={  //名称,位置,开始,类型,已审,时间
@@ -30,20 +31,21 @@
                         //7-lat;8-lng;9-submitter:email;10-:portal ID;11-moveoptions+moveplace:1-10 11-20;12-:开审日期 yyyy-mm-dd
     let privatePortal = ["占位po"];
     let editGYMPhoto = ["重型皮带轮"];//不再使用，将同commitScorePhoto一并删除
+    //早期有错误无法审核的po
     let errPortal = ["b7a1c45e923048e0be225bbc264f9161","08196910e908e2613194624f7c04a46e"];
 
     let tryNumber = 10;
     let expireTime = null;
-    let reviewTime = 20;  //审po时间为20分钟
+    let reviewTime = 20;  //审po时间为20分钟，用于倒计时
     let autoReview = null;
     let reviewPortalAuto = "true";
     let editGYMAuto = "true";//不再使用，删除时需与commitScoreEdit及监听XMLHttpRequest里一并删除
     let postPeriod=[25,30];  //自动提交前倒计时，将在此时间内随机生成一个，单位：秒
-    let postTimeoutLimit = 60;//剩最后一分钟强制提交
+    let postTimeoutLimit = 60;//剩余时间小于postTimeoutLimit时将强制提交，单位：秒
     //let submitCountDown = null;
     let userID = null;
-    let userEmail = null;
-    let performance = null;
+    let userEmail = null;//用户邮箱，在加载时从网络读取，用于识别当前用户，并做为审po关键标识用于审核、更新和保存
+    let performance = null;//用户评价，展示用
     let submitButtonClicked = false;
     let scoreAlready = false;
     let saveportalcnt1 = 500;  //本地保存池中审po数量，超过此数量将不保存，先进先出原则
@@ -53,7 +55,7 @@
     let privatePortalDisplay1 = 50;  //首页列表中显示池中已审po数量
     let privatePortalDisplay2 = 50;  //首页列表中显示非池已审po数量
     let recentPo = 10;//首页显示最近审过的池中po数量
-    let portalData = null;
+    let portalData = null;//当前审核的portal数据
     //VIP区，此区内的portal将无条件五星，格式为：中心点纬度,中心点经度,纬度半径(1/10000),纬度半径(1/10000)
     let private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[42.2828685,125.738134,3408,5517],[41.755547,123.288777,940,1140],[41.81979911, 123.25708028,910,920],[41.810820,123.376373,547,1036]];
     let timer = null;
@@ -70,9 +72,9 @@
     //在cloudflare中上传的链接
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
-    let cookie = localStorage.cfcookie;//上传权限
-    let userEmailList1 = [];
-    let userEmailList2 = [];
+    //let cookie = localStorage.cfcookie;//上传权限  使用cloudflare的worker后，不再使用cookie
+    let userEmailList1 = [];//审核员列表，用于显示
+    let userEmailList2 = [];//审核员列表，用于显示
     //上传任务po的Google Apps Scripts链接
     let dURL = "https://script.google.com/macros/s/AKfycbwlUEhAm4l8kI617UcNDw2CU7xFR3GGPAMUECt6L5RV8cs4KELQsC6siB_7xwk8JTzpMg/exec";
 
@@ -92,50 +94,202 @@
         localStorage.setItem("Warning",1);
     }
 
-    function uploadFile(pmethod,pfilename,pdata){
-        switch(pmethod){
-            case "PUT":
-//                return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method:     "PUT",
-                    url:        surl+pfilename,
-                    data:       pdata,
-                    anonymous:  true,
-                    cookie:     cookie,
-                    headers: {
-                        "Content-Type": "application/json",
-                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
-                    },
-                    onload: function(res){
-                        console.log(res)
-                        if(res.status === 200){
-                            console.log('上传: '+pfilename+" 成功");
-                        }else{
-                            console.log('上传失败:',surl+pfilename)
-                        }
-                    },
-                    onerror : function(err){
-                        console.log('上传错误',surl+pfilename)
-                        console.log(err)
-                    }
-//                    onload: resolve,
-//                    onerror: reject
-                });
-//                                                        });
-            case "GET":
-            default:
+    console.log("mywin",mywin.location);
+    mywin.onload = async function() {
+        //createStatusPanel();
+        //console.log("onload","getMission");
+        // 先获取用户信息并等待完成
+        const restext = await getUser();
+
+        // 处理用户信息
+        userEmail = restext.result.socialProfile.email;
+        performance = restext.result.performance;
+
+        if (userEmail) {
+            localStorage.setItem("currentUser", userEmail);
+            document.title = userEmail;
+        }
+
+        console.log("最终获取到的用户邮箱：", userEmail);
+        missionGDoc = JSON.parse(localStorage.missionGDoc);
+        //console.log(mywin.location.href);
+        //如果是在展示页，那么获取用户的动作在XMLHttpRequest-showReviewedHome中完成
+        if(mywin.location.href != "https://wayfarer.nianticlabs.com/new/showcase")
+        {
+            await getMissionFromGoogleDoc();
         }
     }
 
-    console.log("mywin",mywin.location);
-    mywin.onload = function() {
-        //console.log("onload","getMission");
-        missionGDoc = JSON.parse(localStorage.missionGDoc);
-        getMissionFromGoogleDoc();
-        //getMission();
+    // 配置 - CloudFlare
+    const CONFIG = {
+        WORKER_URL: 'https://work-wayfarer.tydtyd.workers.dev',
+        SECRET_KEY: 'warfarer-review', // 与Worker中相同的密钥
+        DEFAULT_FOLDER: 'defaultpath/' // 本地指定的存储路径，可随时修改
+    };
+    // 上传数据到R2   uploadDataToR2(folderPath:路径 , fileName:文件名 , data:json数据)
+    function uploadDataToR2(folderPath,fileName,data) {
+        try {
+            console.log(`正在上传数据:${folderPath}`);
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: CONFIG.WORKER_URL,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Secret-Key': CONFIG.SECRET_KEY
+                },
+                data: JSON.stringify({
+                    folderPath: folderPath,
+                    fileName: fileName,
+                    data: data
+                }),
+                onload: function(response) {
+                    try {
+                        const result = JSON.parse(response.responseText);
+                        if (result.success) {
+                            console.log(`数据上传成功: ${result.fullPath}`);
+                        } else {
+                            console.log(`上传失败: ${result.error || result.details}`);
+                        }
+                    } catch (e) {
+                        console.log(`解析响应失败: ${e.message}`);
+                    }
+                },
+                onerror: function(error) {
+                    console.log(`解析响应失败: ${error.message}`);
+                }
+            });
+        } catch (e) {
+            console.log(`解析响应失败: ${e.message}`);
+        }
+    }
+    // 列出R2中的文件
+    function listR2Files(folderPath) {
+        const listContainer = document.getElementById('fileList');
+
+        if (!folderPath) {
+            showStatus('请输入文件夹路径', true);
+            return;
+        }
+
+        //listContainer.innerHTML = '<div style="text-align: center; color: #64748b;">加载中...</div>';
+        //showStatus('正在加载文件列表...');
+
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: `${CONFIG.WORKER_URL}/list?prefix=${encodeURIComponent(folderPath)}`,
+            headers: {
+                'X-Secret-Key': CONFIG.SECRET_KEY
+            },
+            onload: function(response) {
+                try {
+                    const result = JSON.parse(response.responseText);
+                    if (result.success) {
+                        if (result.fileCount === 0) {
+                            listContainer.innerHTML = '<div style="color: #64748b;">该路径下没有文件</div>';
+                            showLog('加载完成，未找到文件',false);
+                            return;
+                        }
+
+                        // 生成文件列表
+                        let html = '<table style="width: 100%; border-collapse: collapse;">';
+                        result.files.forEach(file => {
+                            const fileName = file.name.split('/').pop();
+                            html += `
+                                <tr style="border-bottom: 1px solid #f1f5f9; cursor: pointer;"
+                                    onmouseover="this.style.backgroundColor='#f8fafc'"
+                                    onmouseout="this.style.backgroundColor='transparent'">
+                                    <td style="padding: 8px 0;">
+                                        <span data-file="${file.name}" class="file-link">${fileName}</span>
+                                    </td>
+                                    <td style="text-align: right; font-size: 12px; color: #64748b;">
+                                        ${formatSize(file.size)}
+                                    </td>
+                                    <td style="text-align: right; font-size: 12px; color: #64748b; padding-left: 10px;">
+                                        ${new Date(file.lastModified).toLocaleString()}
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        html += '</table>';
+                        listContainer.innerHTML = html;
+
+                        // 绑定文件点击事件
+                        document.querySelectorAll('.file-link').forEach(link => {
+                            link.addEventListener('click', (e) => {
+                                const fileName = e.target.getAttribute('data-file');
+                                readR2File(fileName);
+                            });
+                        });
+
+                        showLog(`成功加载 ${result.fileCount} 个文件` , false);
+                    } else {
+                        listContainer.innerHTML = `<div style="color: #dc2626;">错误: ${result.error}</div>`;
+                        console.log('result',result);
+                        showLog(`加载失败: ${result.error}`, true);
+                    }
+                } catch (e) {
+                    listContainer.innerHTML = `<div style="color: #dc2626;">解析错误: ${e.message}</div>`;
+                    console.log('e',e);
+                    showLog(`解析响应失败: ${e.message}`, true);
+                }
+            },
+            onerror: function(error) {
+                listContainer.innerHTML = `<div style="color: #dc2626;">请求失败: ${error.message}</div>`;
+                console.log('error',error);
+                showLog(`连接失败: ${error.message}`, true);
+            }
+        });
+    }
+    // 读取指定的JSON文件
+    function readR2File(fileName) {
+        return new Promise((res, err) => {
+            console.log(`正在读取文件: ${fileName.split('/').pop()}`);
+
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: `${CONFIG.WORKER_URL}/read?file=${encodeURIComponent(fileName)}`,
+                headers: {
+                    'X-Secret-Key': CONFIG.SECRET_KEY
+                },
+                // 新增：打印发送的请求信息
+                onsend: function() {
+                    console.log('发送请求:', {
+                        url: this.url,
+                        headers: this.headers
+                    });
+                },
+                onload: function(response) {
+                    console.log('收到响应:', {
+                        status: response.status,
+                        responseText: response.responseText.substring(0, 200) // 只显示前200字符
+                    });
+                    try {
+                        const result = JSON.parse(response.responseText);
+                        if (result.success) {
+                            showLog(`成功读取文件: ${result.fileName.split('/').pop()}`,false);
+                            res(result);
+                        } else {
+                            console.log('result',result);
+                            showLog(`读取失败: ${result.error}`, true);
+                            err(result);
+                        }
+                    } catch (e) {
+                        console.log('e',e);
+                        showLog(`解析文件内容失败: ${e.message}`, true);
+                        err(e);
+                    }
+                },
+                onerror: function(error) {
+                    console.log('error',error);
+                    showLog(`连接失败: ${error.message}`, true);
+                }
+            });
+        }).catch(e => {
+            showLog(`解析文件内容失败: ${e.message}`, true);
+            console.log('Promise', e)});
     }
 
-    //更新任务数据至Google Doc , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
+    //更新任务数据至Google DOC , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
     function saveToGDoc(sdata){
         $.ajax({
             url: dURL,
@@ -160,10 +314,7 @@
             }
         });
     };
-
     //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
-
-    //从Google Doc读取数据
     function getMissionFromGoogleDoc() {
         // 返回 Promise 对象，包裹异步请求逻辑
         return new Promise((resolve, reject) => {
@@ -180,7 +331,7 @@
                         let markercollection = JSON.parse(data);
                         // 筛选状态为'提交'或'审核'的元素
                         let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
-                        console.log('filteredMarkers', filteredMarkers);
+                        console.log('Main-getGDoc', filteredMarkers);
                         missionGDoc = filteredMarkers;
                         localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
 
@@ -221,68 +372,41 @@
         saveToGDoc(data);
     }
 
-    //google doc 完全取代后，不再使用
-    function getMission(){
-        let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission.list.json")
-        .then(res=>{
-            console.log("读取网络任务");
-            //console.log("res",res);
-            if(!res) {
-                setTimeout(function(){
-                    console.log("onload","未找到任务列表");
-                },1000);
-                return;
-            }
-            let miss = JSON.parse(res)[0];
-            //console.log(miss);
-            if(miss){
-                let title="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+miss.title+".json";
-                console.log(miss.title);
-                let resp1 = U_XMLHttpRequest("GET",title)
-                .then(res=>{
-                    //console.log("res",res);
-                    if(!res) {
-                        setTimeout(function(){
-                            console.log("onload","未找到任务列表");
-                        },1000);
-                        return;
-                    }
-                    localStorage.setItem("currentmissiontitle",JSON.stringify(miss));
-                    localStorage.setItem("currentmission",res);
-                    missionlist =  eval("(" + res + ")");
-                    //console.log(JSON.stringify(missionlist));
-                });
-            }
-        });
-    }
-
+    // 修复XMLHttpRequest封装，仅在请求完成（readyState=4）时处理响应
     function U_XMLHttpRequest(method, url) {
         return new Promise((res, err) => {
             const xhr = new XMLHttpRequest();
             xhr.open(method, url, true);
-            xhr.setRequestHeader("If-Modified-Since" ,"0");
+            xhr.setRequestHeader("If-Modified-Since", "0");
             xhr.onreadystatechange = function() {
+                // 仅在请求完全完成时处理（readyState=4）
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
-                        res(xhr.responseText);
+                        res(xhr.responseText); // 成功：返回响应文本
                     } else {
-                        err(xhr.statusText);
+                        const errorMsg = `${method}:${url} 失败（状态码：${xhr.status}）`;
+                        console.log(errorMsg);
+                        err(new Error(errorMsg)); // 失败：返回错误对象
                     }
                 }
             };
             xhr.onerror = function() {
-                err(xhr.statusText);
+                const errorMsg = `${method}:${url} 网络错误`;
+                console.log(errorMsg);
+                err(new Error(errorMsg));
             };
             xhr.send();
         }).catch(e => {
-            console.log('Promise', e)});
+            console.log(`${method}:${url} 捕获错误：${e.message}`);
+            throw e; // 重新抛出错误，让调用方处理
+        });
     }
 
     //监听http请求，不同的页面实现不同功能
     (function (open) {
         XMLHttpRequest.prototype.open = function (method, url) {
-//            console.log(url);
-//            console.log(method);
+            //console.log(url);
+            //console.log(method);
             //提示需重新登录
             if(url === "/api/v1/vault/loginconfig")
             {
@@ -417,6 +541,11 @@
                     return;
                 }
                 if(json === null) {
+                    console.log("injectTimer:json为空",json);
+                    return;
+                }
+                if(portalData === null) {
+                    console.log("injectTimer:portalData为空",portalData);
                     return;
                 }
                 console.log('portalData',portalData);
@@ -607,7 +736,7 @@
                 divall.appendChild(spblank);
                 divall.appendChild(divaddscore);
 
-                if(portalData1.type=="NEW") {updateAddress(divaddr);}
+                if(portalData1.type === "NEW") {updateAddress(divaddr);}
                 switch(loc){
                     case "池中":
                         divloc.style="justify-content: flex-start;color:red";break;
@@ -618,6 +747,7 @@
                     default :
                         divloc.style="justify-content: flex-start;";
                 }
+
 
                 divloc.textContent = "定位："+loc +".||.经纬："+portalData1.lat+","+portalData1.lng;
                 //兼容Wayfarer Review Timer
@@ -952,7 +1082,7 @@
                         for(let i=0;i<userlist.length - 1;i++){
                             if(userlist[i].indexOf("@") == -1) {
                                 if(localuserlist.indexOf(userlist[i])>=0){
-                                    suser+="<input type='checkbox' class='cbxusername' checked='checked' id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
+                                    suser+="<input type='checkbox' class='cbxusername' checked id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
                                 } else {
                                     suser+="<input type='checkbox' class='cbxusername' id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
                                 }
@@ -966,7 +1096,7 @@
                     let bnext = "";
                     //console.log("bNextAuto",bNextAuto);
                     if(bNextAuto){
-                        bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' checked=true onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
+                        bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' checked onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
                     } else {
                         bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
                     }
@@ -974,7 +1104,7 @@
                     //console.log(cbxcaptcha);
                     let cap ="";
                     if(cbxcaptcha=="true") {
-                        cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' checked=true onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
+                        cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' checked onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
                     } else {
                         cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
                     }
@@ -988,15 +1118,6 @@
                 console.log(e);
             }
         });
-    }
-
-    //原用于在界面输入cookie，用于上传验证 ， 现cookie保存于options3文件中
-    saveCookie = function () {
-        let scookie = document.querySelector("input[id='txtCookie']");
-        console.log('scookie',scookie);
-        let txtcookie=scookie.value;
-        console.log('txtcookie',txtcookie);
-        localStorage.setItem("cfcookie",txtcookie);
     }
 
     saveNextAutoSetting = function(){
@@ -1023,30 +1144,38 @@
         //console.log("switch auto",autoReview);
     }
 
-    getUser();
-    function getUser(){
-        const resp = U_XMLHttpRequest("GET","https://wayfarer.nianticlabs.com/api/v1/vault/properties")
-        resp.then
-        (res=>{
-            if(res){
-                let restext = JSON.parse(res);
-                //        console.log(restext.result.socialProfile);
-                userEmail = restext.result.socialProfile.email;
-                performance = restext.result.performance ;
-                //        console.log(userEmail);
-                if(restext.result.socialProfile.email)
-                {
-                    localStorage.setItem("currentUser",restext.result.socialProfile.email);
-                    document.title = localStorage["currentUser"];
-                }
-                return restext.result.socialProfile.email;
+    // 简化getUser，只负责获取和解析原始数据
+    function getUser() {
+        return U_XMLHttpRequest("GET", "https://wayfarer.nianticlabs.com/api/v1/vault/properties")
+            .then(res => {
+            //console.log("getUser 响应内容：", res);
+            if (!res) {
+                throw new Error("响应内容为空");
             }
+
+            const restext = JSON.parse(res);
+            console.log("getUser 解析结果：", restext);
+
+            // 仅验证响应结构，不处理数据
+            if (!restext.result?.socialProfile) {
+                throw new Error("响应结构不包含socialProfile");
+            }
+
+            // 返回完整解析结果，让外部处理
+            return restext;
+        })
+            .catch(e => {
+            console.log("getUser 处理失败：", e.message);
+            throw e;
         });
     }
+
 
     //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
     function uploadReviewMark(portaldata){
         try{
+            console.log("uploadReviewMark:portaldata",portaldata);
+            console.log("uploadReviewMark:missionGDoc",missionGDoc);
             if(!missionGDoc){ return;}
             let pname = null; let preview=null;
             missionGDoc.forEach(item => {
@@ -1058,32 +1187,14 @@
 
                     if(portaldata.id){
                         console.log("任务po，保存用户审核打卡...");
-                        let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
+                        //let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
+                        let resp1 = readR2File("portal/portaluseremail/portal."+portaldata.id+".useremail.json")
                         .then(res=>{
                             //如果任务未开审，则更新任务为开审并加id
                             //console.log("preview",preview);
                             item.status = "审核";
                             item.portalID = portaldata.id;item.responsedate = formatDate(new Date(),"yyyy-MM-dd");
                             saveToGDoc(item);
-
-                            /*
-                        for(let i=0;i<missionlist.length;i++){
-                            if(missionlist[i][0]==portaldata.title){
-                                if(preview == "false" || preview == "✗" || missionlist[i][10] == null || missionlist[i][10]=="") {
-                                    console.log("update1",missionlist);
-                                    //missionlist[i][5]=formatDate(new Date(),"yyyy-MM-dd");
-                                    missionlist[i][12]=formatDate(new Date(),"yyyy-MM-dd");
-                                    missionlist[i][2]="true";
-                                    missionlist[i][10]=portaldata.id;
-                                    console.log("update1",missionlist);
-                                    if(miss){
-                                        console.log("ititle",ititle);
-                                        if(miss) uploadFile("PUT","mission/mission."+ititle+".json",JSON.stringify(missionlist));
-                                        console.log("更新任务为开审",portaldata.title);
-                                    }
-                                }
-                            }
-                        }*/
 
                             console.log("读取用户打卡");
                             //console.log("res",res);
@@ -1095,11 +1206,14 @@
                                     + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
                                     +'"performance":"' + performance +'"'
                                     + "}]";
-                                    uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
+                                    //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
+                                    uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",JSON.parse(susermark));
                                 },1000);
                                 return;
                             } else {
-                                const dupload = JSON.parse(res);
+                                const dupload = res.content;
+                                console.log("res",res);
+                                //const dupload = JSON.parse(res.content);
                                 for(let i=0;i<dupload.length;i++){
                                     if(dupload[i].useremail == userEmail) {
                                         console.log("存过打卡了");
@@ -1113,7 +1227,8 @@
                                 dupdata.push(susermark);
                                 //console.log(dupdata);
                                 //console.log(JSON.stringify(dupdata));
-                                uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
+                                //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
+                                uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",dupdata);
                             }
                         },err=>{
                             console.log(err);
@@ -1122,141 +1237,6 @@
                     return ; //找到一个，就不进行下一个循环
                 }
             });
-        } catch(e) {
-            console.log(e);
-        }
-    }
-    //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
-    function uploadReviewMarkbak(portaldata){
-        try{
-            if(!missionlist){ return;}
-            let miss=localStorage.currentmissiontitle;
-            let ititle=null;
-            if(miss) ititle=JSON.parse(miss).title;
-            let pname = null; let preview=null;let mid = null;
-            for(let i=0;i<missionlist.length;i++){
-                if(missionlist[i][0] == portaldata.title) {
-                    if(Math.abs(missionlist[i][7]-portaldata.lat)<=0.001 & Math.abs(missionlist[i][8]-portaldata.lng)<=0.01) {
-                        pname = portaldata.title;preview=missionlist[i][2];mid=missionlist[i][10];
-                    }
-                }
-            }
-            if(pname == null) {return;}
-
-            if(portaldata.id){
-                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/mission/mission."+ititle+".portallist.json")
-                .then(res=>{
-                    console.log("读取任务po列表");
-                    //console.log("res",res);
-                    if(!res) {
-                        setTimeout(function(){
-                            console.log("读取任务po列表","未找到任务po列表记录");
-                            //保存任务id :
-                            let susermark='[{"id":"' + portaldata.id +'",'
-                            +'"title":"' + portaldata.title +'",'
-                            + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
-                            +'"type":"'+portaldata.type+'",'
-                            +'"lat":'+portaldata.lat+','
-                            +'"lng":'+portaldata.lng+','
-                            +'"imageUrl":"'+portaldata.imageUrl+'",'
-                            +'"supportingImageUrl":"'+portaldata.supportingImageUrl+'",'
-                            +'"streetAddress":"'+portaldata.streetAddress+'"'
-                            + "}]";
-                            if(ititle) {
-                                uploadFile("PUT","mission/mission."+ititle+".portallist.json",susermark);
-                            } else {
-                                console.log("错误：","未获取任务名！");
-                            }
-                        },1000);
-                        return;
-                    } else {
-                        //console.log("res",res);
-                        const dupload = JSON.parse(res);
-                        let isave=0;
-                        for(let i=0;i<dupload.length;i++){
-                            if(dupload[i].id == portaldata.id) {
-                                console.log("存过portal了");
-                                isave=1;
-                            }
-                        }
-                        if(isave==0){
-                            //console.log(dupload);
-                            let dupdata = dupload ;
-                            //dupdata.push(dupload);
-                            let susermark={id:portaldata.id,title:portaldata.title,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),type:portaldata.type,
-                                           lat:portaldata.lat,lng:portaldata.lng,imageUrl:portaldata.imageUrl,supportingImageUrl:portaldata.supportingImageUrl,streetAddress:portaldata.streetAddress};
-                            dupdata.push(susermark);
-                            //console.log(dupdata);
-                            //console.log(JSON.stringify(dupdata));
-                            if(ititle) {
-                                uploadFile("PUT","mission/mission."+ititle+".portallist.json",JSON.stringify(dupdata));
-                            } else
-                            {
-                                console.log("错误：","未获取任务名！");
-                            }
-                        }
-                    }
-                },err=>{
-                    console.log(err);
-                });
-
-                console.log("任务po，保存用户审核打卡...");
-                let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
-                .then(res=>{
-                    //如果任务未开审，则更新任务为开审并加id
-                    //console.log("preview",preview);
-                    for(let i=0;i<missionlist.length;i++){
-                        if(missionlist[i][0]==portaldata.title){
-                            if(preview == "false" || preview == "✗" || missionlist[i][10] == null || missionlist[i][10]=="") {
-                                console.log("update1",missionlist);
-                                //missionlist[i][5]=formatDate(new Date(),"yyyy-MM-dd");
-                                missionlist[i][12]=formatDate(new Date(),"yyyy-MM-dd");
-                                missionlist[i][2]="true";
-                                missionlist[i][10]=portaldata.id;
-                                console.log("update1",missionlist);
-                                if(miss){
-                                    console.log("ititle",ititle);
-                                    if(miss) uploadFile("PUT","mission/mission."+ititle+".json",JSON.stringify(missionlist));
-                                    console.log("更新任务为开审",portaldata.title);
-                                }
-                            }
-                        }
-                    }
-
-                    console.log("读取用户打卡");
-                    //console.log("res",res);
-                    if(!res) {
-                        setTimeout(function(){
-                            console.log("读取用户打卡","未找到用户打卡记录");
-                            //保存任务id :
-                            let susermark='[{"useremail":"' + userEmail +'",'
-                            + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
-                            +'"performance":"' + performance +'"'
-                            + "}]";
-                            uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
-                        },1000);
-                        return;
-                    } else {
-                        const dupload = JSON.parse(res);
-                        for(let i=0;i<dupload.length;i++){
-                            if(dupload[i].useremail == userEmail) {
-                                console.log("存过打卡了");
-                                return;
-                            }
-                        }
-                        //console.log(dupload);
-                        let dupdata = dupload ;
-                        //dupdata.push(dupload);
-                        let susermark={useremail:userEmail,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),performance:performance};
-                        dupdata.push(susermark);
-                        //console.log(dupdata);
-                        //console.log(JSON.stringify(dupdata));
-                        uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
-                    }
-                },err=>{
-                    console.log(err);
-                });
-            }
         } catch(e) {
             console.log(e);
         }
@@ -1337,127 +1317,6 @@
     }
 
     //注入标签：任务列表、最近审的po、池中/本地/外地、中文地址
-    //图片打分
-    function commitScorePhoto(portalData1,loc){
-        const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
-        const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
-        //            console.log(photo);
-        //本地道馆编辑图片，全选 app-accept-all-photos-card
-        if(editGYMPhoto.indexOf(portalData1.title)>=0){
-            if(photoall){
-                if(photoall.className.indexOf("photo-card--reject")==-1){
-                    photoall.click();
-                }
-            }
-            return "全选";
-        } else if (photo)
-        {
-            if(photo[0].className.indexOf("photo-card--reject")==-1){
-                photo[0].click();
-            }
-            return "瞎选第一个";
-        }
-    }
-    //编辑po打分
-    function commitScoreEdit(portalData1,loc){
-        //标题：点集合中的第一个选项
-        let icnt2 = 0;
-        let optp2 = document.querySelector('app-select-title-edit mat-radio-button');
-        if (optp2) {
-            optp2.scrollIntoView(true);
-            let opt2 = optp2.querySelector("label[class='mat-radio-label']");
-            //console.log(opt2);
-            while(!opt2) {
-                setTimeout(function(){
-                    opt2 = optp2.querySelector("label[class='mat-radio-label']");
-                    //        console.log(opt2);
-                },1000);
-                icnt2++;
-                if (icnt2>10) { break;}
-            }
-            //console.log(opt2);
-            if (opt2) {
-                opt2.click();
-                console.log("options click!");
-            }
-        }
-
-        //描述：点集合中的第一个选项
-        let icnt3 = 0;
-        let optp3 = document.querySelector('app-select-description-edit mat-radio-button');
-        if (optp3) {
-            optp3.scrollIntoView(true);
-            let opt3 = optp3.querySelector("label[class='mat-radio-label']");
-            //console.log(opt3);
-            while(!opt3) {
-                setTimeout(function(){
-                    opt3 = optp3.querySelector("label[class='mat-radio-label']");
-                    //        console.log(opt3);
-                },1000);
-                icnt3++;
-                if (icnt3>10) { break;}
-            }
-            //console.log(opt3);
-            if (opt3) {
-                opt3.click();
-                console.log("options click!");
-            }
-        }
-
-        //本地，如果是自动，则切换为手动
-        let ret = null;
-        if (autoReview=='true' ) {
-            if (loc=="池中"){
-                if(editGYMAuto == "true") autoReview="false";
-                console.log("autoReview set false");
-                ret = "池中挪po";
-            } else {
-                ret = "瞎选一个";
-            }
-        } else
-        {
-            ret = "瞎选一个";
-        }
-
-        //点地图中的第一个点
-        let icnt1 = 0;
-        let optp = document.querySelector('agm-map');
-        if (optp) {
-//            console.log("optp",optp);
-            optp.scrollIntoView(true);
-          //防止不点击，1秒后执行
-            setTimeout(function(){
-              //防止不点击，先滚动到categorization
-              let ccard = document.querySelector("wf-review-card[id='categorization-card']");
-              if(ccard){
-                ccard.scrollIntoView(true);
-              }
-              let opt1 = optp.querySelector('div[role="button"]');
-//              console.log("opt1",opt1);
-              //这个应该没有用
-              if(!opt1 ) {
-                opt1 = optp.querySelector('div[role="button"]');
-              }
-              if (opt1) {
-                  console.log("editGYMAuto",editGYMAuto);
-                  if(editGYMAuto == "true") {
-                      opt1.click();
-                  }
-                console.log("map click!");
-              }
-            },200);
-        }
-
-      //滚回顶部
-      setTimeout(function(){
-        var conpan = document.querySelector('mat-sidenav-content[class="mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100"]');
-        if(conpan)
-        {
-          conpan.scrollTo({top:0,left:0,behavior:'smooth'});
-        }
-      },1000);
-      return ret;
-    }
     //新po打分
     function commitScoreNew(portalData1,loc)
     {
@@ -1706,17 +1565,9 @@
     //打分，调用图片、编辑、新po
     function commitScore(portalData1,loc)
     {
-        if(portalData1.type=="NEW"){
+        if(portalData1.type === "NEW"){
             return commitScoreNew(portalData1,loc);
         }
-        //挪至follow中，commitScoreEdit、commitScorePhoto函数不再使用，测试后将删除
-        /*
-        if(portalData1.type=="EDIT"){
-            return commitScoreEdit(portalData1,loc);
-        }
-        if(portalData1.type=="PHOTO"){
-            return commitScorePhoto(portalData1,loc);
-        }*/
     }
 
     //池中、本地、外地判断 返回1：池中；2：本地；3：外地；0：无
@@ -1749,12 +1600,21 @@
             }
         }
         //任务列表判断
+        //console.log(`判断池中`,portal);
+        missionGDoc.forEach(item => {
+            //console.log(`判断池中$item`,item);
+            if((item.title === portal.title || item.id === portal.id) & (Math.abs(portal.lat-item.lat)<=0.001) & (Math.abs(portal.lng-item.lng)<=0.001)){
+                console.log("位置判断missionGDoc：池中");
+                ibaserate = "池中";
+            }
+        })
+        /*
         for (let i=0;i<missionlist.length;i++){
             if(missionlist[i][0]===portal.title & (Math.abs(portal.lat-missionlist[i][7])<=0.001) & (Math.abs(portal.lng-missionlist[i][8])<=0.001)){
                 console.log("位置判断：池中");
                 return "池中";
             }
-        }
+        }*/
         return ibaserate;
     }
 
@@ -1883,189 +1743,70 @@
             console.log("reviewShowErr",e);
         }
     }
-    //在审核页review显示审过的po
-    function showReviewedReviewbak()
-    {
-        try{
-            const retitle = document.getElementById("latestpo");
-            //console.log("retitle",retitle);
-            if( !retitle){
-                let tmpmissionlist = JSON.parse(JSON.stringify(missionlist));
-                let miss1 = JSON.parse(localStorage.currentmissiontitle);
-                let prpo1 = JSON.parse(localStorage.getItem('Reviewed1'));
-                let prpo2 = JSON.parse(localStorage.getItem('Reviewed2'));
-                //console.log(prpo1.length);
-                //console.log(prpo1);
-                //console.log(prpo[0]);
-                let stmp =" ";
-                //console.log(prpo.length);
-                let icnt=0;
-                let userlist=localStorage[userEmail+"user"];
-                if(!userlist) userlist="";
-                //主要部分：生成-最近审的5个po / 任务po
-                if (prpo1!=null){
-                    for(let i=prpo1.length-1;i>=0;i--){
-                        let strarr = prpo1[i];
-                        try {
-                            while(strarr.indexOf("undefined")>0){
-                                strarr = strarr.replace("undefined","0");
-                            }
-                            while(strarr.indexOf('""')>0){
-                                strarr = strarr.replace('""','"');
-                            }
-                            while(strarr.indexOf('":","')>0){
-                                strarr = strarr.replace('":","','":"","');
-                            }
-                            //console.log(strarr);
-                            let stmparr = eval("(" + strarr + ")");
-                            if((userlist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail)){
-                                //最近审的5个po
-                                if(icnt<recentPo){
-                                    stmp += stmparr.title+"/";
-                                    //if (icnt>=5) break;
-                                }
-                                icnt++;
-                                //任务  //0名称,1位置,2开始,3类型,4已审,5时间
-                                //console.log(tmpmissionlist);
-                                for(let k=tmpmissionlist.length-1;k>=0;k--){
-                                    if(stmparr.title==tmpmissionlist[k][0]){
-                                        if(tmpmissionlist[k][4]!="true"){ //第一条匹配的(临时借用missionlist[i][2])
-                                            if(new Date(stmparr.dt) >= new Date(tmpmissionlist[k][5]+" 00:00:00")){ //进审po池子后审到的
-                                                tmpmissionlist[k][4]="true"; //标记已经找到;审过了
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } catch(e) {
-                            console.log(e);
-                        }
-                    }
-                }
-                if (prpo2!=null){
-                    for(let i=prpo2.length-1;i>=0;i--){
-                        let strarr = prpo2[i];
-                        try {
-                            while(strarr.indexOf("undefined")>0){
-                                strarr = strarr.replace("undefined","0");
-                            }
-                            while(strarr.indexOf('""')>0){
-                                strarr = strarr.replace('""','"');
-                            }
-                            while(strarr.indexOf('":","')>0){
-                                strarr = strarr.replace('":","','":"","');
-                            }
-                            //console.log(strarr);
-                            let stmparr = eval("(" + strarr + ")");
-                            if((userlist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail)){
-                                //任务  //0名称,1位置,2开始,3类型,4已审,5时间
-                                //console.log(tmpmissionlist);
-                                for(let k=0;k<tmpmissionlist.length;k++){
-                                    if(stmparr.title==tmpmissionlist[k][0]){
-                                        if(tmpmissionlist[k][4]!="true"){ //第一条匹配的
-                                            if(new Date(stmparr.dt) >= new Date(tmpmissionlist[k][5]+" 00:00:00")){ //进审po池子后审到的
-                                                tmpmissionlist[k][4]="true"; //标记已经找到;审过了
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } catch(e) {
-                            console.log(e);
-                        }
-                    }
-                }
-                //console.log(stmp);
-                //生成 ：三种任务po归类 ：待完成2|已完成1|未进池3|已终止4
-                //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
-                let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
-                let okcount = 0;
-                for (let j=0;j<tmpmissionlist.length;j++){
-                    if(tmpmissionlist[j][6]=="ok"){
-                        okcount++;
-                        tmmiss4+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                    }
-                    else if(tmpmissionlist[j][4]=="✓" || tmpmissionlist[j][4]=="true"){
-                        tmmiss1+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                        //tmmiss1+="["+tmpmissionlist[j][0]+"]";
-                    }
-                    else if (tmpmissionlist[j][2]=="✗" || tmpmissionlist[j][2]=="false"){
-                        tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                    }
-                    else {
-                        if(tmpmissionlist[j][9]!=userEmail)
-                            tmmiss2+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+tmpmissionlist[j][0]+".png' target='_blank'>"+tmpmissionlist[j][0]+"</a>]";
-                        //tmmiss2+="["+tmpmissionlist[j][0]+"]";
-                    }
-                }
-                //任务完成，给出消息，决定是否暂停                      待开发
-              if(tmmiss2==""){ //Mission over
-              }
-              let appreview = document.querySelector("app-review");
-              if(appreview){
-                  const dva1=document.createElement("div");
-                  dva1.className="userclass missionpo";
-                  dva1.id="missionpo";
-                  dva1.textContent="";
-                  const dva2=document.createElement("div");
-                  dva2.className="userclass latestpo";
-                  dva2.id="latestpo";
-                  dva2.textContent="";
-                  appreview.insertBefore(dva2,appreview.firstChild);
-                  appreview.insertBefore(dva1,appreview.firstChild);
-                  //console.log("missionlist",missionlist);
-                  if(missiondisplay == "true"){
-                      if(miss1.state == "going" & okcount<tmpmissionlist.length){
-                          $(".userclass.missionpo").replaceWith(
-                              "<font size=3><div class='userclass missionpo' id='missionpo'>【待完成】"+tmmiss2
-                              //+"<p>【已完成】"+tmmiss1
-                              +"<p>【未进池】"+tmmiss3
-                              //+"<p>【已终止】"+tmmiss4
-                              +"</div></font>");
-                      }
-                  }
-                  $(".userclass.latestpo").replaceWith("<font size=3><div class='userclasss latestpo' id='latestpo'>【已审po】"+stmp+"</div></font><div class='wf-page-header__title ng-star-inserted' ></div><p>");
-              }
-            } ;
-        } catch (e) {
-            console.log("reviewShowErr",e);
-        }
-    }
 
     //首页home显示用户审过的po
-    async function showReviewedHome(){
-        //console.log("missionlist",missionlist);
-        //getMission();
-        $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>");
-        $(".showcase-gallery").replaceWith(
-            "<div><font size=5>-任务-</font></div><div id='missionPortal1'></div><div id='missionuser'></div>"
-            +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
-            +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
-            +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
-            +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
-        );
-
+    async function showReviewedHome() {
         try {
-            // 等待 getMissionFromGoogleDoc 执行完成（获取数据）
+            if(userEmail === null) {
+                // 先获取用户信息并等待完成
+                const restext = await getUser();
+                // 处理用户信息
+                userEmail = restext.result.socialProfile.email;
+                performance = restext.result.performance;
+
+                if (userEmail != null) {
+                    localStorage.setItem("currentUser", userEmail);
+                    document.title = userEmail;
+                } else return;
+                console.log("最终获取到的用户邮箱：", userEmail);
+            }
+            // 更新页面DOM
+            $(".wf-page-header__title.ng-star-inserted").replaceWith(
+                `<div class='placestr'><font size=5>${userEmail}</font></div>`
+            );
+
+            $(".showcase-gallery").replaceWith(`
+            <div><font size=5>-任务-</font></div>
+            <div id='missionPortal1'></div>
+            <div id='missionuser'></div>
+            <div id='idlbfollow'></div>
+            <br>
+            <div><font size=5>跟审记录</font></div>
+            <div id='idfollow'></div>
+            <div id='idlbupload'></div>
+            <br>
+            <div><font size=5>上传记录</font></div>
+            <div id='idupload'></div>
+            <br>
+            <div><font size=5>池中已审</font></div>
+            <div id='privatePortal1'></div>
+            <br>
+            <div><font size=5>池外已审</font></div>
+            <div id='privatePortal2'></div>
+        `);
+
+            // 等待获取任务数据（现在处于async函数中，可安全使用await）
             await getMissionFromGoogleDoc();
 
-            console.log("missionGDoc.length1",missionGDoc.length);
-            // 数据获取完成后，再执行业务逻辑
+            //console.log("missionGDoc.length1", missionGDoc.length);
+
+            // 处理任务数据
             if (missionGDoc.length > 0) {
-                console.log("业务逻辑执行：", missionGDoc);
+                //console.log("业务逻辑执行：", missionGDoc);
                 showReviewedHome1();
             } else {
                 console.log("无符合条件的任务数据");
-                // 可选：处理无数据的场景（如显示空提示）
+                // 可添加无数据提示
             }
+
         } catch (error) {
-            // 捕获 getMissionFromGoogleDoc 中的所有错误（地址无效、请求失败、解析错误等）
-            console.log("getDisplay 执行失败：", error);
-            // 可选：进一步处理错误（如重试机制）
-            //刷新窗口
-            mywin.location.reload();
+            // 集中捕获所有可能的错误
+            console.log("执行失败：", error);
+            // 刷新窗口（根据实际需求决定是否保留）
+            // mywin.location.reload();
         }
     }
+
     function showReviewedHome1()
     {
             try{
@@ -2075,7 +1816,6 @@
                 {
                     //      userEmail=getUser();  //会引起promise错误
                 }
-                let cbxmiss = localStorage["cbxmission"];
 
                 let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
                 let sfdetail = "";
@@ -2108,12 +1848,6 @@
                 }
                 $("#idupload").replaceWith(sutitle+sudetail);
 
-                if(cbxmiss){
-                    if(cbxmiss=="true"){
-                        let obj = document.getElementById("cbxmission");
-                        obj.checked = true;
-                    }
-                }
                 //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
                 let smis="<table style='width:100%'><thead><tr>"
                 +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
@@ -2285,265 +2019,83 @@
                         +"<td>"+item.lat+"</td>"+"<td>"+item.lng+"</td>"+"<td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
                         +"</tr>";
                 });
-                console.log('homepage',missionGDoc);
+                //console.log('homepage',missionGDoc);
                 let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
                 //console.log("missionPortal1",$("#missionPortal1"));
                 smistmp+="</tbody></table>";
-                const parse = new DOMParser();
-                let smisssss=parse.parseFromString(smistmp,"text/html");
-                document.querySelector("#missionPortal1").innerHTML = smisssss.body.innerHTML;
+                // 使用const声明变量，避免意外修改
+                const parser = new DOMParser();
+                // 确保smistmp是有效的字符串，避免解析错误
+                if (typeof smistmp === 'string' && smistmp.trim() !== '') {
+                    try {
+                        // 解析HTML字符串
+                        const doc = parser.parseFromString(smistmp, "text/html");
+                        // 获取目标元素
+                        const missionPortal = document.querySelector("#missionPortal1");
+
+                        if (missionPortal) {
+                            // 插入解析后的内容
+                            missionPortal.innerHTML = doc.body.innerHTML;
+                            //console.log("HTML内容已成功插入到missionPortal1");
+                        } else {
+                            console.error("未找到id为missionPortal1的元素");
+                        }
+                    } catch (error) {
+                        console.error("解析HTML时发生错误:", error);
+                    }
+                } else {
+                    console.warn("smistmp不是有效的HTML字符串，无法解析");
+                }
                 //console.log(smisssss.body.innerHTML);
                 //console.log("smistmp",smistmp);
-                $("#missionuser").replaceWith(sultmp);
+                //replaceElement("#missionuser", sultmp);
+                //$("#missionuser").replaceWith(sultmp);
                 //console.log(smisssss);
             } catch(e){console.log(e);}
         }
 
-    function showReviewedHomebak(){
-        //console.log("missionlist",missionlist);
-        //getMission();
-        awaitElement(() => missionlist.length>0)
-            .then((ref) => {
-            $(".wf-page-header__title.ng-star-inserted").replaceWith("<div class='placestr'><font size=5>"+userEmail+"</font></div>"
-                                                                     //+"<div><font size=5>skey:"+
-                                                                     //"<input type='text' id='sskey' name='sskey' required minlength='35' maxlength='35' size='45' value="+skey+"></input>"+
-                                                                     //"<button class='wf-button' onclick=saveKey()>保存</button></font></div>"+
-                                                                     //"<a href='https://lbs.qq.com/dev/console/application/mine' target='_blank'>申请key</a>"
-                                                                    );
-            let miss=JSON.parse(localStorage.currentmissiontitle);
-            $(".showcase-gallery").replaceWith(
-                "<div><font size=5><a href='"+durl+"/mission/mission."+miss.title+".json' target='_blank'>-任-</a><span>　</span><a href='"+durl+"/mission/mission."+miss.title+".portallist.json' target='_blank'>-务-</a>  ||  </font><input type='checkbox' id='cbxmission' onclick=saveMission()>任务完成自动暂停(开发中)</input></div><div id='missionPortal1'></div><div id='missionuser'></div>"
-                +"<div id='idlbfollow'></div><br><div><font size=5>跟审记录</font></div><div id='idfollow'></div>"
-                +"<div id='idlbupload'></div><br><div><font size=5>上传记录</font></div><div id='idupload'></div><br>"
-                +"<div><font size=5>池中已审</font></div><div id='privatePortal1'></div>"
-                +"<br><div><font size=5>池外已审</font></div><div id='privatePortal2'></div>"
-            );
-            showReviewedHome1();
-        });
-    }
-    function showReviewedHome1bak()
+    // 通用元素替换函数replaceElement
+    // selector: 目标元素的选择器（如 "#missionuser", ".content" 等）
+    // replacement: 用于替换的内容（HTML字符串或DOM元素）
+    // 使用示例
     {
-        try{
-            //在首页显示池内已审po的表格
-            var prpo = [];
-            if(!userEmail)
-            {
-                //      userEmail=getUser();  //会引起promise错误
-            }
-            let cbxmiss = localStorage["cbxmission"];
+    // 替换 #missionuser 元素
+    // replaceElement("#missionuser", '<div class="new-mission">新的任务内容</div>');
 
-            let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
-            let sfdetail = "";
-            let slocalfollow = [];
-            if(localStorage.getItem(userEmail+"follow")) slocalfollow = JSON.parse(localStorage.getItem(userEmail+"follow"));
-            //console.log(slocalfollow);
-            if(slocalfollow.length>0){
-                sfdetail+="<tbody>";
-                //console.log(slocalfollow[0]);
-                let icnt = 0;if (slocalfollow.length>followPortalDisplay) icnt = slocalfollow.length - followPortalDisplay;
-                for (let i=slocalfollow.length - 1;i>=icnt;i--){
-                    sfdetail+="<tr><td>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>"+slocalfollow[i].review+"</td></tr>";
-                }
-                sfdetail+="</tbody></table>";
-            }
-            $("#idfollow").replaceWith(sftitle+sfdetail);
+    // 替换 .old-content 元素
+    // replaceElement(".old-content", '<p>这是新内容</p>');
 
-            let sutitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>审核情况</th></thead>";
-            let sudetail = "";
-            let slocalupload = [];
-            if(localStorage.getItem(userEmail+"upload")) slocalupload = JSON.parse(localStorage.getItem(userEmail+"upload"));
-            //console.log(slocalupload);
-            if(slocalupload.length>0){
-                sudetail+="<tbody>";
-                let icnt = 0;if (slocalupload.length>uploadPortalDisplay) icnt = slocalupload.length - uploadPortalDisplay;
-                for (let i=slocalupload.length - 1;i>=icnt;i--){
-                    sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+slocalupload[i].review+"</td></tr>";
-                }
-                sudetail+="</tbody></table>";
-            }
-            $("#idupload").replaceWith(sutitle+sudetail);
-
-            if(cbxmiss){
-                if(cbxmiss=="true"){
-                    let obj = document.getElementById("cbxmission");
-                    obj.checked = true;
-                }
-            }
-            //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
-            let smis="<table style='width:100%'><thead><tr>"
-            +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
-            +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
-            +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
-            +"<th style='width:14%'>挪po</th>"
-            +"</tr></thead>";
-            let smistmp="";let sstmp="";let ssok="";
-            //console.log("start",missionlist);
-            let missionlist1 = JSON.parse(JSON.stringify(missionlist));
-            let usernamelist=localStorage[userEmail+"user"];
-            if (!usernamelist) usernamelist="";
-            smistmp=smis+"<tbody>";
-            //console.log(missionlist);
-
-            prpo = JSON.parse(localStorage.getItem('Reviewed1'));
-            //console.log(prpo);
-            let stmp = "<table style='width:100%'><thead><tr>"
-            +"<th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th>"
-            +"<th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th>"
-            +"<th style='width:40%'>时间</th></tr></thead>";
-            if (prpo!=null){
-                let strarr ="";
-                let stmparr=[];
-                stmp+="<tbody>";
-                for(let i=prpo.length-1;i>=0;i--){
-                    //console.log(prpo[i]);
-                    strarr = prpo[i];
-                    try {
-                        while(strarr.indexOf("undefined")>0){
-                            strarr = strarr.replace("undefined","0");
-                        }
-                        while(strarr.indexOf('""')>0){
-                            strarr = strarr.replace('""','"');
-                        }
-                        while(strarr.indexOf('":","')>0){
-                            strarr = strarr.replace('":","','":"","');
-                        }
-                        stmparr = eval("(" + strarr + ")");
-                        if(stmparr.score.length==7){
-                            stmparr.score = stmparr.score.replace(/5/g,"Y");
-                            stmparr.score = stmparr.score.replace(/3/g,"D");
-                            stmparr.score = stmparr.score.replace(/1/g,"N");
-                        }
-                        //console.log(JSON.parse(prpo[i]));
-                        //console.log(stmparr);
-                        //console.log(stmparr.title,stmparr.dt);
-                        if (prpo.length-1 - i <= privatePortalDisplay1 ) {
-                            stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
-                        }
-                        //console.log(usernamelist);console.log(stmparr.user);
-                        if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
-                            for(let k=0;k<missionlist1.length;k++){
-                                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id
-                                if (missionlist1[k][0]==stmparr.title){
-                                    if(new Date(stmparr.dt)){
-                                        if(new Date(missionlist1[k][5]) <= new Date(stmparr.dt)){
-                                            //console.log("missionlist1[k][0]:"+missionlist1[k][0]+" stmparr.title:"+stmparr.title);
-                                            missionlist1[k][3] = stmparr.type;
-                                            missionlist1[k][5] = stmparr.dt;//审核时间
-                                            missionlist1[k][4] = "✓";//已审
-                                        } else {
-                                            missionlist1[k][4] = "";//已审
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } catch(err) {
-                        console.log(err);
-                    }
-                }
-                stmp+="</tbody></table>";
-                //console.log("privatePortal1",$("#privatePortal1"));
-                $("#privatePortal1").replaceWith(stmp);
-                //console.log("stmp",stmp);
-                //console.log("privatePortal1",$("#privatePortal1"));
-            }
-            //       }
-
-            let prpo2 = JSON.parse(localStorage.getItem('Reviewed2'));
-            //console.log(prpo2);
-            //console.log(prpo2[0]);
-            stmp = "<table style='width:100%'><thead><tr>"
-            +"<th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th>"
-            +"<th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th>"
-            +"<th style='width:40%'>时间</th></tr></thead>";
-            if (prpo2!=null){
-                let strarr ="";
-                let stmparr=[];
-                stmp+="<tbody>";
-                //console.log(prpo2.length);
-                for(let i=prpo2.length-1;i>=0;i--){
-                    strarr = prpo2[i];
-                    try{
-                        while(strarr.indexOf("undefined")>0){
-                            strarr = strarr.replace("undefined","0");
-                        }
-                        while(strarr.indexOf('""')>0){
-                            strarr = strarr.replace('""','"');
-                        }
-                        while(strarr.indexOf('":","')>0){
-                            strarr = strarr.replace('":","','":"","');
-                        }
-                        //console.log(strarr);
-                        stmparr = eval("(" + strarr + ")");
-                        if(stmparr.score.length==7){
-                            stmparr.score = stmparr.score.replace(/5/g,"Y");
-                            stmparr.score = stmparr.score.replace(/3/g,"D");
-                            stmparr.score = stmparr.score.replace(/1/g,"N");
-                        }
-                        //console.log(JSON.parse(prpo2[i]));
-                        if (prpo2.length-1 - i <= privatePortalDisplay2 ) {
-                            stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
-                        }
-                        if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
-                            for(let k=0;k<missionlist1.length;k++){
-                                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id
-                                if (missionlist1[k][0]==stmparr.title){
-                                    //console.log(stmparr);
-                                    if(new Date(stmparr.dt)){
-                                        if(new Date(missionlist1[k][5]) <= new Date(stmparr.dt)){
-                                            //console.log("missionlist1[k][0]:"+missionlist1[k][0]+" stmparr.title:"+stmparr.title);
-                                            //console.log(stmparr);
-                                            missionlist1[k][3] = stmparr.type;
-                                            missionlist1[k][5] = stmparr.dt;
-                                            missionlist1[k][4] = "✓";//已审
-                                        } else {
-                                            missionlist1[k][4] = "";//已审
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        console.log(err);
-                    }
-                }
-                stmp+="</tbody></table>";
-                $("#privatePortal2").replaceWith(stmp);
-                //console.log(prpo[0].title);
-            }
-            //console.log("missionlist1",missionlist1);
-            for(let k=0;k<missionlist1.length;k++){
-                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪计划
-                if(missionlist1[k][9].indexOf(userEmail)>=0){ missionlist1[k][4] = "O";}//自己
-                if (missionlist1[k][2] === "true") {missionlist1[k][2]="✓"} else {missionlist1[k][2]="✗";};//开审
-                if(missionlist1[k][6] === "ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
-                let iplan=parseInt(missionlist[k][11]); let splan="";
-                if(iplan>=1 && iplan<10) splan="左第"+missionlist[k][11]+"个";
-                if(iplan>=11 && iplan<20) splan="上第"+(missionlist[k][11]-10)+"个";
-                if(iplan==10) splan="最右那个";
-                if(iplan==20) splan="最下那个";
-                smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td>"
-                    +"<td>"+missionlist1[k][6]+"</td>"
-                    +'<td><a href="javascript:void(0);" us="us2" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
-                    +'<td><a href="javascript:void(0);" us="us1" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
-                    +"<td>"+missionlist1[k][2]+"</td><td>"+missionlist1[k][4]+"</td>"+
-                    "<td><a href='"+durl+"/portal/portaluseremail/portal."+missionlist1[k][10]+".useremail.json'  target='_blank'>"+missionlist1[k][5]+"</a></td>"
-                    +"<td>"+missionlist1[k][7]+"</td>"+"<td>"+missionlist1[k][8]+"</td>"+"<td>"+splan+"</td>"
-                    +"</tr>";
-            }
-            let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
-            //console.log("missionPortal1",$("#missionPortal1"));
-            smistmp+="</tbody></table>";
-            const parse = new DOMParser();
-            let smisssss=parse.parseFromString(smistmp,"text/html");
-            document.querySelector("#missionPortal1").innerHTML = smisssss.body.innerHTML;
-            //console.log(smisssss.body.innerHTML);
-            //console.log("smistmp",smistmp);
-            $("#missionuser").replaceWith(sultmp);
-            //console.log(smisssss);
-        } catch(e){console.log(e);}
+    // 也可以替换为DOM元素
+    // const newDiv = $('<div>动态创建的元素</div>');
+    // replaceElement("#container", newDiv);
     }
-//<a href='https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/html.users.list.review.html?id="+missionlist1[k][10]+"' target='_blank'>"
+    function replaceElement(selector, replacement) {
+        // 缓存目标元素
+        const $target = $(selector);
+
+        // 检查目标元素是否存在
+        if ($target.length === 0) {
+            console.error(`未找到符合选择器 "${selector}" 的元素，无法替换`);
+            return false;
+        }
+
+        // 检查替换内容是否有效
+        if (replacement === undefined || replacement === null) {
+            console.warn(`替换内容为${replacement}，将清空元素`);
+            $target.empty();
+            return true;
+        }
+
+        try {
+            // 执行替换操作
+            $target.replaceWith(replacement);
+            //console.log(`符合选择器 "${selector}" 的元素已成功替换`);
+            return true;
+        } catch (error) {
+            console.error(`替换符合选择器 "${selector}" 的元素时发生错误:`, error);
+            return false;
+        }
+    }
 
     function findUserEmail(userreview,UEmailList){
         try{
@@ -2606,21 +2158,25 @@
                 } else if(us=="us2") {
                     userEmailList = JSON.parse(JSON.stringify(userEmailList2));
                 }
-                let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+id+".useremail.json")
+                //let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+id+".useremail.json")
+                let resp = readR2File("portal/portaluseremail/portal."+id+".useremail.json")
                 .then(res=>{
                     let userreview = [];
                     if(!res) {
                         setTimeout(function(){
-                            console.log("switchUserReviewDiv","未找到审核文件");
+                            console.log("switchUserReviewDiv:未找到审核文件",res);
                         },1000);
                         //return;
                     } else {
-                        userreview = res;
+                        //userreview = res;
+                        userreview = JSON.stringify(res.content);
                     }
+                    //console.log('res',res);
                     //console.log(idUserEmail.style.display);
                     stmp+="<div id='idUserEmail' style='display:block;'><div style='display: flex;'>";
                     //console.log("userEmailList",userEmailList);
                     //console.log("userreview",userreview);
+                    if(userreview.length>0) console.log('userreviewjson',JSON.parse(userreview));
                     for(let i=0;i<userEmailList.length;i++){
                         let sname=null;let semail=null;let slink=null; let po = "";
                         sname=userEmailList[i].substring(0,userEmailList[i].indexOf(';'));
@@ -2630,13 +2186,17 @@
                             //console.log(sname);console.log(semail);console.log(slink);console.log(userEmail);console.log(powner);
                             //console.log(userreview);console.log(semail);
                         }
-                        if(semail.indexOf(powner)>=0){
-                            po = "<span style='color:red'>O:</span>";
+                        if(powner){
+                            if(semail.indexOf(powner)>=0){
+                                po = "<span style='color:red'>O:</span>";
+                            }
+                        } else {
+                            po = "<span></span>";
                         }
                         //审核过的用户
                         if(findUserEmail(userreview,semail)>0){
                             //console.log('userreview',userreview);
-                            console.log('semail yes',semail);
+                            //console.log('semail yes',semail);
                             //if(sname === "pkpkqq02" || sname === "O:pkpkqq02") { console.log("find OK");}
                         //if(userreview.indexOf(userEmailList[i])>=0) {
                             //console.log('userEmail',userEmail);
@@ -2649,7 +2209,7 @@
                             }
                         } else { //未审到的用户
                             //if(sname == "pkpkqq02") { console.log("find NO");}
-                            console.log('semail no',semail);
+                            //console.log('semail no',semail);
                             if(semail.indexOf(userEmail)>=0){
                                 if(owner=="true"){
                                     stmp+="<div class='sqselfowner'>" + po + sname+"</div>";
@@ -2657,7 +2217,7 @@
                                     stmp+="<div class='sqselfno'>" + po + sname+"</div>";
                                 }
                             } else {
-                                console.log('semail',semail);
+                                //console.log('semail',semail);
                                 stmp+="<div class='sqno'>" + po + sname+"</div>";
                             }
                         }
@@ -2670,7 +2230,7 @@
                     //console.log("stmp",stmp);
                     $("#idUserEmail").replaceWith(stmp);
                 },err=>{
-                    console.log("err","not found");
+                    console.log("err, not found", err);
                 });
             }
             setTimeout(function(){
@@ -2833,6 +2393,81 @@
                         "masterxiaoli666;masterxiaoli666@gmail.com;","shizx1twk;shizx1twk@gmail.com;","470274941;470274941@qq.com;","wczmw;wczmw@sina.com;",";;"
                        ];
 
+    }
+
+    // -------------------------- 核心：创建左下角状态面板 --------------------------
+    function createStatusPanel() {
+        // 状态面板容器
+        const panel = document.createElement('div');
+        panel.id = 'cf-upload-status-panel';
+        // 样式：固定在左下角，半透明背景，不遮挡操作
+        panel.style.cssText = `
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      max-width: 400px;
+      max-height: 150px;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      font-size: 12px;
+      font-family: Arial, sans-serif;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      overflow-y: auto;
+      z-index: 99999; /* 确保在最上层，不被其他元素遮挡 */
+      opacity: 0.9;
+    `;
+
+        // 面板标题（可选，用于区分状态类型）
+        const title = document.createElement('div');
+        title.style.cssText = `
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      font-weight: bold;
+      color: #4CAF50;
+    `;
+        title.textContent = 'R2上传状态';
+        panel.appendChild(title);
+
+        // 状态内容容器（用于动态添加日志）
+        const content = document.createElement('div');
+        content.id = 'cf-status-content';
+        content.style.lineHeight = '1.4';
+        panel.appendChild(content);
+
+        // 添加到页面
+        document.body.appendChild(panel);
+
+        // 返回内容容器，方便后续添加日志
+        return content;
+    }
+
+    // -------------------------- 工具：向面板添加日志 --------------------------
+    // 先创建面板，获取内容容器
+    //const statusContent = createStatusPanel();
+
+    // 自定义日志函数：替代console.log，将内容显示在面板
+    function showLog(message, isError = false) {
+        // 创建单条日志元素
+        const logItem = document.createElement('div');
+        // 错误信息标红，普通信息白色
+        logItem.style.color = isError ? '#ff4444' : '#ffffff';
+        // 添加时间戳（可选，便于追溯）
+        const time = new Date().toLocaleTimeString();
+        logItem.textContent = `[${time}] ${message}`;
+
+        // 添加到面板（最新日志在最下面）
+        //statusContent.appendChild(logItem);
+
+        // 滚动到底部，确保能看到最新日志
+        //statusContent.scrollTop = statusContent.scrollHeight;
+
+        // 可选：保留最近20条日志，避免面板过长
+        //if (statusContent.children.length > 20) {
+        //statusContent.removeChild(statusContent.firstChild);
+        //}
     }
 
     //css
