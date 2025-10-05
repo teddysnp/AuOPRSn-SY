@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.3
+// @version      6.0.4
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1082,7 +1082,7 @@
                         for(let i=0;i<userlist.length - 1;i++){
                             if(userlist[i].indexOf("@") == -1) {
                                 if(localuserlist.indexOf(userlist[i])>=0){
-                                    suser+="<input type='checkbox' class='cbxusername' checked=true id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
+                                    suser+="<input type='checkbox' class='cbxusername' checked id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
                                 } else {
                                     suser+="<input type='checkbox' class='cbxusername' id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
                                 }
@@ -1096,7 +1096,7 @@
                     let bnext = "";
                     //console.log("bNextAuto",bNextAuto);
                     if(bNextAuto){
-                        bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' checked=true onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
+                        bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' checked onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
                     } else {
                         bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
                     }
@@ -1104,7 +1104,7 @@
                     //console.log(cbxcaptcha);
                     let cap ="";
                     if(cbxcaptcha=="true") {
-                        cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' checked=true onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
+                        cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' checked onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
                     } else {
                         cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
                     }
@@ -1816,7 +1816,6 @@
                 {
                     //      userEmail=getUser();  //会引起promise错误
                 }
-                let cbxmiss = localStorage["cbxmission"];
 
                 let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
                 let sfdetail = "";
@@ -1849,12 +1848,6 @@
                 }
                 $("#idupload").replaceWith(sutitle+sudetail);
 
-                if(cbxmiss){
-                    if(cbxmiss=="true"){
-                        let obj = document.getElementById("cbxmission");
-                        obj.checked = true;
-                    }
-                }
                 //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
                 let smis="<table style='width:100%'><thead><tr>"
                 +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
