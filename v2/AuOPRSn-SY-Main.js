@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.5
+// @version      6.0.6
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2023,6 +2023,7 @@
                 let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
                 //console.log("missionPortal1",$("#missionPortal1"));
                 smistmp+="</tbody></table>";
+                //console.log(`smistmp`,smistmp);
                 // 使用const声明变量，避免意外修改
                 const parser = new DOMParser();
                 // 确保smistmp是有效的字符串，避免解析错误
@@ -2032,6 +2033,7 @@
                         const doc = parser.parseFromString(smistmp, "text/html");
                         // 获取目标元素
                         const missionPortal = document.querySelector("#missionPortal1");
+                        //console.log(`missionPortal`,missionPortal);
 
                         if (missionPortal) {
                             // 插入解析后的内容
@@ -2048,7 +2050,7 @@
                 }
                 //console.log(smisssss.body.innerHTML);
                 //console.log("smistmp",smistmp);
-                //replaceElement("#missionuser", sultmp);
+               replaceElement("#missionuser", sultmp);
                 //$("#missionuser").replaceWith(sultmp);
                 //console.log(smisssss);
             } catch(e){console.log(e);}
