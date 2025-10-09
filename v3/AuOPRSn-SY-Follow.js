@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      3.0.2
+// @version      3.0.3-b
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -435,6 +435,39 @@
     //保存审核数据到本地，并判断是否需要上传
     function savePostData(tmpfollow,data){
         if(tmpfollow.id!=null){
+            if(data.type === "EDIT" & data.selectedLocationHash){
+                let ilat = null;let ilng = null; let idlat = null;let idlng = null; let stmp ="";
+                for(const item of portalData.locationEdits) {
+                    if(item.hash === cloudReviewData.selectedLocationHash){
+                        ilat = item.lat; ilng = item.lng;
+                    }
+                }
+                for(const item of portalData.locationEdits) {
+                    if(item.hash === data.selectedLocationHash){
+                        ilat = item.lat; ilng = item.lng;
+                    }
+                }
+                if(ilat !== null) {
+                    if(ilat > portalData.lat ) stmp = "上:"+ilat;
+                    if(ilat < portalData.lat ) stmp = "下:"+ilat;
+                    if(ilat === portalData.lat ) stmp = "不变:"+ilat;
+                    if(ilng > portalData.lng ) stmp += ";右:"+ilng;
+                    if(ilng < portalData.lng ) stmp += ";左:"+ilng;
+                    if(ilng === portalData.lng ) stmp += ";不变:"+ilng;
+                    if(cloudReviewData.selectedLocationHash === data.selectedLocationHash){
+                        tmpfollow.review = stmp + "|与云一致";
+                    } else {
+                        stmp += "|实际:";
+                        if(idlat > portalData.lat ) stmp += "上:"+idlat;
+                        if(idlat < portalData.lat ) stmp += "下:"+idlat;
+                        if(idlat === portalData.lat ) stmp += "不变:"+idlat;
+                        if(idlng > portalData.lng ) stmp += ";右:"+idlng;
+                        if(idlng < portalData.lng ) stmp += ";左:"+idlng;
+                        if(idlng === portalData.lng ) stmp += ";不变:"+idlng;
+                    }
+                }
+            }
+
             let localpd1 = [];
             tmpfollow.dateTime = new Date();
             if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
@@ -1073,6 +1106,21 @@
                 //rdata selectedLocationHash selectedTitleHash selectedDescriptionHash
                 //pdata titleEdits[] descriptionEdits[] locationEdits[]
                 //titleUnable : 以上皆非
+                let ilat = null;let ilng = null;
+                for(const item of pdata.locationEdits) {
+                    if(item.hash === rdata.selectedLocationHash){
+                        ilat = item.lat; ilng = item.lng;
+                    }
+                }
+                if(ilat !== null) {
+                    let stmp = "";
+                    if(ilat > pdata.lat ) stmp = "上";
+                    if(ilat < pdata.lat ) stmp = "下";
+                    if(ilat === pdata.lat && ilng === pdata.lng) stmp = "不变";
+                    if(ilng > pdata.lng ) stmp += ";右";
+                    if(ilng < pdata.lng ) stmp += ";左";
+                    tmptext = "照抄网络审核："+stmp;
+                }
                 setTimeout(function(){
                     let btntitle = document.querySelector('app-select-title-edit');
                     if(btntitle) {
@@ -1362,10 +1410,10 @@
                 let stmp = "";
                 if(ilat > pdata.lat ) stmp = "上:"+pdata.lat+'=>'+ilat;
                 if(ilat < pdata.lat ) stmp = "下:"+pdata.lat+'=>'+ilat;
-                if(ilat === pdata.lat ) stmp = "原:"+pdata.lat;
+                if(ilat === pdata.lat ) stmp = "上下不变:"+pdata.lat;
                 if(ilng > pdata.lng ) stmp += ";右:"+pdata.lng+'=>'+ilng;
                 if(ilng < pdata.lng ) stmp += ";左:"+pdata.lng+'=>'+ilng;
-                if(ilng === pdata.lng ) stmp += ";原:"+pdata.lng;
+                if(ilng === pdata.lng ) stmp += ";左右不变:"+pdata.lng;
                 tmpupload.review=stmp;
             }
             isave=1;
