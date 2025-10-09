@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.4
+// @version      6.0.7-b
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -51,6 +51,7 @@
     let saveportalcnt1 = 500;  //本地保存池中审po数量，超过此数量将不保存，先进先出原则
     let saveportalcnt2 = 500;  //本地保存池外审po数量，超过此数量将不保存，先进先出原则
     let followPortalDisplay = 30;    //首页显示的跟审数量
+    let expirePortalDisplay = 10;    //首页显示的超时数量
     let uploadPortalDisplay = 30;    //首页显示的上传数量
     let privatePortalDisplay1 = 50;  //首页列表中显示池中已审po数量
     let privatePortalDisplay2 = 50;  //首页列表中显示非池已审po数量
@@ -331,7 +332,7 @@
                         let markercollection = JSON.parse(data);
                         // 筛选状态为'提交'或'审核'的元素
                         let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
-                        console.log('filteredMarkers', filteredMarkers);
+                        console.log('Main-getGDoc', filteredMarkers);
                         missionGDoc = filteredMarkers;
                         localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
 
@@ -360,7 +361,12 @@
                 error: function (x, y, z) {
                     const errorMsg = `请求失败: ${x.status} - ${y}`;
                     console.log('Err:', errorMsg, x, z);
-                    alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                    //alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                    createNotify("错误", {
+                        body: "读取任务列表错误，请刷新页面，否则将无法按计划审核！",
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                        requireInteraction: true
+                    });
                     reject(new Error(errorMsg)); // AJAX 请求失败时触发 Promise 失败
                 }
             });
@@ -583,173 +589,173 @@
             //console.log("countdown",countdown);
             if(countdown === null){  //标签不存在则创建
                 let loc = "";
-                loc =getLocation(portalData1);
-                //共注入五部份 divall为总 dvauto dv divuser divcountdown divaddrscore
                 const divall=document.createElement("div");
-                divall.id="iddvall";
-                divall.style="width:80%;font-size:16px;";
-                divall.className="clusertop";
                 const spblank=document.createElement("span");
-                spblank.textContent="　　";
-
-                //dvauto = dvautobtn + dvautolabel
                 const dvauto = document.createElement("div");
-                dvauto.style="width:10%;font-size:16px";
-                dvauto.className="clusertop1";
                 const dvautobtn = document.createElement("button");
-                dvautobtn.id="btnauto";
-                dvautobtn.className="txtcenter";
-                dvautobtn.type="button";
-                dvautobtn.textContent = "切换";
-                dvautobtn.style="background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:30px;border-radius:10px;";
-                dvautobtn.setAttribute("onClick", "startstopAuto()");
                 const dvautolabel = document.createElement('p');
-                dvautolabel.id = "idautolabel";
-                dvautolabel.textContent = '自动';
-                dvautolabel.className="txtcenter";
-                dvauto.appendChild(dvautobtn);
-                dvauto.appendChild(dvautolabel);
-
-                //dv = div1 = ltimerlabel1 + ltimerlabel2
                 const dv=document.createElement("div");
-                dv.style="width:10%;font-size:16px;";
-                dv.className="clusertop1";
                 const div1=document.createElement("div");
-                div1.className = 'txtcenter';
                 const ltimerlabel1 = document.createElement('p');
-                ltimerlabel1.id = "idltimerlabel";
-                ltimerlabel1.textContent = '计时: ';
-                ltimerlabel2 = document.createElement('p');
-                ltimerlabel2.id = "idtimerdata";
-                ltimerlabel2.classList.add("clptimerdata");
-                //ltimerlabel2.textContent = '开始: ';
-
-                div1.appendChild(ltimerlabel1);
-                div1.appendChild(ltimerlabel2);
-                dv.appendChild(div1);
-
-                //divcountdown = countdownlabel + countdown
-                //增加提交倒计时
                 let divcountdown=document.createElement("div");
-                divcountdown.style="width:10%;font-size:14px";
-                divcountdown.className="txtcenter";
-                //增加提交倒计时label
                 let dvupdown = document.createElement("div");
-                dvupdown.style="width:10%;font-size:20px";
-                dvupdown.className="txtcenter";
                 let countuplabel = document.createElement('span');
-                countuplabel.className = 'cluplabel';
-                countuplabel.style="color:#d9d6c3;";
-                countuplabel.id = "iduplabel";
-                countuplabel.textContent = '↑';
-                //增加提交倒计时label
                 let countdownlabel = document.createElement('span');
-                countdownlabel.className = 'clcountdownlabel';
-                countdownlabel.id = "idcountdownlabel";
-                countdownlabel.style="color:#d9d6c3;";
-                countdownlabel.textContent = '↓';
-                dvupdown.appendChild(countuplabel);
-                dvupdown.appendChild(countdownlabel);
-                divcountdown.appendChild(dvupdown);
-                //增加提交倒计时标签
                 let dvcdown = document.createElement("div");
-                dvcdown.style="width:100%;font-size:16px;display:flex;justify-content:flex-center;";
-                dvcdown.className="txtcenter";
                 let dvcdown1 = document.createElement("div");
-                dvcdown1.style="width:5%";
-                dvcdown1.className="txtcenter";
                 let dvcdown2 = document.createElement("div");
-                dvcdown2.style="width:33%";
-                dvcdown2.className="txtcenter";
                 let dvcdown3 = document.createElement("div");
-                dvcdown3.style="width:33%";
-                dvcdown3.className="txtcenter";
-                countdown = document.createElement('span');
-                countdown.className = 'txtcenter';
-                countdown.id = "idcountdown";
-                dvcdown2.appendChild(countdown);
-                dvcdown.appendChild(dvcdown1);
-                dvcdown.appendChild(dvcdown2);
-                dvcdown.appendChild(dvcdown3);
-                //countdown.textContent = '';
-                //countdown.style.display = 'justify-content: center;';
-                divcountdown.appendChild(dvcdown);
-                //console.log(countdown);
-
-                //divuser = userlabel+uname
                 const divuser=document.createElement("div");
-                divuser.style="width:25%;font-size:14px";
-                divuser.className="clusertop1";
-                //增加当前用户label
                 const userlabel = document.createElement('p');
-                userlabel.className = 'cluserlabel';
-                userlabel.id = "iduserlabel";
-                userlabel.textContent = '当前用户: ';
-                divuser.appendChild(userlabel);
-                //增加当前用户标签
                 const uname = document.createElement('p');
-                uname.className = 'clusername';
-                uname.id = "idusername";
-                uname.textContent = '';
-                uname.textContent = userEmail;
-                divuser.appendChild(uname);
-
-                //divaddscore = divaddr + divlocscore( divloc +divblank)
-                //增加地址、池中本地外地、打分标签
                 const divaddscore = document.createElement('div');
-                divaddscore.style="width:100%;font-size:14px";
-                divaddscore.className="clusertop1";
-                //增加地址
                 const divaddr = document.createElement('p');
-                divaddr.className = 'claddr';
-                divaddr.id = "idaddr";
-                divaddr.textContent = '';
-                //增加池中本地外地、打分
                 const divlocscore = document.createElement('div');
-                divlocscore.className="clusertop1";
-                //增加池中本地外地
                 const divloc = document.createElement('span');
-                divloc.className = 'clusertop1';
-                divloc.id = "idloc";
-                divloc.style="justify-content: flex-start;";
-                divloc.textContent = '';
-                //增加空白
                 const divblank = document.createElement('span');
-                divblank.className = 'clusertop1';
-                divblank.textContent = '.  ||  .';
-                //增加打分
                 const divscore = document.createElement('span');
-                divscore.className = 'clusertop1';
-                divscore.id="idscore";
-                divscore.textContent="";
+                {
+                    loc =getLocation(portalData1);
+                    //共注入五部份 divall为总 dvauto dv divuser divcountdown divaddrscore
+                    divall.id="iddvall";
+                    divall.style="width:80%;font-size:16px;";
+                    divall.className="clusertop";
+                    spblank.textContent="　　";
 
-                divlocscore.appendChild(divloc);
-                divlocscore.appendChild(divblank);
-                divlocscore.appendChild(divscore);
-                divaddscore.appendChild(divlocscore);
-                divaddscore.appendChild(divaddr);
+                    //dvauto = dvautobtn + dvautolabel
+                    dvauto.style="width:10%;font-size:16px";
+                    dvauto.className="clusertop1";
+                    dvautobtn.id="btnauto";
+                    dvautobtn.className="txtcenter";
+                    dvautobtn.type="button";
+                    dvautobtn.textContent = "切换";
+                    dvautobtn.style="background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:30px;border-radius:10px;";
+                    dvautobtn.setAttribute("onClick", "startstopAuto()");
+                    dvautolabel.id = "idautolabel";
+                    dvautolabel.textContent = '自动';
+                    dvautolabel.className="txtcenter";
+                    dvauto.appendChild(dvautobtn);
+                    dvauto.appendChild(dvautolabel);
 
-                divall.appendChild(dvauto);
-                divall.appendChild(dv);
-                divall.appendChild(divcountdown);
-                divall.appendChild(divuser);
-                divall.appendChild(spblank);
-                divall.appendChild(divaddscore);
+                    //dv = div1 = ltimerlabel1 + ltimerlabel2
+                    dv.style="width:10%;font-size:16px;";
+                    dv.className="clusertop1";
+                    div1.className = 'txtcenter';
+                    ltimerlabel1.id = "idltimerlabel";
+                    ltimerlabel1.textContent = '计时: ';
+                    ltimerlabel2 = document.createElement('p');
+                    ltimerlabel2.id = "idtimerdata";
+                    ltimerlabel2.classList.add("clptimerdata");
+                    //ltimerlabel2.textContent = '开始: ';
 
-                if(portalData1.type === "NEW") {updateAddress(divaddr);}
-                switch(loc){
-                    case "池中":
-                        divloc.style="justify-content: flex-start;color:red";break;
-                    case "本地":
-                        divloc.style="justify-content: flex-start;color:blue";break;
-                    case "外地":
-                        divloc.style="justify-content: flex-start;color:black";break;
-                    default :
-                        divloc.style="justify-content: flex-start;";
+                    div1.appendChild(ltimerlabel1);
+                    div1.appendChild(ltimerlabel2);
+                    dv.appendChild(div1);
+
+                    //divcountdown = countdownlabel + countdown
+                    //增加提交倒计时
+                    divcountdown.style="width:10%;font-size:14px";
+                    divcountdown.className="txtcenter";
+                    //增加提交倒计时label
+                    dvupdown.style="width:10%;font-size:20px";
+                    dvupdown.className="txtcenter";
+                    countuplabel.className = 'cluplabel';
+                    countuplabel.style="color:#d9d6c3;";
+                    countuplabel.id = "iduplabel";
+                    countuplabel.textContent = '↑';
+                    //增加提交倒计时label
+                    countdownlabel.className = 'clcountdownlabel';
+                    countdownlabel.id = "idcountdownlabel";
+                    countdownlabel.style="color:#d9d6c3;";
+                    countdownlabel.textContent = '↓';
+                    dvupdown.appendChild(countuplabel);
+                    dvupdown.appendChild(countdownlabel);
+                    divcountdown.appendChild(dvupdown);
+                    //增加提交倒计时标签
+                    dvcdown.style="width:100%;font-size:16px;display:flex;justify-content:flex-center;";
+                    dvcdown.className="txtcenter";
+                    dvcdown1.style="width:5%";
+                    dvcdown1.className="txtcenter";
+                    dvcdown2.style="width:33%";
+                    dvcdown2.className="txtcenter";
+                    dvcdown3.style="width:33%";
+                    dvcdown3.className="txtcenter";
+                    countdown = document.createElement('span');
+                    countdown.className = 'txtcenter';
+                    countdown.id = "idcountdown";
+                    dvcdown2.appendChild(countdown);
+                    dvcdown.appendChild(dvcdown1);
+                    dvcdown.appendChild(dvcdown2);
+                    dvcdown.appendChild(dvcdown3);
+                    //countdown.textContent = '';
+                    //countdown.style.display = 'justify-content: center;';
+                    divcountdown.appendChild(dvcdown);
+                    //console.log(countdown);
+
+                    //divuser = userlabel+uname
+                    divuser.style="width:25%;font-size:14px";
+                    divuser.className="clusertop1";
+                    //增加当前用户label
+                    userlabel.className = 'cluserlabel';
+                    userlabel.id = "iduserlabel";
+                    userlabel.textContent = '当前用户: ';
+                    divuser.appendChild(userlabel);
+                    //增加当前用户标签
+                    uname.className = 'clusername';
+                    uname.id = "idusername";
+                    uname.textContent = '';
+                    uname.textContent = userEmail;
+                    divuser.appendChild(uname);
+
+                    //divaddscore = divaddr + divlocscore( divloc +divblank)
+                    //增加地址、池中本地外地、打分标签
+                    divaddscore.style="width:100%;font-size:14px";
+                    divaddscore.className="clusertop1";
+                    //增加地址
+                    divaddr.className = 'claddr';
+                    divaddr.id = "idaddr";
+                    divaddr.textContent = '';
+                    //增加池中本地外地、打分
+                    divlocscore.className="clusertop1";
+                    //增加池中本地外地
+                    divloc.className = 'clusertop1';
+                    divloc.id = "idloc";
+                    divloc.style="justify-content: flex-start;";
+                    divloc.textContent = '';
+                    //增加空白
+                    divblank.className = 'clusertop1';
+                    divblank.textContent = '.  ||  .';
+                    //增加打分
+                    divscore.className = 'clusertop1';
+                    divscore.id="idscore";
+                    divscore.textContent="";
+
+                    divlocscore.appendChild(divloc);
+                    divlocscore.appendChild(divblank);
+                    divlocscore.appendChild(divscore);
+                    divaddscore.appendChild(divlocscore);
+                    divaddscore.appendChild(divaddr);
+
+                    divall.appendChild(dvauto);
+                    divall.appendChild(dv);
+                    divall.appendChild(divcountdown);
+                    divall.appendChild(divuser);
+                    divall.appendChild(spblank);
+                    divall.appendChild(divaddscore);
+
+                    if(portalData1.type === "NEW") {updateAddress(divaddr);}
+                    switch(loc){
+                        case "池中":
+                            divloc.style="justify-content: flex-start;color:red";break;
+                        case "本地":
+                            divloc.style="justify-content: flex-start;color:blue";break;
+                        case "外地":
+                            divloc.style="justify-content: flex-start;color:black";break;
+                        default :
+                            divloc.style="justify-content: flex-start;";
+                    }
+                    divloc.textContent = "定位："+loc +".||.经纬："+portalData1.lat+","+portalData1.lng;
                 }
-
-
-                divloc.textContent = "定位："+loc +".||.经纬："+portalData1.lat+","+portalData1.lng;
                 //兼容Wayfarer Review Timer
                 let pnode = document.querySelector("div[class='wayfarerrtmr']");
                 //console.log(pnode);
@@ -787,6 +793,38 @@
                     },1000);
                //}
                 if(timer==null) { timer = mywin.setInterval(() => {
+
+                    //超时了
+                    {
+                        let expModal = document.querySelector('app-review-expired-modal');
+                        let expButton = expModal ? expModal.querySelector('.wf-button.wf-button--primary') : null;
+                        if (expButton) {
+                            console.log('超时了',portalData1.title+","+portalData1.id);
+                            //保存到本地超时部分
+                            let reviewExpList = [];
+                            try {
+                                const reviewExpData = localStorage.getItem('reviewExpList');
+                                if (reviewExpData) {
+                                    reviewExpList = JSON.parse(reviewExpData);
+                                    if (!Array.isArray(reviewExpList)) {
+                                        console.warn(`reviewExpList 数据格式错误，已重置为空数组`);
+                                        reviewExpList = [];
+                                    }
+                                }
+                            } catch (error) {
+                                console.error(`解析${reviewExpList}数据失败：`, error);
+                                reviewExpList = [];
+                            }
+                            let reExpData = {email:userEmail,id:portalData1.id,title:portalData1.title,lat:portalData1.lat,lng:portalData1.lng,dateTime:new Date(),review:'超时'};
+                            reviewExpList.push(reExpData);
+                            localStorage.setItem('reviewExpList',JSON.stringify(reviewExpList));
+                            //点击下一个按钮
+                            setTimeout(function(){
+                                expButton.click();
+                            },500);
+                        }
+                    }
+
                     if(countdown.textContent.indexOf("+")>0){
                         const ss=countdown.textContent;
                         const iright=parseInt(ss.substring(ss.indexOf("+")+1,ss.length));
@@ -970,6 +1008,55 @@
         counter.textContent = `${minutes}:${seconds}`;
     }
 
+    // 地址更新函数
+    // divaddr: 用于显示地址的DOM元素
+    // maxAttempts: 最大尝试次数（默认3次）
+    // interval: 每次尝试的间隔时间（毫秒，默认500ms）
+    function updateAddress(divaddr, maxAttempts = 5, interval = 500) {
+        // 递归获取地址的内部函数
+        const fetchAddress = (attemptsLeft) => {
+            // 查找地址元素
+            const addrElement = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+
+            // 尝试次数用尽，退出递归
+            if (attemptsLeft <= 0) {
+                console.log("已达到最大尝试次数，未能获取有效地址");
+                return;
+            }
+
+            // 检查元素是否存在
+            if (!addrElement) {
+                console.log(`地址元素未找到，剩余尝试次数: ${attemptsLeft - 1}`);
+                setTimeout(() => fetchAddress(attemptsLeft - 1), interval);
+                return;
+            }
+
+            // 检查地址是否加载完成（不含"載入中"）
+            const addressText = addrElement.childNodes[1]?.innerText;
+            if (!addressText) {
+                console.log(`地址文本为空，剩余尝试次数: ${attemptsLeft - 1}`);
+                setTimeout(() => fetchAddress(attemptsLeft - 1), interval);
+                return;
+            }
+
+            if (addressText.indexOf("載入中") === -1) {
+                // 地址已加载，处理并更新显示
+                let address = addressText.split(":")[1] || "";
+                address = address.replace(" 邮政编码", "").trim();
+                divaddr.textContent = `地址:${address}`;
+                console.log(`成功获取地址（尝试次数: ${maxAttempts - attemptsLeft + 1}）`);
+            } else {
+                // 仍在加载中，继续尝试
+                console.log(`地址加载中，剩余尝试次数: ${attemptsLeft - 1}`);
+                setTimeout(() => fetchAddress(attemptsLeft - 1), interval);
+            }
+        };
+
+        // 开始第一次尝试
+        fetchAddress(maxAttempts);
+    }
+
+    /*
     function updateAddress(divaddr){
         setTimeout(function(){
                 let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
@@ -1027,6 +1114,7 @@
             queryloop();
         },500);
     }
+    */
 
     saveUserNameList = function (){
         let cbsuser = document.querySelectorAll("input[class='cbxusername']");
@@ -1242,7 +1330,8 @@
         }
     }
 
-    //保存审po记录到本地：review1,review2
+    //保存审po记录到本地：review1,review2 ; 新6.1.0以后：reviewLista reviewListb
+    //reviewa: user,title,type,lat,lng,score,dt,id,follow
     function saveReviewtoLocal(pageData,data) {
         let localreview = [];
         let tmpstorage = null ;
@@ -1267,39 +1356,33 @@
                 if(ssc) sscore=ssc.textContent;
             }
         }
-        try{
-            //    console.log(pageData);
-            //    let sc=document.querySelector("");
-            //保存池中po至 Reviewed1
-            if (privatePortal.indexOf(pageData.title)>=0 || missionGDoc.some(item => item.title === pageData.title) ||
-                gpausePortal.indexOf(pageData.title)>0 || sloc=="池中" ) {
-                localreview = JSON.parse(localStorage.getItem('Reviewed1'));
-                //      console.log(localreview);
-                if(localreview === null) {localreview = [];};
-                //                       console.log(localreview);
-                tmpstorage='{\"user\":\"'+localStorage.currentUser+'\",\"title\":\"'+pageData.title+'\",\"type\":\"'+pageData.type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
-                    ',\"score\":\"'+sscore
-                    +'\",\"dt\":\"'+sdt+'\"}';
-                localreview.push(tmpstorage);
-                //      console.log(localreview);
-                localStorage.setItem('Reviewed1', JSON.stringify(localreview.slice(0-saveportalcnt1)));
-            } else
-                //保存池外po至 Reviewed2
-            {
-                //             console.log("Updating local review storage Reviewed2..");
-                localreview = JSON.parse(localStorage.getItem('Reviewed2'));
-                //                       console.log(pageData);
-                if(localreview === null) {localreview = [];};
-                //           console.log(localreview);
-                tmpstorage='{\"user\":\"'+localStorage.currentUser+'\",\"title\":\"'+pageData.title+'\",\"type\":\"'+pageData.type+'\",\"lat\":'+pageData.lat+',\"lng\":'+pageData.lng+
-                    ',\"score\":\"'+ sscore
-                    +'\",\"dt\":\"'+sdt+'\"}';
-                localreview.push(tmpstorage);
-                //      console.log(localreview.slice(0-saveportalcnt2));
-                localStorage.setItem('Reviewed2', JSON.stringify(localreview.slice(0-saveportalcnt2)));
+
+        try {
+            // 构建评审数据对象（通用数据结构）
+            const reviewData = {
+                user: localStorage.currentUser,
+                id:pageData.id,
+                title: pageData.title,
+                type: pageData.type,
+                lat: pageData.lat,
+                lng: pageData.lng,
+                score: sscore,
+                datetime: sdt,
+                follow: false
+            };
+
+            // 根据条件选择存储键
+            if (privatePortal.indexOf(pageData.title) >= 0 || missionGDoc.some(item => item.title === pageData.title) || gpausePortal.indexOf(pageData.title) > 0 || sloc === "池中") {
+                // 符合条件：保存到reviewLista
+                console.log("保存池中已审-reviewLista",pageData.title);
+                saveReviewData('reviewLista', reviewData);
+            } else {
+                // 不符合条件：保存到reviewListb
+                console.log("保存池外已审reviewListb",pageData.title);
+                saveReviewData('reviewListb', reviewData);
             }
         } catch (e) {
-            console.log(e);
+            console.error('处理评审数据时发生错误：', e);
         }
     }
     //监听提交按钮，调用saveReviewtoLocal保存审po记录到本地
@@ -1313,6 +1396,40 @@
                     saveReviewtoLocal(portalData);
                 }
             })
+        }
+    }
+    // 提取通用函数：处理评审数据的存储逻辑
+    function saveReviewData(storageKey, reviewData) {
+        // 初始化数据数组
+        let reviewList = [];
+        const storedData = localStorage.getItem(storageKey);
+
+        if (storedData) {
+            try {
+                reviewList = JSON.parse(storedData);
+                // 确保解析后的数据是数组
+                if (!Array.isArray(reviewList)) {
+                    reviewList = [];
+                    console.warn(`本地存储的${storageKey}数据格式错误，已重置为空数组`);
+                }
+            } catch (error) {
+                console.error(`解析${storageKey}数据失败，已重置为空数组：`, error);
+                reviewList = [];
+            }
+
+            // 添加新数据
+            //console.log("storedData",JSON.parse(storedData));
+            //console.log("reviewList",reviewList);
+            //console.log("reviewData",reviewData);
+            reviewList.push(reviewData);
+
+            // 保存回本地存储
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(reviewList));
+                console.log(`${storageKey}数据已成功保存到本地存储`);
+            } catch (error) {
+                console.error(`保存${storageKey}数据失败：`, error);
+            }
         }
     }
 
@@ -1775,6 +1892,10 @@
             <div id='idfollow'></div>
             <div id='idlbupload'></div>
             <br>
+            <div><font size=5>超时记录</font></div>
+            <div id='idexpire'></div>
+            <div id='idlbexpire'></div>
+            <br>
             <div><font size=5>上传记录</font></div>
             <div id='idupload'></div>
             <br>
@@ -1788,11 +1909,11 @@
             // 等待获取任务数据（现在处于async函数中，可安全使用await）
             await getMissionFromGoogleDoc();
 
-            console.log("missionGDoc.length1", missionGDoc.length);
+            //console.log("missionGDoc.length1", missionGDoc.length);
 
             // 处理任务数据
             if (missionGDoc.length > 0) {
-                console.log("业务逻辑执行：", missionGDoc);
+                //console.log("业务逻辑执行：", missionGDoc);
                 showReviewedHome1();
             } else {
                 console.log("无符合条件的任务数据");
@@ -1809,15 +1930,16 @@
 
     function showReviewedHome1()
     {
-            try{
-                //在首页显示池内已审po的表格
-                var prpo = [];
-                if(!userEmail)
-                {
-                    //      userEmail=getUser();  //会引起promise错误
-                }
+        try{
+            if(!userEmail)
+            {
+                //      userEmail=getUser();  //会引起promise错误
+            }
 
-                let sftitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>跟审情况</th></thead>";
+
+            //以下，生成 跟审列表
+            {
+                let sftitle="<table style='width:100%'><thead><tr><th style='width:20%'>ID</th><th style='width:15%'>名称</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th><th style='width:15%'>时间</th><th style='width:29%'>跟审情况</th></thead>";
                 let sfdetail = "";
                 let slocalfollow = [];
                 if(localStorage.getItem(userEmail+"follow")) slocalfollow = JSON.parse(localStorage.getItem(userEmail+"follow"));
@@ -1827,13 +1949,39 @@
                     //console.log(slocalfollow[0]);
                     let icnt = 0;if (slocalfollow.length>followPortalDisplay) icnt = slocalfollow.length - followPortalDisplay;
                     for (let i=slocalfollow.length - 1;i>=icnt;i--){
-                        sfdetail+="<tr><td>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>"+slocalfollow[i].review+"</td></tr>";
+                        //let tmpDateTime = slocalfollow[i].dateTime ? (slocalfollow[i].dateTime.substring(0,10)+" "+slocalfollow[i].dateTime.substring(11,19)) : "";
+                        const tmpDateTime = slocalfollow[i].dateTime ? (new Date(slocalfollow[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
+                        //console.log(tmpDateTime); // 输出示例：2025-10-09 12:36:06（GMT+8 时间）
+                        sfdetail+="<tr><td>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>" + tmpDateTime + "</td><td>"+slocalfollow[i].review+"</td></tr>";
                     }
                     sfdetail+="</tbody></table>";
                 }
                 $("#idfollow").replaceWith(sftitle+sfdetail);
+            }
 
-                let sutitle="<table style='width:100%'><thead><tr><th style='width:30%'>ID</th><th style='width:15%'>名称</th><th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:30%'>审核情况</th></thead>";
+            //以下，生成 超时列表
+            {
+                let sftitle="<table style='width:100%'><thead><tr><th style='width:20%'>ID</th><th style='width:15%'>名称</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th><th style='width:15%'>时间</th><th style='width:29%'>跟审情况</th></thead>";
+                let sfdetail = "";
+                let slocalexpire = [];
+                if(localStorage.getItem("reviewExpList")) slocalexpire = JSON.parse(localStorage.getItem("reviewExpList"));
+                //console.log(slocalexpire);
+                if(slocalexpire.length>0){
+                    sfdetail+="<tbody>";
+                    //console.log(slocalexpire[0]);
+                    let icnt = 0;if (slocalexpire.length>expirePortalDisplay) icnt = slocalexpire.length - expirePortalDisplay;
+                    for (let i=slocalexpire.length - 1;i>=icnt;i--){
+                        const tmpDateTime = slocalexpire[i].dateTime ? (new Date(slocalexpire[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
+                        sfdetail+="<tr><td>"+slocalexpire[i].id+"</td><td>"+slocalexpire[i].title+"</td><td>"+slocalexpire[i].lat+"</td><td>"+slocalexpire[i].lng+"</td><td>" + tmpDateTime + "</td><td>"+slocalexpire[i].review+"</td></tr>";
+                    }
+                    sfdetail+="</tbody></table>";
+                }
+                $("#idexpire").replaceWith(sftitle+sfdetail);
+            }
+
+            //以下，生成 上传列表
+            {
+                let sutitle="<table style='width:100%'><thead><tr><th style='width:20%'>ID</th><th style='width:15%'>名称</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th><th style='width:15%'>时间</th><th style='width:29%'>审核情况</th></thead>";
                 let sudetail = "";
                 let slocalupload = [];
                 if(localStorage.getItem(userEmail+"upload")) slocalupload = JSON.parse(localStorage.getItem(userEmail+"upload"));
@@ -1842,12 +1990,26 @@
                     sudetail+="<tbody>";
                     let icnt = 0;if (slocalupload.length>uploadPortalDisplay) icnt = slocalupload.length - uploadPortalDisplay;
                     for (let i=slocalupload.length - 1;i>=icnt;i--){
-                        sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+slocalupload[i].review+"</td></tr>";
+                        const tmpDateTime = slocalupload[i].dateTime ? (new Date(slocalupload[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
+                        sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+tmpDateTime+"</td><td>"+slocalupload[i].review+"</td></tr>";
                     }
                     sudetail+="</tbody></table>";
                 }
                 $("#idupload").replaceWith(sutitle+sudetail);
+            }
 
+            // 处理池中评审列表（reviewLista → #privatePortal1）
+            const tableHtmlA = generateReviewTable('reviewLista', privatePortalDisplay1);
+            replaceElement("#privatePortal1", tableHtmlA);
+            // 处理池外评审列表（reviewListb → #privatePortal2）
+            const tableHtmlB = generateReviewTable('reviewListb', privatePortalDisplay2);
+            replaceElement("#privatePortal2", tableHtmlB);
+
+            //以下，生成任务列表显示：smis：表头；smistmp：最终表格；sultmp：用户邮箱排列块
+            //放在最后，因为需要generateReviewTable里读取本地来判断是否审过=>更新missionGDoc中的ownerstatus
+            //下一步，是否加入读取网络文件来判断是否审过？
+            {
+                //smistmp(字符串)/missionPortal(DOM元素)  ; sultmp(字符串，用户邮箱)/missionuser(显示用户邮箱排列块)
                 //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
                 let smis="<table style='width:100%'><thead><tr>"
                 +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
@@ -1856,159 +2018,7 @@
                 +"<th style='width:14%'>挪po</th>"
                 +"</tr></thead>";
                 let smistmp="";let sstmp="";let ssok="";
-                //console.log("start",missionlist);
-                //let missionlist1 = JSON.parse(JSON.stringify(missionlist));
-                let usernamelist=localStorage[userEmail+"user"];
-                if (!usernamelist) usernamelist="";
                 smistmp=smis+"<tbody>";
-                //console.log(missionlist);
-
-                prpo = JSON.parse(localStorage.getItem('Reviewed1'));
-                //console.log(prpo);
-                let stmp = "<table style='width:100%'><thead><tr>"
-                +"<th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th>"
-                +"<th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th>"
-                +"<th style='width:40%'>时间</th></tr></thead>";
-                if (prpo!=null){
-                    let strarr ="";
-                    let stmparr=[];
-                    stmp+="<tbody>";
-                    for(let i=prpo.length-1;i>=0;i--){
-                        //console.log(prpo[i]);
-                        strarr = prpo[i];
-                        try {
-                            while(strarr.indexOf("undefined")>0){
-                                strarr = strarr.replace("undefined","0");
-                            }
-                            while(strarr.indexOf('""')>0){
-                                strarr = strarr.replace('""','"');
-                            }
-                            while(strarr.indexOf('":","')>0){
-                                strarr = strarr.replace('":","','":"","');
-                            }
-                            stmparr = eval("(" + strarr + ")");
-                            if(stmparr.score.length==7){
-                                stmparr.score = stmparr.score.replace(/5/g,"Y");
-                                stmparr.score = stmparr.score.replace(/3/g,"D");
-                                stmparr.score = stmparr.score.replace(/1/g,"N");
-                            }
-                            //console.log(JSON.parse(prpo[i]));
-                            //console.log(stmparr);
-                            //console.log(stmparr.title,stmparr.dt);
-                            if (prpo.length-1 - i <= privatePortalDisplay1 ) {
-                                stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
-                            }
-                            //console.log(usernamelist);console.log(stmparr.user);
-                            if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
-                                missionGDoc.forEach(item => {
-                                    if(item.title === stmparr.title & item.title === "大黄蜂"){
-                                        //console.log(item.responsedate);
-                                        //console.log(stmparr.dt);
-                                        //console.log(new Date(item.responsedate).getTime());
-                                        //console.log(new Date(stmparr.dt.slice(0,10)).getTime() - 5*24*60*60*1000 );
-                                    }
-                                    if(item.title === stmparr.title &
-                                       (new Date(item.responsedate).getTime() <= new Date(stmparr.dt.slice(0,10)).getTime() + 5*24*60*60*1000 )){
-                                        item.ownerstatus = true ;
-                                    }
-                                })
-                            }
-                        } catch(err) {
-                            console.log(err);
-                        }
-                    }
-                    stmp+="</tbody></table>";
-                    //console.log("privatePortal1",$("#privatePortal1"));
-                    $("#privatePortal1").replaceWith(stmp);
-                    //console.log("stmp",stmp);
-                    //console.log("privatePortal1",$("#privatePortal1"));
-                }
-                //       }
-
-                let prpo2 = JSON.parse(localStorage.getItem('Reviewed2'));
-                //console.log(prpo2);
-                //console.log(prpo2[0]);
-                stmp = "<table style='width:100%'><thead><tr>"
-                    +"<th style='width:20%'>用户</th><th style='width:15%'>名称</th><th style='width:10%'>类型</th>"
-                    +"<th style='width:10%'>纬度</th><th style='width:10%'>经度</th><th style='width:15%'>打分</th>"
-                    +"<th style='width:40%'>时间</th></tr></thead>";
-                if (prpo2!=null){
-                    let strarr ="";
-                    let stmparr=[];
-                    stmp+="<tbody>";
-                    //console.log(prpo2.length);
-                    for(let i=prpo2.length-1;i>=0;i--){
-                        strarr = prpo2[i];
-                        try{
-                            while(strarr.indexOf("undefined")>0){
-                                strarr = strarr.replace("undefined","0");
-                            }
-                            while(strarr.indexOf('""')>0){
-                                strarr = strarr.replace('""','"');
-                            }
-                            while(strarr.indexOf('":","')>0){
-                                strarr = strarr.replace('":","','":"","');
-                            }
-                            //console.log(strarr);
-                            stmparr = eval("(" + strarr + ")");
-                            if(stmparr.score.length==7){
-                                stmparr.score = stmparr.score.replace(/5/g,"Y");
-                                stmparr.score = stmparr.score.replace(/3/g,"D");
-                                stmparr.score = stmparr.score.replace(/1/g,"N");
-                            }
-                            //console.log(JSON.parse(prpo2[i]));
-                            if (prpo2.length-1 - i <= privatePortalDisplay2 ) {
-                                stmp+="<tr><td>"+stmparr.user+"</td><td>"+stmparr.title+"</td><td>"+stmparr.type+"</td><td>"+stmparr.lat+"</td><td>"+stmparr.lng+"</td><td>"+stmparr.score+"</td><td>"+stmparr.dt+"</td></tr>";
-                            }
-                            if(stmparr.title === "石中女"){
-                                console.log(stmparr.user);console.log(userEmail);
-                            }
-                            if(usernamelist.indexOf(stmparr.user)>=0 || stmparr.user==userEmail){
-                                missionGDoc.forEach(item => {
-                                    if(stmparr.title === "石中女"){
-                                        console.log(item.title);
-                                    }
-                                    if(item.title === stmparr.title &
-                                       (new Date(item.responsedate).getTime() <= new Date(stmparr.dt.slice(0,10)).getTime() + 5*24*60*60*1000 )){
-                                        if(stmparr.title === "石中女"){
-                                            console.log(item.title);
-                                        }
-                                        item.ownerstatus = true;
-                                    }
-                                })
-                            }
-                        } catch (err) {
-                            console.log(err);
-                        }
-                    }
-                    stmp+="</tbody></table>";
-                    $("#privatePortal2").replaceWith(stmp);
-                    //console.log(prpo[0].title);
-                }
-                //console.log("missionlist1",missionlist1);
-                //需要做的，将missionGDoc替换missionlist1进行显示，已审等需要设置临时变量，在生成smistmp时替换掉
-                //再检查上面对missionlist1的操作，是否无用，可以删除
-                /*
-            for(let k=0;k<missionlist1.length;k++){
-                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪计划
-                if(missionlist1[k][9].indexOf(userEmail)>=0){ missionlist1[k][4] = "O";}//自己
-                if (missionlist1[k][2] === "true") {missionlist1[k][2]="✓"} else {missionlist1[k][2]="✗";};//开审
-                if(missionlist1[k][6] === "ok"){missionlist1[k][6]="✓"} else {missionlist1[k][6]="";};//审结
-                let iplan=parseInt(missionlist[k][11]); let splan="";
-                if(iplan>=1 && iplan<10) splan="左第"+missionlist[k][11]+"个";
-                if(iplan>=11 && iplan<20) splan="上第"+(missionlist[k][11]-10)+"个";
-                if(iplan==10) splan="最右那个";
-                if(iplan==20) splan="最下那个";
-                smistmp+="<tr><td><a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a></td>"
-                    +"<td>"+missionlist1[k][6]+"</td>"
-                    +'<td><a href="javascript:void(0);" us="us2" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][1]+"</a></td>"
-                    +'<td><a href="javascript:void(0);" us="us1" owner="'+missionlist1[k][4]+'" powner="'+missionlist1[k][9]+'" tagName="'+missionlist1[k][10]+'" onclick="switchUserReviewDiv()";>'+missionlist1[k][3]+"</a></td>"
-                    +"<td>"+missionlist1[k][2]+"</td><td>"+missionlist1[k][4]+"</td>"+
-                    "<td><a href='"+durl+"/portal/portaluseremail/portal."+missionlist1[k][10]+".useremail.json'  target='_blank'>"+missionlist1[k][5]+"</a></td>"
-                    +"<td>"+missionlist1[k][7]+"</td>"+"<td>"+missionlist1[k][8]+"</td>"+"<td>"+splan+"</td>"
-                    +"</tr>";
-            }
-            */
                 missionGDoc.forEach(item => {
                     smistmp+="<tr><td>"+item.title+"</a></td>"
                         +"<td>"+(item.status === "通过" ? "✓" : "" )+"</td>"
@@ -2019,10 +2029,11 @@
                         +"<td>"+item.lat+"</td>"+"<td>"+item.lng+"</td>"+"<td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
                         +"</tr>";
                 });
-                console.log('homepage',missionGDoc);
+                //console.log('homepage',missionGDoc);
                 let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
                 //console.log("missionPortal1",$("#missionPortal1"));
                 smistmp+="</tbody></table>";
+                //console.log(`smistmp`,smistmp);
                 // 使用const声明变量，避免意外修改
                 const parser = new DOMParser();
                 // 确保smistmp是有效的字符串，避免解析错误
@@ -2032,11 +2043,12 @@
                         const doc = parser.parseFromString(smistmp, "text/html");
                         // 获取目标元素
                         const missionPortal = document.querySelector("#missionPortal1");
+                        //console.log(`missionPortal`,missionPortal);
 
                         if (missionPortal) {
                             // 插入解析后的内容
                             missionPortal.innerHTML = doc.body.innerHTML;
-                            console.log("HTML内容已成功插入到missionPortal1");
+                            //console.log("HTML内容已成功插入到missionPortal1");
                         } else {
                             console.error("未找到id为missionPortal1的元素");
                         }
@@ -2051,8 +2063,137 @@
                 replaceElement("#missionuser", sultmp);
                 //$("#missionuser").replaceWith(sultmp);
                 //console.log(smisssss);
-            } catch(e){console.log(e);}
+            }
+
+        } catch(e){console.log(e);}
+
+    }
+    // 通用函数：生成评审数据表格
+    function generateReviewTable(storageKey, displayLimit) {
+        // 1. 安全读取并解析本地存储数据
+        let reviewData = [];
+        try {
+            const storedData = localStorage.getItem(storageKey);
+            if (storedData) {
+                reviewData = JSON.parse(storedData);
+                if (!Array.isArray(reviewData)) {
+                    console.warn(`${storageKey} 数据格式错误，已重置为空数组`);
+                    reviewData = [];
+                }
+            }
+        } catch (error) {
+            console.error(`解析${storageKey}数据失败：`, error);
+            reviewData = [];
         }
+
+        // 2. 构建表格HTML
+        let tableHtml = `
+          <table style='width:100%'>
+            <thead>
+                <tr>
+                    <th style='width:18%'>用户</th>
+                    <th style='width:12%'>名称</th>
+                    <th style='width:6%'>类型</th>
+                    <th style='width:8%'>纬度</th>
+                    <th style='width:8%'>经度</th>
+                    <th style='width:12%'>打分</th>
+                    <th style='width:16%'>时间</th>
+                    <th style='width:20%'>ID</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+
+        let itemCount = 0;
+
+        // 创建数组的反转副本，不影响原数组
+        reviewData = [...reviewData].reverse();
+        // 3. 遍历数据生成表格行
+        for (const item of reviewData) {
+
+            // 处理分数格式化
+            let formattedScore = item.score;
+            if (typeof item.score === 'string' && item.score.length === 7) {
+                formattedScore = item.score
+                    .replace(/5/g, "Y")
+                    .replace(/3/g, "D")
+                    .replace(/1/g, "N");
+            }
+
+            // 安全获取字段值
+            const user = item.user || '';
+            const title = item.title || '';
+            const type = item.type || '';
+            const lat = item.lat || '';
+            const lng = item.lng || '';
+            const dateTime = item.dt || item.datetime || '';
+            const id = item.id || '';
+
+            if (itemCount < displayLimit) {
+                // 添加表格行
+                tableHtml += `
+            <tr>
+                <td>${user}</td>
+                <td>${title}</td>
+                <td>${type}</td>
+                <td>${lat}</td>
+                <td>${lng}</td>
+                <td>${formattedScore}</td>
+                <td>${dateTime}</td>
+                <td>${id}</td>
+            </tr>
+            `;
+            }
+            itemCount++;
+
+            // 4. 更新任务状态
+            let usernamelist=localStorage[userEmail+"user"];
+            if (!usernamelist) usernamelist="";
+            if (usernamelist?.indexOf(user) >= 0 || user === userEmail) {
+
+                //通过id判断当前用户是否审过-20251007改
+                const matchingMission = missionGDoc.find(mission => mission.portalID === id);
+                //console.log(`matchingMission:${id}`,matchingMission);
+                if (matchingMission) {
+                    //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
+                    matchingMission.ownerstatus = true;
+                }
+                //通过名称匹配来判断当前用户是否审过
+                /*
+                const matchingMission = missionGDoc.find(mission => mission.title === title);
+                if (matchingMission) {
+                    try {
+                        const responseDate = new Date(matchingMission.responsedate);
+                        const reviewDate = new Date(dateTime.slice(0, 10));
+
+                        if (!isNaN(responseDate.getTime()) && !isNaN(reviewDate.getTime())) {
+                            const fiveDaysLater = new Date(reviewDate);
+                            fiveDaysLater.setDate(reviewDate.getDate() + 5);
+
+                            if (responseDate <= fiveDaysLater) {
+                                matchingMission.ownerstatus = true;
+                            }
+                        } else {
+                            console.warn(`无效日期 - ${storageKey}：${matchingMission.responsedate} vs ${dateTime}`);
+                        }
+                    } catch (dateError) {
+                        console.error(`${storageKey}日期处理错误：`, dateError);
+                    }
+                }
+                */
+
+            }
+        }
+
+        // 完成表格HTML
+        tableHtml += `
+            </tbody>
+        </table>
+    `;
+
+        //console.log(storageKey,tableHtml);
+        return tableHtml;
+    }
 
     // 通用元素替换函数replaceElement
     // selector: 目标元素的选择器（如 "#missionuser", ".content" 等）
@@ -2089,7 +2230,7 @@
         try {
             // 执行替换操作
             $target.replaceWith(replacement);
-            console.log(`符合选择器 "${selector}" 的元素已成功替换`);
+            //console.log(`符合选择器 "${selector}" 的元素已成功替换`);
             return true;
         } catch (error) {
             console.error(`替换符合选择器 "${selector}" 的元素时发生错误:`, error);
@@ -2162,6 +2303,7 @@
                 let resp = readR2File("portal/portaluseremail/portal."+id+".useremail.json")
                 .then(res=>{
                     let userreview = [];
+                    let userReviewJson = null;
                     if(!res) {
                         setTimeout(function(){
                             console.log("switchUserReviewDiv:未找到审核文件",res);
@@ -2169,6 +2311,7 @@
                         //return;
                     } else {
                         //userreview = res;
+                        userReviewJson = res.content;
                         userreview = JSON.stringify(res.content);
                     }
                     //console.log('res',res);
@@ -2176,7 +2319,46 @@
                     stmp+="<div id='idUserEmail' style='display:block;'><div style='display: flex;'>";
                     //console.log("userEmailList",userEmailList);
                     //console.log("userreview",userreview);
-                    if(userreview.length>0) console.log('userreviewjson',JSON.parse(userreview));
+                    if(userreview.length>0) console.log('userReviewJson',userReviewJson);
+
+                    //如果用户打卡里userreview没有当前用户，但是missionGDoc里的ownerstatus是ture，则补一个打卡
+                    //补打卡的过程，从本地reviewLista及reviewListb里读取用户审核的情况(通过id匹配)
+                    //在userreview里增加一个当前用户的审核，并上传到cloudflare
+                    //通过id判断当前用户是否审过-20251007改
+                    const matchingMission = missionGDoc.find(mission => mission.portalID === id);
+                    //console.log(`matchingMission:${id}`,matchingMission);
+                    if (matchingMission) {
+                        let iHaveReview = false;
+                        //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
+                        if(matchingMission.ownerstatus){
+                             const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
+                            if(!userReviewed){
+                                //无用户打卡，但是本地审核中有 => 上传补打卡
+                                //业务逻辑 - 补打卡
+                                iHaveReview = true;
+                                console.log("无用户打卡，但是本地审核中有");
+                            } else {
+                                console.log("有用户打卡，本地审核也有");
+                            }
+                        } else {
+                            //任务列表中显示未审，是否再读取一次reviewLista和reviewListb
+                        }
+                        if(iHaveReview) {
+                            let susermark={useremail : userEmail,
+                                           datetime : formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),
+                                           performance:performance};
+                            userReviewJson.push(susermark);
+                            console.log("userReviewJson","userReviewJson");
+                            userreview = JSON.stringify(userReviewJson);
+                            setTimeout(function(){
+                                console.log("补用户打卡：portal/portaluseremail/","portal."+id+".useremail.json",susermark);
+                                //保存任务id :
+                                //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
+                                uploadDataToR2("portal/portaluseremail/","portal."+id+".useremail.json",userReviewJson);
+                            },500);
+                        }
+                    }
+
                     for(let i=0;i<userEmailList.length;i++){
                         let sname=null;let semail=null;let slink=null; let po = "";
                         sname=userEmailList[i].substring(0,userEmailList[i].indexOf(';'));
