@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      3.0.2-b
+// @version      3.0.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1351,6 +1351,23 @@
             }
             if(data.newLocation) {tmpupload.review = tmpupload.review+":挪"+data.newLocation; isave=1};
         } else if(data.type=="EDIT"){
+            //pdata.locationEdits[i].hash = data.selectedhash => pdata.locationEdits[i].value
+            let ilat = null;let ilng = null;
+            for(const item of pdata.locationEdits) {
+                if(item.hash === data.selectedLocationHash){
+                    ilat = item.lat; ilng = item.lng;
+                }
+            }
+            if(ilat !== null) {
+                let stmp = "";
+                if(ilat > pdata.lat ) stmp = "上:"+pdata.lat+'=>'+ilat;
+                if(ilat < pdata.lat ) stmp = "下:"+pdata.lat+'=>'+ilat;
+                if(ilat === pdata.lat ) stmp = "原:"+pdata.lat;
+                if(ilng > pdata.lng ) stmp += ";右:"+pdata.lng+'=>'+ilng;
+                if(ilng < pdata.lng ) stmp += ";左:"+pdata.lng+'=>'+ilng;
+                if(ilng === pdata.lng ) stmp += ";原:"+pdata.lng;
+                tmpupload.review=stmp;
+            }
             isave=1;
         } else if(data.type=="PHOTO"){
             isave=1;
