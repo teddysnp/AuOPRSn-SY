@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      3.0.1
+// @version      3.0.2-b
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -15,17 +15,17 @@
 
     let autoreview = null;
     let portalData = null;
-    let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確","方向","不準確的位置","不存在的假位置","標題含有顏文字或表情符號"];
-    let rejcbxengstr = ["PHOTO_BAD_BLURRY","PHOTO_FACE","PHOTO_PLATE","PHOTO_BAD","TEXT_BAD_TITLE","PHOTO_DIR","MISMATCH","ACCURACY_FAKE","EMOJI_TITLE"];
+    let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確","方向","不準確的位置","不存在的假位置","不雅的內容","涉嫌影響審查結果","令人反感","涉及攻擊性內容或言論","標題含有顏文字或表情符號"];
+    let rejcbxengstr = ["PHOTO_BAD_BLURRY","PHOTO_FACE","PHOTO_PLATE","PHOTO_BAD","TEXT_BAD_TITLE","PHOTO_DIR","MISMATCH","ACCURACY_FAKE","ACCURACY_EXPLICIT","ACCURACY_PERSONAL","ACCURACY_OFFENSIVE","ACCURACY_ABUSE","EMOJI_TITLE"];
     let reviewPortalAuto ="false";
     let cloudReviewData = null;
     localStorage.setItem("reviewPortalAuto",reviewPortalAuto);
 
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
-    let cookie = localStorage.cfcookie;
+    //let cookie = localStorage.cfcookie;  使用cloudflare的worker后，不再使用cookie
     let useremail = "";
-    let tmpfollow={id:null,title:null,lat:null,lng:null,review:null};
+    let tmpfollow={id:null,title:null,lat:null,lng:null,review:null,dateTime:null};
     let isUserClick = false ;
     let iautoman = null;
     let mywin = window;
@@ -57,7 +57,7 @@
             console.log("follow-missionGDoc",missionGDoc);
         }*/
     }
-    // 改造：将 getMissionFromGoogleDoc 改为返回 Promise 的函数
+    //从google doc 读取任务
     function getMissionFromGoogleDoc() {
         // 返回 Promise 对象，包裹异步请求逻辑
         return new Promise((resolve, reject) => {
@@ -134,7 +134,7 @@
             error: function (xhr, status, error) {
                 console.error("请求失败：", status, "错误信息：", xhr.responseText);
                     createNotify("更新任务错误", {
-                        body: "更新任务文档失败！" +errorMsg,
+                        body: "更新任务文档失败！" +xhr.responseText,
                         icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                         requireInteraction: false
                     });
@@ -175,66 +175,6 @@
                 }
             }
         });
-    }
-
-    //上传json审核至cloudflare 使用cookie方式
-    function gmrequest(pmethod,purl,pid,pdata){
-        cookie = localStorage.cfcookie;
-        switch(pmethod){
-            case "PUT":
-//                return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method:     "PUT",
-                    url:        purl+pid+".json",
-                    data:       pdata,
-                    anonymous:  true,
-                    cookie:     cookie,
-                    headers: {
-                        "Content-Type": "application/json",
-                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
-                    },
-                    onload: function(res){
-                        let restext = null;
-                        try {
-                            restext = JSON.parse(res.responseText);
-                        } catch(e) {
-                            console.log(e);
-                        }
-                        if(res.status === 200){
-                            if (restext.success) {
-                                console.log("postjson",restext);
-                                //success:false情况
-                                //修改首页上传显示  绿：1d953f
-                                let iup = document.getElementById("iduplabel");
-                                if(iup) iup.style="font-weight:bold;color:#1d953f";
-                                console.log(purl+pid+".json");
-                                console.log('审核记录上传成功:'+pid)
-                            } else {
-                                console.log("postjson",restext);
-                                let iup = document.getElementById("iduplabel");
-                                if(iup) iup.style="font-weight:bold;color:red";
-                                console.log('审核记录上传失败:'+pid)
-                            }
-                        }else{
-                            let iup = document.getElementById("iduplabel");
-                            if(iup) iup.style="font-weight:bold;color:red";
-                            console.log('审核记录上传失败:'+pid)
-                        }
-                    },
-                    onerror : function(err){
-                        //修改首页上传显示
-                        let iup = document.getElementById("iduplabel");
-                        if(iup) iup.style="font-weight:bold;color:red";
-                        console.log('审核记录上传错误:'+pid)
-                        console.log(err)
-                    }
-//                    onload: resolve,
-//                    onerror: reject
-                });
-//                                                        });
-            case "GET":
-            default:
-        }
     }
 
     // 配置 - CloudFlare
@@ -279,7 +219,6 @@
             console.log(`解析响应失败: ${e.message}`);
         }
     }
-
     // 读取指定的JSON文件
     function readR2File(fileName) {
         return new Promise((res, err) => {
@@ -408,9 +347,8 @@
                                 console.log("挪至新位置：",JSON.parse(data[0]).newLocation);
                             }
                         }
-
                         //跟po，保存记录至本地：用户名+follow
-                        console.log("查看是否跟po，保存至本地",tmpfollow);
+                        //console.log("查看是否跟po，保存至本地",tmpfollow);
                         savePostData(tmpfollow,data);
 
                         //console.log("tmpdata",tmpdata);
@@ -435,7 +373,6 @@
                         } else {
                             console.log("saving local follow n");
                             localpd1.push(tmpfollow);
-                            //console.log(localpd1);
                             localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
                         }
                     }
@@ -499,14 +436,15 @@
     function savePostData(tmpfollow,data){
         if(tmpfollow.id!=null){
             let localpd1 = [];
+            tmpfollow.dateTime = new Date();
             if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
+            console.log(useremail+"follow",localpd1);
             if(localpd1.length==0){
-                console.log("saving local follow 1");
+                console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
                 localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
             } else {
-                console.log("saving local follow n");
+                console.log(useremail+"follow n",JSON.stringify(tmpfollow));
                 localpd1.push(tmpfollow);
-                //console.log(localpd1);
                 localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
             }
         }
@@ -619,16 +557,18 @@
                     missionGDoc.forEach(item => {
                         //console.log('item',item);
                         let isave=0;
-                        let iphoto=0;
+                        let iphoto=0;let iphoto1=0;
                         if(item.types === "图片"){
-                            console.log(item.types,"图片");
+                            //console.log("injectManage-item",item);
                         }
                         for(let i=0;i<pData.submissions.length;i++){
                             //console.log("申请:",pData.submissions[i]);
                             //1分钟的时间戳值:60000 20分钟是1200000
                             if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
                             {
-                                if(item.title === "山与井" || pData.submissions[i].title === "山与井"){
+                                if(item.title === "1905文化创意园" || pData.submissions[i].title === "1905文化创意园"){
+                                console.log("injectManage-item",item);
+                                console.log(`injectManage-pData.submissions[${i}]`,pData.submissions[i]);
                                     console.log("injectManage-NotPHOTO-item",item);console.log("injectManage-NotPHOTO-pData.submissions[i]",pData.submissions[i]);
                                 }
                                 //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
@@ -636,13 +576,23 @@
                                 {
                                     //pData.submissions.status === "NIANTIC_REVIEW" 系统审 !!!!!!!!!!!!!!!!!!!!!!!!!
                                     let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
-                                    if(pData.submissions[i].types == "PHOTO"){
-                                        if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED"))
-                                        { iphoto+=0; }
-                                        //开审
-                                        if(pData.submissions[i].status == "VOTING") { iphoto+=1; }
+                                    if(pData.submissions[i].type === "PHOTO"){
+                                        if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED"))
+                                        {
+                                            iphoto+=0;
+                                            console.log("iphoto+0");
+                                        }
+                                        //开审 : 否则也算开审，否则任务里可能不再显示，将来无法再更新成通过
+                                        if(pData.submissions[i].status === "VOTING") {
+                                            console.log("iphoto+1");
+                                            iphoto+=1;
+                                        }
+                                        if(pData.submissions[i].status === "NIANTIC_REVIEW") {
+                                            console.log("iphoto1+1");
+                                            iphoto1+=1;
+                                        }
                                     } else {
-                                        if((pData.submissions[i].status == "ACCEPTED" || pData.submissions[i].status == "REJECTED") & item.status != "通过") {
+                                        if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED") & item.status != "通过") {
                                             item.status = "通过";
                                             isave=1;
                                             console.log("injectManage-NotPHOTO-","isave1:通过");
@@ -655,13 +605,13 @@
                                         }
                                     }
                                     //审核人写错
-                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") & item.submitter != useremail) {
+                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") & item.submitter != useremail) {
                                         item.submitter = useremail ;
                                         isave=1;
                                         console.log("isave3：更新邮箱");
                                     }
                                     //更新经纬度、id
-                                    if((pData.submissions[i].status == "VOTING" || pData.submissions[i].status == "NOMINATION") &
+                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") &
                                        (pData.submissions[i].lat != item.lat || pData.submissions[i].lng != item.lng )){
                                         console.log("ptitle",pData.submissions[i].title);
                                         console.log("mtitle",JSON.stringify(item.title));
@@ -674,23 +624,71 @@
                                         console.log("isave1：更新经纬度及id");
                                     }
                                 }
-                                if(iphoto>0 & item.status === "提交" & item.types ==="图片")
-                                {
-                                    item.status = "审核";
-                                    isave=1;
-                                    console.log("isave1：多图片更新为审核");
+                            } else {
+                                //名字如果写错，将进行智能匹配
+                                let iTitle1 = approximateMatch(item.title,pData.submissions[i].title);
+                                let iTitle2 = approximateMatch(item.title,pData.submissions[i].poiData.title);
+                                /*if(item.title === "万达木馬"){
+                                console.log(item.title+","+pData.submissions[i].title,iTitle1);
+                                console.log(item.title+","+pData.submissions[i].poiData.title,iTitle2);
+                            }*/
+                                if(iTitle1 || iTitle2){
+                                    console.log(pData.submissions[i].title || pData.submissions[i].poiData?.title || item.title);
+                                    item.title = pData.submissions[i].title || pData.submissions[i].poiData?.title ;
+                                    isave = 1;
+                                    console.log("名字写错");
                                 }
-                                if(iphoto === 0 & item.status === "审核" & item.types ==="图片")
-                                {
-                                    item.status = "通过";
-                                    isave=1;
-                                    console.log("isave1：多图片更新为通过");
-                                }
+                            }
+                        }
+                        console.log(`injectManage-iphoto:${iphoto}`);
+                        if(item.types === "图片"){
+                            // 使用switch处理item.status的多状态判断
+                            switch (item.status) {
+                                case "提交":
+                                    // 处理"提交"状态的逻辑
+                                    console.log(`任务《${item.title}》处于提交状态`);
+                                    if(iphoto === 0){//修改过，需测试是否影响其它
+                                        item.status = "通过";
+                                        isave=1;
+                                        console.log("isave1：多图片更新为通过");
+                                    } else {
+                                        item.status = "审核";
+                                        isave=1;
+                                        console.log("isave1：多图片更新为审核");
+                                    }
+                                    break;
+                                case "审核":
+                                    // 处理"审核"状态的逻辑
+                                    console.log(`任务《${item.title}》正在审核中`);
+                                    if(iphoto === 0){
+                                        if(iphoto1 > 0) {//只有官方审核，改为提交
+                                            item.status = "提交";
+                                            isave=1;
+                                            console.log("isave5：多图片仅官方审核为提交");
+                                        } else {
+                                            item.status = "通过";
+                                            isave=1;
+                                            console.log("isave1：多图片更新为通过");
+                                        }
+                                    } else {
+                                    }
+                                    break;
+                                case "通过":
+                                    // 处理"通过"状态的逻辑
+                                    if(iphoto === 0){
+                                    } else {
+                                    }
+                                    console.log(`任务《${item.title}》已通过审核`);
+                                    break;
+                                default:
+                                    // 处理所有未明确声明的状态（默认分支）
+                                    console.warn(`发现未知状态：${item.status}，任务标题：${item.title}`);
+                                    break;
                             }
                         }
                         console.log(item.title +':isave',isave);
                         //更新云中任务
-                        if(isave==1){
+                        if(isave === 1){
                             setTimeout(function(){
                                 localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
                                 saveToGDoc(item);
@@ -928,87 +926,6 @@
             if(ilabel) ilabel.textContent = tmptext;
             console.log("idscore",tmptext);
         },1500);
-    }
-
-    function scrollToBottom (){
-        console.log('scrollToBottom');
-        (function smoothscroll() {
-            const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
-            const clientHeight = document.documentElement.clientHeight; // 浏览器高度
-            const scrollHeight = document.documentElement.scrollHeight; // 总高度
-            if (scrollHeight - 10 > currentScroll + clientHeight) {
-                window.requestAnimationFrame(smoothscroll);
-                window.scrollTo(0, currentScroll + (scrollHeight - currentScroll - clientHeight) / 2);
-            }
-        })();
-    };
-    //EDIT位置编辑用的函数
-    function findArrayTwo(arr,title){
-        for(let i=0;i<arr.length;i++){
-            //            console.log("arr["+i+"]",arr[i]);
-            if(arr[i].indexOf(title)>=0){
-                return i;
-            }
-        }
-        return -1;
-    }
-    //返回排好序的挪po点集合
-    function getclickedbtn(ptstruct,iplan){
-        let ilen=ptstruct.length;
-        if (ilen<=0) return null;
-        if (ilen==1) return ptstruct[0].aria-describedby;
-        return resort(ptstruct,iplan);
-    }
-    //按挪的计划，对挪po点集合进行排序
-    function resort(ptstruct,iplan){
-        //    console.log(ptstruct[0].left);
-        if(iplan<=10){
-            for(let i=0;i<ptstruct.length;i++){
-                for(let j=0;j<ptstruct.length - 1;j++){
-                    let tmp = ptstruct[j];
-                    if(parseInt(ptstruct[j].left) > parseInt(ptstruct[j+1].left)){
-                        tmp = ptstruct[j];
-                        ptstruct[j]=ptstruct[j+1];
-                        ptstruct[j+1]=tmp;
-                    }
-                }
-            }
-        }
-        if(iplan>10){
-            for(let i=0;i<ptstruct.length;i++){
-                for(let j=0;j<ptstruct.length - 1;j++){
-                    let tmp = ptstruct[j];
-                    if(parseInt(ptstruct[j].top) > parseInt(ptstruct[j+1].top)){
-                        tmp = ptstruct[j];
-                        ptstruct[j]=ptstruct[j+1];
-                        ptstruct[j+1]=tmp;
-                    }
-                }
-            }
-        }
-        return ptstruct;
-    }
-    //得到挪po的点坐标集合，屏幕坐标
-    function getbtnStruct(ptbutton){
-        let ptall = [];
-        ptbutton.forEach((ptbtn) => {
-            let ptbtaria = ptbtn.getAttribute("aria-describedby");
-            let ptbtnatt = ptbtn.getAttribute('style');
-            while(ptbtnatt.indexOf(" ")>0) {
-                ptbtnatt = ptbtnatt.replace(" ","");
-            }
-            ptbtnatt = ptbtnatt.replaceAll(":",'":"');
-            ptbtnatt = ptbtnatt.replaceAll(";",'","');
-            ptbtnatt = ptbtnatt.replaceAll("px","");
-            ptbtnatt = '{"aria-describedby":"'+ptbtaria+'","'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
-            //                    ptbtnatt='{"'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
-            //      console.log(ptbtnatt);
-            ptbtnatt=JSON.parse(ptbtnatt);
-            //      console.log(ptbtnatt);
-            ptall.push(ptbtnatt);
-        })
-        //    console.log(ptall);
-        return ptall;
     }
 
     //判断云端是否有审核记录，执行跟审或任务审
@@ -1402,8 +1319,8 @@
         //console.log(iskip);
         let localpd = [];
         if(localStorage.getItem(useremail+"upload")) localpd = JSON.parse(localStorage.getItem(useremail+"upload"));
-        let tmpupload={id:null,title:null,lat:null,lng:null,review:null};
-        tmpupload.id=data.id;
+        let tmpupload={id:null,title:null,lat:null,lng:null,review:null,dateTime:null};
+        tmpupload.id=data.id; tmpupload.dateTime = new Date();
 
         if(data.id=pdata.id){
             tmpupload.title=pdata.title;tmpupload.lat=pdata.lat;tmpupload.lng=pdata.lng;
@@ -1443,20 +1360,18 @@
             try{
                 console.log("saving...");
                 if(icloud==0 || icloud==2){
-                    if(cookie) {
-                        //保存至本地
-                        if(localpd.length==0){
-                            localStorage.setItem(useremail+"upload","["+JSON.stringify(tmpupload)+"]");
-                        } else {
-                            localpd.push(tmpupload);
-                            localStorage.setItem(useremail+"upload",JSON.stringify(localpd));
-                        }
-                        //上传至云端
-                        console.log("上传...",data.id);
-                        //gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
-                        uploadDataToR2("portal/portalreview/","portal."+data.id+".json",data);
-                        console.log("审核结束:",data.id);
+                    //保存至本地
+                    if(localpd.length==0){
+                        localStorage.setItem(useremail+"upload","["+JSON.stringify(tmpupload)+"]");
+                    } else {
+                        localpd.push(tmpupload);
+                        localStorage.setItem(useremail+"upload",JSON.stringify(localpd));
                     }
+                    //上传至云端
+                    console.log("上传...",data.id);
+                    //gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
+                    uploadDataToR2("portal/portalreview/","portal."+data.id+".json",data);
+                    console.log("审核结束:",data.id);
                 } else {
                     //保存审核记录至本地：以下未调试
                     let creviewlist =[];
@@ -1485,7 +1400,145 @@
         }
     }
 
-    // 自定义日志函数：替代console.log，将内容显示在面板
+    function scrollToBottom (){
+        console.log('scrollToBottom');
+        (function smoothscroll() {
+            const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
+            const clientHeight = document.documentElement.clientHeight; // 浏览器高度
+            const scrollHeight = document.documentElement.scrollHeight; // 总高度
+            if (scrollHeight - 10 > currentScroll + clientHeight) {
+                window.requestAnimationFrame(smoothscroll);
+                window.scrollTo(0, currentScroll + (scrollHeight - currentScroll - clientHeight) / 2);
+            }
+        })();
+    };
+    //EDIT位置编辑用的函数
+    function findArrayTwo(arr,title){
+        for(let i=0;i<arr.length;i++){
+            //            console.log("arr["+i+"]",arr[i]);
+            if(arr[i].indexOf(title)>=0){
+                return i;
+            }
+        }
+        return -1;
+    }
+    //返回排好序的挪po点集合
+    function getclickedbtn(ptstruct,iplan){
+        let ilen=ptstruct.length;
+        if (ilen<=0) return null;
+        if (ilen==1) return ptstruct[0].aria-describedby;
+        return resort(ptstruct,iplan);
+    }
+    //按挪的计划，对挪po点集合进行排序
+    function resort(ptstruct,iplan){
+        //    console.log(ptstruct[0].left);
+        if(iplan<=10){
+            for(let i=0;i<ptstruct.length;i++){
+                for(let j=0;j<ptstruct.length - 1;j++){
+                    let tmp = ptstruct[j];
+                    if(parseInt(ptstruct[j].left) > parseInt(ptstruct[j+1].left)){
+                        tmp = ptstruct[j];
+                        ptstruct[j]=ptstruct[j+1];
+                        ptstruct[j+1]=tmp;
+                    }
+                }
+            }
+        }
+        if(iplan>10){
+            for(let i=0;i<ptstruct.length;i++){
+                for(let j=0;j<ptstruct.length - 1;j++){
+                    let tmp = ptstruct[j];
+                    if(parseInt(ptstruct[j].top) > parseInt(ptstruct[j+1].top)){
+                        tmp = ptstruct[j];
+                        ptstruct[j]=ptstruct[j+1];
+                        ptstruct[j+1]=tmp;
+                    }
+                }
+            }
+        }
+        return ptstruct;
+    }
+    //得到挪po的点坐标集合，屏幕坐标
+    function getbtnStruct(ptbutton){
+        let ptall = [];
+        ptbutton.forEach((ptbtn) => {
+            let ptbtaria = ptbtn.getAttribute("aria-describedby");
+            let ptbtnatt = ptbtn.getAttribute('style');
+            while(ptbtnatt.indexOf(" ")>0) {
+                ptbtnatt = ptbtnatt.replace(" ","");
+            }
+            ptbtnatt = ptbtnatt.replaceAll(":",'":"');
+            ptbtnatt = ptbtnatt.replaceAll(";",'","');
+            ptbtnatt = ptbtnatt.replaceAll("px","");
+            ptbtnatt = '{"aria-describedby":"'+ptbtaria+'","'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
+            //                    ptbtnatt='{"'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
+            //      console.log(ptbtnatt);
+            ptbtnatt=JSON.parse(ptbtnatt);
+            //      console.log(ptbtnatt);
+            ptall.push(ptbtnatt);
+        })
+        //    console.log(ptall);
+        return ptall;
+    }
+
+    //智能匹配：长度差在一个字符以内;1-2个字符时完全匹配;3-6个字符时允许错1个;7个以上时允许错2个
+    function approximateMatch(strData1, strData2) {
+        // 检查输入有效性
+        if (!strData1 || !strData2) return false;
+
+        const len1 = strData1.length;
+        const len2 = strData2.length;
+
+        // 统计字符出现次数
+        const countChars = (str) => {
+            const counts = {};
+            for (const char of str) {
+                counts[char] = (counts[char] || 0) + 1;
+            }
+            return counts;
+        };
+
+        const counts1 = countChars(strData1);
+        const counts2 = countChars(strData2);
+
+        // 计算共同字符总数
+        let commonChars = 0;
+        for (const char in counts1) {
+            if (counts2[char]) {
+                commonChars += Math.min(counts1[char], counts2[char]);
+            }
+        }
+
+        // 情况1：第一个字符串长度在2及以下
+        if (len1 <= 2) {
+            // 要求长度相同且完全匹配
+            return len1 === len2 && commonChars === len1;
+        }
+        // 情况2：第一个字符串长度在3-6之间
+        else if (len1 >= 3 && len1 <= 6) {
+            // 第二个字符串长度需在3-7之间，且相同字符数为len1-1
+            return len2 >= 3 && len2 <= 7 && commonChars === len1 - 1;
+        }
+        // 情况3：第一个字符串长度在7以上
+        else {
+            // 第二个字符串与第一个长度差1，且相同字符数为len1-2
+            return Math.abs(len1 - len2) === 1 && commonChars === len1 - 2;
+        }
+    }
+
+    // 测试案例
+    /*
+    console.log(approximateMatch("万达", "万达")); // true（长度2，完全相同）
+    console.log(approximateMatch("万达", "万"));   // false（长度不同）
+    console.log(approximateMatch("苹果汁", "苹果水")); // true（长度3，相同字符2=3-1）
+    console.log(approximateMatch("计算机", "计算几")); // true（长度3，相同字符2=3-1）
+    console.log(approximateMatch("abcdef", "abcdeg")); // true（长度6，相同字符5=6-1）
+    console.log(approximateMatch("abcdefg", "abcdefxy")); // true（长度7，差1，相同5=7-2）
+    console.log(approximateMatch("万达木馬", "万达木马")); // true（长度4，相同3=4-1）
+    */
+
+
+    // 自定义日志函数：替代console.log，将内容显示在面板 不是太好用，没使用，但函数接口在，不要删
     function showLog(message, isError = false) {
         // 创建单条日志元素
         const logItem = document.createElement('div');
