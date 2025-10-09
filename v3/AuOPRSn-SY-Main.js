@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.7-b
+// @version      6.0.7
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -460,7 +460,8 @@
                     //clearInterval(timer);
                     mywin.clearInterval(timer);
                     timer = null;
-                    //console.log(portalData);
+                    console.log("保存审po数据到本地-portaldata",portalData);
+                    console.log("保存审po数据到本地-data",data);
                     saveReviewtoLocal(portalData,data);
                     //submitCountDown = null;
                     return send.apply(_this,data);
@@ -1372,9 +1373,16 @@
             };
 
             // 根据条件选择存储键
-            if (privatePortal.indexOf(pageData.title) >= 0 || missionGDoc.some(item => item.title === pageData.title) || gpausePortal.indexOf(pageData.title) > 0 || sloc === "池中") {
+            let miss = missionGDoc.find(mission => mission.portalID === pdata.id);
+            if (miss) {
                 // 符合条件：保存到reviewLista
-                console.log("保存池中已审-reviewLista",pageData.title);
+                miss.ownerstatus = true ;
+                console.log("保存池中已审(id)-reviewLista",pageData.title);
+                saveReviewData('reviewLista', reviewData);
+            }
+            else if (privatePortal.indexOf(pageData.title) >= 0 || missionGDoc.some(item => item.title === pageData.title) || gpausePortal.indexOf(pageData.title) > 0 || sloc === "池中") {
+                // 符合条件：保存到reviewLista
+                console.log("保存池中已审(title)-reviewLista",pageData.title);
                 saveReviewData('reviewLista', reviewData);
             } else {
                 // 不符合条件：保存到reviewListb
@@ -1404,6 +1412,10 @@
         let reviewList = [];
         const storedData = localStorage.getItem(storageKey);
 
+        if(storageKey === "reviewLista") {
+            console.log("storageKey",storageKey);
+            console.log("reviewData",reviewData);
+        }
         if (storedData) {
             try {
                 reviewList = JSON.parse(storedData);
@@ -1425,6 +1437,21 @@
 
             // 保存回本地存储
             try {
+                if(storageKey === "reviewLista") {
+                    console.log("reviewLista",reviewList);
+                }
+                localStorage.setItem(storageKey, JSON.stringify(reviewList));
+                console.log(`${storageKey}数据已成功保存到本地存储`);
+            } catch (error) {
+                console.error(`保存${storageKey}数据失败：`, error);
+            }
+        } else {
+            // 保存回本地存储
+            try {
+                reviewList.push(reviewData);
+                if(storageKey === "reviewLista") {
+                    console.log("reviewLista",reviewList);
+                }
                 localStorage.setItem(storageKey, JSON.stringify(reviewList));
                 console.log(`${storageKey}数据已成功保存到本地存储`);
             } catch (error) {
