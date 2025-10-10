@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      3.0.4
+// @version      3.0.5
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1285,59 +1285,67 @@
         let rd1=cloudReviewData;
         let rd2=JSON.parse(data);
         //云端非空：跟审
+        //console.log("rd1",rd1);console.log("rd2",rd2);console.log("jsondata0",JSON.parse(data[0]));
         if(cloudReviewData !== null ) {
-            console.log("savePostData-portalData",portalData);
-            console.log("savePostData-tmpfollow",tmpfollow);
-            console.log("savePostData-data",data);
-            console.log("rd1",rd1);console.log("rd2",rd2);console.log("jsondata0",JSON.parse(data[0]));
-            tmpfollow.id = rd2.id;tmpfollow.title=portalData.title;tmpfollow.lat=portalData.lat;tmpfollow.lng=portalData.lng;
-            if(rd2.type === "EDIT" & rd2.selectedLocationHash !== null){
-                let ilat = null;let ilng = null; let idlat = null;let idlng = null; let stmp ="";
-                for(const item of portalData.locationEdits) {
-                    if(item.hash === rd1.selectedLocationHash){
-                        ilat = item.lat; ilng = item.lng;
+            try{
+                //console.log("savePostData-portalData",portalData);
+                //console.log("savePostData-tmpfollow",tmpfollow);
+                //console.log("savePostData-data",data);
+                tmpfollow.id = rd2.id;tmpfollow.title=portalData.title;tmpfollow.lat=portalData.lat;tmpfollow.lng=portalData.lng;
+                //console.log("rd2.EDIT,selectedLocationHash",rd2.type === "EDIT" & rd2.selectedLocationHash !== null);
+                if(rd2.type === "EDIT" & rd2.selectedLocationHash !== null){
+                    let ilat = null;let ilng = null; let idlat = null;let idlng = null; let stmp ="";
+                    for(const item of portalData.locationEdits) {
+                        if(item.hash === rd1.selectedLocationHash){
+                            ilat = item.lat; ilng = item.lng;
+                        }
+                        if(item.hash === rd2.selectedLocationHash){
+                            idlat = item.lat; idlng = item.lng;
+                        }
+                    }
+                    //console.log("ilat",ilat);
+                    //console.log("idlat",idlat);
+                    if(idlat !== null) {
+                        if(ilat > portalData.lat ) stmp = "上:"+ilat;
+                        if(ilat < portalData.lat ) stmp = "下:"+ilat;
+                        if(ilat === portalData.lat ) stmp = "不变:"+ilat;
+                        if(ilng > portalData.lng ) stmp += ";右:"+ilng;
+                        if(ilng < portalData.lng ) stmp += ";左:"+ilng;
+                        if(ilng === portalData.lng ) stmp += ";不变:"+ilng;
+                        if(rd1.selectedLocationHash === rd2.selectedLocationHash){
+                            tmpfollow.review = stmp + "|与云一致";
+                        } else {
+                            stmp += "|实际:";
+                            if(idlat > portalData.lat ) stmp += "上:"+idlat;
+                            if(idlat < portalData.lat ) stmp += "下:"+idlat;
+                            if(idlat === portalData.lat ) stmp += "不变:"+idlat;
+                            if(idlng > portalData.lng ) stmp += ";右:"+idlng;
+                            if(idlng < portalData.lng ) stmp += ";左:"+idlng;
+                            if(idlng === portalData.lng ) stmp += ";不变:"+idlng;
+                            tmpfollow.review = stmp;
+                        }
+                        //console.log("savePostData-tmpfollow",tmpfollow);
                     }
                 }
-                for(const item of portalData.locationEdits) {
-                    if(item.hash === rd2.selectedLocationHash){
-                        idlat = item.lat; idlng = item.lng;
-                    }
-                }
-                if(idlat !== null) {
-                    if(ilat > portalData.lat ) stmp = "上:"+ilat;
-                    if(ilat < portalData.lat ) stmp = "下:"+ilat;
-                    if(ilat === portalData.lat ) stmp = "不变:"+ilat;
-                    if(ilng > portalData.lng ) stmp += ";右:"+ilng;
-                    if(ilng < portalData.lng ) stmp += ";左:"+ilng;
-                    if(ilng === portalData.lng ) stmp += ";不变:"+ilng;
-                    if(rd1.selectedLocationHash === rd2.selectedLocationHash){
-                        tmpfollow.review = stmp + "|与云一致";
-                    } else {
-                        stmp += "|实际:";
-                        if(idlat > portalData.lat ) stmp += "上:"+idlat;
-                        if(idlat < portalData.lat ) stmp += "下:"+idlat;
-                        if(idlat === portalData.lat ) stmp += "不变:"+idlat;
-                        if(idlng > portalData.lng ) stmp += ";右:"+idlng;
-                        if(idlng < portalData.lng ) stmp += ";左:"+idlng;
-                        if(idlng === portalData.lng ) stmp += ";不变:"+idlng;
-                        tmpfollow.review = stmp;
-                    }
-                    console.log("savePostData-tmpfollow",tmpfollow);
-                }
-            }
 
-            let localpd1 = [];
-            tmpfollow.dateTime = new Date();
-            if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
-            console.log(useremail+"follow",localpd1);
-            if(localpd1.length==0){
-                console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
-                localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
-            } else {
-                console.log(useremail+"follow n",JSON.stringify(tmpfollow));
-                localpd1.push(tmpfollow);
-                localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
+                let localpd1 = [];
+                tmpfollow.dateTime = new Date();
+                if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
+                console.log("保存跟审",tmpfollow);
+                if(localpd1.length === 0){
+                    //console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
+                    localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
+                } else {
+                    //console.log(useremail+"follow n",JSON.stringify(tmpfollow));
+                    localpd1.push(tmpfollow);
+                    localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
+                }
+            } catch(e){
+                console.log("错误",e);
             }
+        }
+        else {
+            console.log("无云审核数据");
         }
 
         let iautolabel = document.querySelector("p[id='idautolabel']");
