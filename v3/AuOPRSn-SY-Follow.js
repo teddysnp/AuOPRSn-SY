@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      3.0.3-b
+// @version      3.0.4
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -347,10 +347,10 @@
                                 console.log("挪至新位置：",JSON.parse(data[0]).newLocation);
                             }
                         }
+
                         //跟po，保存记录至本地：用户名+follow
                         //console.log("查看是否跟po，保存至本地",tmpfollow);
                         savePostData(tmpfollow,data);
-
                         //console.log("tmpdata",tmpdata);
                         return send.apply(_this,data);
                     } catch(e) {
@@ -431,86 +431,6 @@
             send.apply(this, arguments);
         };
     })(XMLHttpRequest.prototype.send);
-
-    //保存审核数据到本地，并判断是否需要上传
-    function savePostData(tmpfollow,data){
-        if(tmpfollow.id!=null){
-            if(data.type === "EDIT" & data.selectedLocationHash){
-                let ilat = null;let ilng = null; let idlat = null;let idlng = null; let stmp ="";
-                for(const item of portalData.locationEdits) {
-                    if(item.hash === cloudReviewData.selectedLocationHash){
-                        ilat = item.lat; ilng = item.lng;
-                    }
-                }
-                for(const item of portalData.locationEdits) {
-                    if(item.hash === data.selectedLocationHash){
-                        ilat = item.lat; ilng = item.lng;
-                    }
-                }
-                if(ilat !== null) {
-                    if(ilat > portalData.lat ) stmp = "上:"+ilat;
-                    if(ilat < portalData.lat ) stmp = "下:"+ilat;
-                    if(ilat === portalData.lat ) stmp = "不变:"+ilat;
-                    if(ilng > portalData.lng ) stmp += ";右:"+ilng;
-                    if(ilng < portalData.lng ) stmp += ";左:"+ilng;
-                    if(ilng === portalData.lng ) stmp += ";不变:"+ilng;
-                    if(cloudReviewData.selectedLocationHash === data.selectedLocationHash){
-                        tmpfollow.review = stmp + "|与云一致";
-                    } else {
-                        stmp += "|实际:";
-                        if(idlat > portalData.lat ) stmp += "上:"+idlat;
-                        if(idlat < portalData.lat ) stmp += "下:"+idlat;
-                        if(idlat === portalData.lat ) stmp += "不变:"+idlat;
-                        if(idlng > portalData.lng ) stmp += ";右:"+idlng;
-                        if(idlng < portalData.lng ) stmp += ";左:"+idlng;
-                        if(idlng === portalData.lng ) stmp += ";不变:"+idlng;
-                    }
-                }
-            }
-
-            let localpd1 = [];
-            tmpfollow.dateTime = new Date();
-            if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
-            console.log(useremail+"follow",localpd1);
-            if(localpd1.length==0){
-                console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
-                localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
-            } else {
-                console.log(useremail+"follow n",JSON.stringify(tmpfollow));
-                localpd1.push(tmpfollow);
-                localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
-            }
-        }
-
-        let iautolabel = document.querySelector("p[id='idautolabel']");
-        let rd1=cloudReviewData;
-        console.log("云审核数据:",rd1);
-        if(rd1) {
-            rd1.acceptCategories=null;rd1.rejectCategories=null;
-            if(!rd1.skip) rd1.skip=false;
-        }
-        let rd2=JSON.parse(data);
-        console.log("本次审核数据:",rd2);
-        if(rd2) {
-            rd2.acceptCategories=null;rd2.rejectCategories=null;
-            if(!rd2.skip) rd2.skip=false;
-        }
-        let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
-        console.log("是否和网络一致",rs1==rs2);
-        setTimeout(function(){
-            if(isUserClick & rs1!=rs2) {
-                console.log("调用上传接口",isUserClick);
-                uploadPostData(portalData,JSON.parse(data),0,false);
-            } else {
-                console.log("不上传",isUserClick);
-                console.log("审核结束:",rd2.id);
-            }
-        },200);
-        if (iautolabel.textContent == "手动" & rs1!=rs2){
-            //console.log("data",JSON.parse(data));
-            //uploadPostData(portalData,JSON.parse(data),0,false);
-        }
-    };
 
     const awaitElement = get => new Promise((resolve, reject) => {
         let triesLeft = 10;
@@ -1358,6 +1278,95 @@
              )
         return null;
     }
+
+
+    //保存审核数据到本地，并判断是否需要上传
+    function savePostData(tmpfollow,data){
+        let rd1=cloudReviewData;
+        let rd2=JSON.parse(data);
+        //云端非空：跟审
+        if(cloudReviewData !== null ) {
+            console.log("savePostData-portalData",portalData);
+            console.log("savePostData-tmpfollow",tmpfollow);
+            console.log("savePostData-data",data);
+            console.log("rd1",rd1);console.log("rd2",rd2);console.log("jsondata0",JSON.parse(data[0]));
+            tmpfollow.id = rd2.id;tmpfollow.title=portalData.title;tmpfollow.lat=portalData.lat;tmpfollow.lng=portalData.lng;
+            if(rd2.type === "EDIT" & rd2.selectedLocationHash !== null){
+                let ilat = null;let ilng = null; let idlat = null;let idlng = null; let stmp ="";
+                for(const item of portalData.locationEdits) {
+                    if(item.hash === rd1.selectedLocationHash){
+                        ilat = item.lat; ilng = item.lng;
+                    }
+                }
+                for(const item of portalData.locationEdits) {
+                    if(item.hash === rd2.selectedLocationHash){
+                        idlat = item.lat; idlng = item.lng;
+                    }
+                }
+                if(idlat !== null) {
+                    if(ilat > portalData.lat ) stmp = "上:"+ilat;
+                    if(ilat < portalData.lat ) stmp = "下:"+ilat;
+                    if(ilat === portalData.lat ) stmp = "不变:"+ilat;
+                    if(ilng > portalData.lng ) stmp += ";右:"+ilng;
+                    if(ilng < portalData.lng ) stmp += ";左:"+ilng;
+                    if(ilng === portalData.lng ) stmp += ";不变:"+ilng;
+                    if(rd1.selectedLocationHash === rd2.selectedLocationHash){
+                        tmpfollow.review = stmp + "|与云一致";
+                    } else {
+                        stmp += "|实际:";
+                        if(idlat > portalData.lat ) stmp += "上:"+idlat;
+                        if(idlat < portalData.lat ) stmp += "下:"+idlat;
+                        if(idlat === portalData.lat ) stmp += "不变:"+idlat;
+                        if(idlng > portalData.lng ) stmp += ";右:"+idlng;
+                        if(idlng < portalData.lng ) stmp += ";左:"+idlng;
+                        if(idlng === portalData.lng ) stmp += ";不变:"+idlng;
+                        tmpfollow.review = stmp;
+                    }
+                    console.log("savePostData-tmpfollow",tmpfollow);
+                }
+            }
+
+            let localpd1 = [];
+            tmpfollow.dateTime = new Date();
+            if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
+            console.log(useremail+"follow",localpd1);
+            if(localpd1.length==0){
+                console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
+                localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
+            } else {
+                console.log(useremail+"follow n",JSON.stringify(tmpfollow));
+                localpd1.push(tmpfollow);
+                localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
+            }
+        }
+
+        let iautolabel = document.querySelector("p[id='idautolabel']");
+        console.log("云审核数据:",rd1);
+        if(rd1) {
+            rd1.acceptCategories=null;rd1.rejectCategories=null;
+            if(!rd1.skip) rd1.skip=false;
+        }
+        console.log("本次审核数据:",rd2);
+        if(rd2) {
+            rd2.acceptCategories=null;rd2.rejectCategories=null;
+            if(!rd2.skip) rd2.skip=false;
+        }
+        let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
+        console.log("是否和网络一致",rs1 === rs2);
+        setTimeout(function(){
+            if(isUserClick & rs1!=rs2) {
+                console.log("调用上传接口",isUserClick);
+                uploadPostData(portalData,JSON.parse(data),0,false);
+            } else {
+                console.log("不上传",isUserClick);
+                console.log("审核结束:",rd2.id);
+            }
+        },200);
+        if (iautolabel.textContent == "手动" & rs1!=rs2){
+            //console.log("data",JSON.parse(data));
+            //uploadPostData(portalData,JSON.parse(data),0,false);
+        }
+    };
 
     //判断是否需要上传审核至云端，及保存至本地：用户+upload
     function uploadPostData(pdata,rdata,icloud,iskip){
