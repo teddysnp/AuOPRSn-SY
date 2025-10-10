@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.7
+// @version      6.0.8-b
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -460,8 +460,8 @@
                     //clearInterval(timer);
                     mywin.clearInterval(timer);
                     timer = null;
-                    console.log("保存审po数据到本地-portaldata",portalData);
-                    console.log("保存审po数据到本地-data",data);
+                    //console.log("保存审po数据到本地-portaldata",portalData);
+                    //console.log("保存审po数据到本地-data",data);
                     saveReviewtoLocal(portalData,data);
                     //submitCountDown = null;
                     return send.apply(_this,data);
@@ -1342,7 +1342,7 @@
         let ssc=document.querySelector("span[id='idscore']");
         let sscore="";
         let pdata = JSON.parse(data);
-        console.log("Main-saveReviewtoLocal:",pdata);
+        //console.log("Main-saveReviewtoLocal:",pdata);
         if(pdata){
             if(pdata.type=="NEW"){
                 if(pdata.duplicate) {
@@ -1377,16 +1377,17 @@
             if (miss) {
                 // 符合条件：保存到reviewLista
                 miss.ownerstatus = true ;
-                console.log("保存池中已审(id)-reviewLista",pageData.title);
+                //console.log("保存池中已审(id)-reviewLista",pageData.title);
                 saveReviewData('reviewLista', reviewData);
             }
-            else if (privatePortal.indexOf(pageData.title) >= 0 || missionGDoc.some(item => item.title === pageData.title) || gpausePortal.indexOf(pageData.title) > 0 || sloc === "池中") {
+            else if (privatePortal.indexOf(pageData.title) >= 0 || missionGDoc.some(item => item.title === pageData.title) || gpausePortal.indexOf(pageData.title) > 0 || sloc === "池中")
+            {
                 // 符合条件：保存到reviewLista
-                console.log("保存池中已审(title)-reviewLista",pageData.title);
+                //console.log("保存池中已审(title)-reviewLista",pageData.title);
                 saveReviewData('reviewLista', reviewData);
             } else {
                 // 不符合条件：保存到reviewListb
-                console.log("保存池外已审reviewListb",pageData.title);
+                //console.log("保存池外已审reviewListb",pageData.title);
                 saveReviewData('reviewListb', reviewData);
             }
         } catch (e) {
@@ -1413,8 +1414,8 @@
         const storedData = localStorage.getItem(storageKey);
 
         if(storageKey === "reviewLista") {
-            console.log("storageKey",storageKey);
-            console.log("reviewData",reviewData);
+            //console.log("storageKey",storageKey);
+            //console.log("reviewData",reviewData);
         }
         if (storedData) {
             try {
@@ -1450,7 +1451,7 @@
             try {
                 reviewList.push(reviewData);
                 if(storageKey === "reviewLista") {
-                    console.log("reviewLista",reviewList);
+                    //console.log("reviewLista",reviewList);
                 }
                 localStorage.setItem(storageKey, JSON.stringify(reviewList));
                 console.log(`${storageKey}数据已成功保存到本地存储`);
@@ -1774,65 +1775,29 @@
             //console.log("retitle",retitle);
             if( !retitle){
 
-                let prpo = JSON.parse(localStorage.getItem('Reviewed1'));
-                //console.log('prpo',prpo);
-                if (prpo!=null){
-                    let strarr ="";
-                    let stmparr=[];
-                    for(let i=prpo.length-1;i>=0;i--){
-                        strarr = prpo[i];
-                        try {
-                            while(strarr.indexOf("undefined")>0){
-                                strarr = strarr.replace("undefined","0");
-                            }
-                            while(strarr.indexOf('""')>0){
-                                strarr = strarr.replace('""','"');
-                            }
-                            while(strarr.indexOf('":","')>0){
-                                strarr = strarr.replace('":","','":"","');
-                            }
-                            stmparr = eval("(" + strarr + ")");
-                            if(stmparr.user==userEmail){
-                                missionGDoc.forEach(item => {
-                                    if(item.title === stmparr.title &
-                                       (new Date(item.responsedate).getTime() <= new Date(stmparr.dt.slice(0,10)).getTime() + 5*24*60*60*1000 )){
-                                        item.ownerstatus = true ;
-                                    }
-                                })
-                            }
-                        } catch(err) {
-                            console.log(err);
+                missionGDoc.forEach(item => {
+                    item.ownerstatus = false;
+                })
+                //let prpo = JSON.parse(localStorage.getItem('Reviewed1'));
+                let prpo = JSON.parse(localStorage.reviewLista);
+                let reviewData = [...prpo].reverse();
+                console.log('reviewData',reviewData);
+                for (const item of reviewData) {
+                    if(item.user === userEmail){
+                        const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
+                        if(matchingMission){
+                            matchingMission.ownerstatus = true ;
                         }
                     }
                 }
-                prpo = JSON.parse(localStorage.getItem('Reviewed2'));
-                //console.log('prpo',prpo);
-                if (prpo!=null){
-                    let strarr ="";
-                    let stmparr=[];
-                    for(let i=prpo.length-1;i>=0;i--){
-                        strarr = prpo[i];
-                        try {
-                            while(strarr.indexOf("undefined")>0){
-                                strarr = strarr.replace("undefined","0");
-                            }
-                            while(strarr.indexOf('""')>0){
-                                strarr = strarr.replace('""','"');
-                            }
-                            while(strarr.indexOf('":","')>0){
-                                strarr = strarr.replace('":","','":"","');
-                            }
-                            stmparr = eval("(" + strarr + ")");
-                            if(stmparr.user==userEmail){
-                                missionGDoc.forEach(item => {
-                                    if(item.title === stmparr.title &
-                                       (new Date(item.responsedate).getTime() <= new Date(stmparr.dt.slice(0,10)).getTime() + 5*24*60*60*1000 )){
-                                        item.ownerstatus = true ;
-                                    }
-                                })
-                            }
-                        } catch(err) {
-                            console.log(err);
+                prpo = JSON.parse(localStorage.reviewListb);
+                reviewData = [...prpo].reverse();
+                console.log('reviewData',reviewData);
+                for (const item of reviewData) {
+                    if(item.user === userEmail){
+                        const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
+                        if(matchingMission){
+                            matchingMission.ownerstatus = true ;
                         }
                     }
                 }
