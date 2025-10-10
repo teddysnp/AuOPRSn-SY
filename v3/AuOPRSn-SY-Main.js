@@ -1,180 +1,124 @@
 // ==UserScript==
-// @name         AuOPRSn-SY-Follow
+// @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      3.0.8
-// @description  Following other people's review
+// @version      6.1.1-a
+// @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      work-wayfarer.tydtyd.workers.dev
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=nianticlabs.com
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
-
 (function() {
+    //变量区
+    let mywin = window;
+    //如果任务中没有，可以修改此处应急，遇到下列名称的po时，会当成池中po进行审核
+    let gpausePortal=["白白的鹅111","腾飞111","无锡记忆——河边洗衣三少妇11。","Curved monument11"];
+    let gpausePortalString=["重复了-白白的大鹅","重复了-马踏飞燕","重复了-洗刷刷","重复了"];
+    let mission ={  //名称,位置,开始,类型,已审,时间
+        name: "",
+        location: "",
+        action: "",
+        type: "",
+        done: "",
+        dt: ""
+    };
+    let missiondisplay = "true";
+    let missionGDoc = []; //从google doc读取的任务列表
+    let missionlist=[]; //0-title;1-lat,lng;2-status:voting;3-types:新增/编辑/图片;4-:true/false本用户是否审核;5-submitterdate:yyyy-mm-dd;6-status=accept:ok
+                        //7-lat;8-lng;9-submitter:email;10-:portal ID;11-moveoptions+moveplace:1-10 11-20;12-:开审日期 yyyy-mm-dd
+    let privatePortal = ["占位po"];
+    let editGYMPhoto = ["重型皮带轮"];//不再使用，将同commitScorePhoto一并删除
+    //早期有错误无法审核的po
+    let errPortal = ["b7a1c45e923048e0be225bbc264f9161","08196910e908e2613194624f7c04a46e"];
 
-    let autoreview = null;
-    let portalData = null;
-    let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確","方向","不準確的位置","不存在的假位置","不雅的內容","涉嫌影響審查結果","令人反感","涉及攻擊性內容或言論","標題含有顏文字或表情符號"];
-    let rejcbxengstr = ["PHOTO_BAD_BLURRY","PHOTO_FACE","PHOTO_PLATE","PHOTO_BAD","TEXT_BAD_TITLE","PHOTO_DIR","MISMATCH","ACCURACY_FAKE","ACCURACY_EXPLICIT","ACCURACY_PERSONAL","ACCURACY_OFFENSIVE","ACCURACY_ABUSE","EMOJI_TITLE"];
-    let reviewPortalAuto ="false";
-    let cloudReviewData = null;
-    localStorage.setItem("reviewPortalAuto",reviewPortalAuto);
+    let tryNumber = 10;
+    let expireTime = null;
+    let reviewTime = 20;  //审po时间为20分钟，用于倒计时
+    let autoReview = null;
+    let reviewPortalAuto = "true";
+    let editGYMAuto = "true";//不再使用，删除时需与commitScoreEdit及监听XMLHttpRequest里一并删除
+    let postPeriod=[25,30];  //自动提交前倒计时，将在此时间内随机生成一个，单位：秒
+    let postTimeoutLimit = 60;//剩余时间小于postTimeoutLimit时将强制提交，单位：秒
+    //let submitCountDown = null;
+    let userID = null;
+    let userEmail = null;//用户邮箱，在加载时从网络读取，用于识别当前用户，并做为审po关键标识用于审核、更新和保存
+    let performance = null;//用户评价，展示用
+    let submitButtonClicked = false;
+    let scoreAlready = false;
+    let saveportalcnt1 = 500;  //本地保存池中审po数量，超过此数量将不保存，先进先出原则
+    let saveportalcnt2 = 500;  //本地保存池外审po数量，超过此数量将不保存，先进先出原则
+    let followPortalDisplay = 30;    //首页显示的跟审数量
+    let expirePortalDisplay = 10;    //首页显示的超时数量
+    let uploadPortalDisplay = 30;    //首页显示的上传数量
+    let privatePortalDisplay1 = 50;  //首页列表中显示池中已审po数量
+    let privatePortalDisplay2 = 50;  //首页列表中显示非池已审po数量
+    let recentPo = 10;//首页显示最近审过的池中po数量
+    let portalData = null;//当前审核的portal数据
+    //VIP区，此区内的portal将无条件五星，格式为：中心点纬度,中心点经度,纬度半径(1/10000),纬度半径(1/10000)
+    let private=[[41.7485825,123.4324825,230,380],[41.803847,123.357713,910,920],[42.2828685,125.738134,3408,5517],[41.755547,123.288777,940,1140],[41.81979911, 123.25708028,910,920],[41.810820,123.376373,547,1036]];
+    let timer = null;
+    let ttm = null;
 
+    let bNextAuto = true;//下一个是否自动，由用户设置
+    if(localStorage.bnextauto) {
+        bNextAuto = localStorage.bnextauto;
+    }
+    let needCaptcha = false;
+    if(localStorage.captchasetting){
+        needCaptcha = localStorage.captchasetting;
+    }
+    //在cloudflare中上传的链接
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
-    //let cookie = localStorage.cfcookie;  使用cloudflare的worker后，不再使用cookie
-    let useremail = "";
-    let tmpfollow={id:null,title:null,lat:null,lng:null,review:null,dateTime:null};
-    let isUserClick = false ;
-    let iautoman = null;
-    let mywin = window;
-    //let missionlist = [];
-    let missionGDoc = []; //从google doc读取的任务列表
+    //let cookie = localStorage.cfcookie;//上传权限  使用cloudflare的worker后，不再使用cookie
+    let userEmailList1 = [];//审核员列表，用于显示
+    let userEmailList2 = [];//审核员列表，用于显示
+    //上传任务po的Google Apps Scripts链接
     let dURL = "https://script.google.com/macros/s/AKfycbwlUEhAm4l8kI617UcNDw2CU7xFR3GGPAMUECt6L5RV8cs4KELQsC6siB_7xwk8JTzpMg/exec";
 
-    mywin.onload = function() {
+    const loginNotice = null;
+
+    //首次运行显示警告
+    let iWarning=0;
+    if(localStorage.Warning) {
+        iWarning = localStorage.Warning;
+    }
+    if (iWarning == 0) {
+        createNotify("欢迎", {
+            body: "请自行承担后果(包括被N社踢出)!",
+            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+            requireInteraction: false
+        });
+        localStorage.setItem("Warning",1);
+    }
+
+    console.log("mywin",mywin.location);
+    mywin.onload = async function() {
+        //createStatusPanel();
         //console.log("onload","getMission");
-        missionGDoc = JSON.parse(localStorage.missionGDoc);
-        getLocalMissionList();
-        getLocalGDocMissionList();
-    }
+        // 先获取用户信息并等待完成
+        const restext = await getUser();
 
-    function getLocalGDocMissionList(){
-        let miss = localStorage.missionGDoc;
-        if (miss) {
-            missionGDoc = JSON.parse(miss);
-            //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
-            console.log("follow-missionGDoc",missionGDoc);
+        // 处理用户信息
+        userEmail = restext.result.socialProfile.email;
+        performance = restext.result.performance;
+
+        if (userEmail) {
+            localStorage.setItem("currentUser", userEmail);
+            document.title = userEmail;
         }
-    }
-    function getLocalMissionList(){
-        /*
-        let miss = localStorage.currentmission;
-        if (miss) {
-            missionGDoc = JSON.parse(miss);
-            //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
-            console.log("follow-missionGDoc",missionGDoc);
-        }*/
-    }
-    //从google doc 读取任务
-    function getMissionFromGoogleDoc() {
-        // 返回 Promise 对象，包裹异步请求逻辑
-        return new Promise((resolve, reject) => {
-            const url = dURL + '?status=mission';
-            if (!url) {
-                reject(new Error("请求地址为空")); // 地址无效时触发失败
-                return;
-            }
 
-            $.ajax({
-                url, type: 'GET', dataType: 'text',
-                success: function (data, status, header) {
-                    try {
-                        let markercollection = JSON.parse(data);
-                        // 筛选状态为'提交'或'审核'的元素
-                        let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
-                        console.log('filteredMarkers', filteredMarkers);
-                        missionGDoc = filteredMarkers;
-                        localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
-
-                        // 初始化 ownerstatus 字段
-                        missionGDoc.forEach(item => {
-                            item.ownerstatus = "";
-                        });
-
-                        console.log("missionGDoc", missionGDoc);
-
-                        // 测试数据修改（保留原逻辑）
-                        let testdata = filteredMarkers.filter(item => item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b" );
-                        if (testdata.length === 1) {
-                            testdata[0].status = "通过";
-                            // testSaveToDoc(testdata[0]); // 如需执行，可在这里调用
-                        }
-
-                        // 数据处理完成，触发 Promise 成功，返回处理后的数据
-                        resolve(missionGDoc);
-
-                    } catch (e) {
-                        console.log(e);
-                        alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
-                        reject(e); // 解析/处理失败时触发 Promise 失败
-                    }
-                },
-                error: function (x, y, z) {
-                    const errorMsg = `请求失败: ${x.status} - ${y}`;
-                    console.log('Err:', errorMsg, x, z);
-                    createNotify("读取任务错误", {
-                        body: "读取任务文档失败！" +errorMsg,
-                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
-                        requireInteraction: false
-                    });
-                    //alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
-                    reject(new Error(errorMsg)); // AJAX 请求失败时触发 Promise 失败
-                }
-            });
-        });
-    }
-    //更新任务数据至Google Doc , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
-    function saveToGDoc(sdata){
-
-        $.ajax({
-            url: dURL, // 确保是最新部署的 GAS 链接
-            type: "POST",
-            // 核心：将对象转为 URL 编码字符串（适配 x-www-form-urlencoded 格式）
-            data: $.param(sdata),
-            // 核心：指定正确的 Content-Type（GAS 能自动解析该格式）
-            contentType: "application/x-www-form-urlencoded; charset=UTF-8",
-            // 不需要禁用 processData（默认 true，$.param 已处理数据，无需额外处理）
-            processData: true,
-            success: function (data, status) {
-                console.log("请求成功，响应数据：", data);
-                // 此处可添加业务逻辑（如提示成功）
-            },
-            error: function (xhr, status, error) {
-                console.error("请求失败：", status, "错误信息：", xhr.responseText);
-                    createNotify("更新任务错误", {
-                        body: "更新任务文档失败！" +xhr.responseText,
-                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
-                        requireInteraction: false
-                    });
-            }
-        });
-    };
-    listenLinkClick();
-    //监听页面点击，获取是否人工点击
-    function listenLinkClick(){
-        document.body.addEventListener("click",function(event){
-            //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
-            //console.log("isTrusted",event.isTrusted);
-            isUserClick = event.isTrusted;
-            if(event.isTrusted) {
-                //console.log(event.srcElement);
-                let iauto = document.getElementById("idautolabel");
-                //if(iauto) console.log(iauto.textContent);
-                if(event.srcElement.innerText == "thumb_down" || event.srcElement.innerText == "標記為重複") {
-                    if (iauto.textContent == "自动") {
-                        iautoman = "自动";
-                        let ibtn = document.getElementById("btnauto");
-                        if (ibtn) {
-                            ibtn.click();
-                        }
-                    }
-                }
-                if(event.srcElement.innerText == "取消" || event.srcElement.innerText == "關閉") {
-                    if (iauto.textContent == "手动" ) {
-                        if(iautoman == "自动") {
-                            let ibtn = document.getElementById("btnauto");
-                            if (ibtn) {
-                                ibtn.click();
-                            }
-                        } else {
-                            iautoman = null;
-                        }
-                    }
-                }
-            }
-        });
+        console.log("最终获取到的用户邮箱：", userEmail);
+        missionGDoc = JSON.parse(localStorage.missionGDoc);
+        //console.log(mywin.location.href);
+        //如果是在展示页，那么获取用户的动作在XMLHttpRequest-showReviewedHome中完成
+        if(mywin.location.href != "https://wayfarer.nianticlabs.com/new/showcase")
+        {
+            await getMissionFromGoogleDoc();
+        }
     }
 
     // 配置 - CloudFlare
@@ -219,6 +163,84 @@
             console.log(`解析响应失败: ${e.message}`);
         }
     }
+    // 列出R2中的文件
+    function listR2Files(folderPath) {
+        const listContainer = document.getElementById('fileList');
+
+        if (!folderPath) {
+            showStatus('请输入文件夹路径', true);
+            return;
+        }
+
+        //listContainer.innerHTML = '<div style="text-align: center; color: #64748b;">加载中...</div>';
+        //showStatus('正在加载文件列表...');
+
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: `${CONFIG.WORKER_URL}/list?prefix=${encodeURIComponent(folderPath)}`,
+            headers: {
+                'X-Secret-Key': CONFIG.SECRET_KEY
+            },
+            onload: function(response) {
+                try {
+                    const result = JSON.parse(response.responseText);
+                    if (result.success) {
+                        if (result.fileCount === 0) {
+                            listContainer.innerHTML = '<div style="color: #64748b;">该路径下没有文件</div>';
+                            showLog('加载完成，未找到文件',false);
+                            return;
+                        }
+
+                        // 生成文件列表
+                        let html = '<table style="width: 100%; border-collapse: collapse;">';
+                        result.files.forEach(file => {
+                            const fileName = file.name.split('/').pop();
+                            html += `
+                                <tr style="border-bottom: 1px solid #f1f5f9; cursor: pointer;"
+                                    onmouseover="this.style.backgroundColor='#f8fafc'"
+                                    onmouseout="this.style.backgroundColor='transparent'">
+                                    <td style="padding: 8px 0;">
+                                        <span data-file="${file.name}" class="file-link">${fileName}</span>
+                                    </td>
+                                    <td style="text-align: right; font-size: 12px; color: #64748b;">
+                                        ${formatSize(file.size)}
+                                    </td>
+                                    <td style="text-align: right; font-size: 12px; color: #64748b; padding-left: 10px;">
+                                        ${new Date(file.lastModified).toLocaleString()}
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        html += '</table>';
+                        listContainer.innerHTML = html;
+
+                        // 绑定文件点击事件
+                        document.querySelectorAll('.file-link').forEach(link => {
+                            link.addEventListener('click', (e) => {
+                                const fileName = e.target.getAttribute('data-file');
+                                readR2File(fileName);
+                            });
+                        });
+
+                        showLog(`成功加载 ${result.fileCount} 个文件` , false);
+                    } else {
+                        listContainer.innerHTML = `<div style="color: #dc2626;">错误: ${result.error}</div>`;
+                        console.log('result',result);
+                        showLog(`加载失败: ${result.error}`, true);
+                    }
+                } catch (e) {
+                    listContainer.innerHTML = `<div style="color: #dc2626;">解析错误: ${e.message}</div>`;
+                    console.log('e',e);
+                    showLog(`解析响应失败: ${e.message}`, true);
+                }
+            },
+            onerror: function(error) {
+                listContainer.innerHTML = `<div style="color: #dc2626;">请求失败: ${error.message}</div>`;
+                console.log('error',error);
+                showLog(`连接失败: ${error.message}`, true);
+            }
+        });
+    }
     // 读取指定的JSON文件
     function readR2File(fileName) {
         return new Promise((res, err) => {
@@ -238,231 +260,981 @@
                     });
                 },
                 onload: function(response) {
-                    /*
                     console.log('收到响应:', {
                         status: response.status,
                         responseText: response.responseText.substring(0, 200) // 只显示前200字符
-                    });*/
+                    });
                     try {
                         const result = JSON.parse(response.responseText);
                         if (result.success) {
-                            //showLog(`成功读取文件: ${result.fileName.split('/').pop()}`,false);
+                            showLog(`成功读取文件: ${result.fileName.split('/').pop()}`,false);
                             res(result);
                         } else {
-                            console.log('返回结果',result.details);
-                            //showLog(`读取失败: ${result.error}`, true);
+                            console.log('result',result);
+                            showLog(`读取失败: ${result.error}`, true);
                             err(result);
                         }
                     } catch (e) {
                         console.log('e',e);
-                        //showLog(`解析文件内容失败: ${e.message}`, true);
+                        showLog(`解析文件内容失败: ${e.message}`, true);
                         err(e);
                     }
                 },
                 onerror: function(error) {
-                    err(error);
-                    console.log('请求错误：',error);
+                    console.log('error',error);
                     showLog(`连接失败: ${error.message}`, true);
                 }
             });
         }).catch(e => {
-            //showLog(`解析文件内容失败: ${e.message}`, true);
-            //console.log('Promise', e)
+            showLog(`解析文件内容失败: ${e.message}`, true);
+            console.log('Promise', e)});
+    }
+
+    //更新任务数据至Google DOC , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
+    function saveToGDoc(sdata){
+        $.ajax({
+            url: dURL,
+            type: "POST",
+            // 核心：将对象转为 URL 编码字符串（适配 x-www-form-urlencoded 格式）
+            data: $.param(sdata),
+            // 核心：指定正确的 Content-Type（GAS 能自动解析该格式）
+            contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+            // 不需要禁用 processData（默认 true，$.param 已处理数据，无需额外处理）
+            processData: true,
+            success: function (data, status) {
+                console.log("请求成功，响应数据：", data);
+                // 此处可添加业务逻辑（如提示成功）
+            },
+            error: function (xhr, status, error) {
+                console.error("请求失败：", status, "错误信息：", xhr.responseText);
+                createNotify("错误", {
+                    body: "更新任务失败！错误：" + xhr.responseText,
+                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                    requireInteraction: false
+                });
+            }
+        });
+    };
+    //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
+    function getMissionFromGoogleDoc() {
+        // 返回 Promise 对象，包裹异步请求逻辑
+        return new Promise((resolve, reject) => {
+            const url = dURL + '?status=mission';
+            if (!url) {
+                reject(new Error("请求地址为空")); // 地址无效时触发失败
+                return;
+            }
+
+            $.ajax({
+                url, type: 'GET', dataType: 'text',
+                success: function (data, status, header) {
+                    try {
+                        let markercollection = JSON.parse(data);
+                        // 筛选状态为'提交'或'审核'的元素
+                        let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
+                        console.log('Main-getGDoc', filteredMarkers);
+                        missionGDoc = filteredMarkers;
+                        localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
+
+                        // 初始化 ownerstatus 字段
+                        missionGDoc.forEach(item => {
+                            item.ownerstatus = "";
+                        });
+                        //console.log("missionGDoc", missionGDoc);
+
+                        // 测试数据修改（保留原逻辑）
+                        let testdata = filteredMarkers.filter(item => item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b" );
+                        if (testdata.length === 1) {
+                            testdata[0].status = "通过";
+                            // testSaveToDoc(testdata[0]); // 如需执行，可在这里调用
+                        }
+
+                        // 数据处理完成，触发 Promise 成功，返回处理后的数据
+                        resolve(missionGDoc);
+
+                    } catch (e) {
+                        console.log(e);
+                        alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                        reject(e); // 解析/处理失败时触发 Promise 失败
+                    }
+                },
+                error: function (x, y, z) {
+                    const errorMsg = `请求失败: ${x.status} - ${y}`;
+                    console.log('Err:', errorMsg, x, z);
+                    //alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
+                    createNotify("错误", {
+                        body: "读取任务列表错误，请刷新页面，否则将无法按计划审核！",
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                        requireInteraction: true
+                    });
+                    reject(new Error(errorMsg)); // AJAX 请求失败时触发 Promise 失败
+                }
+            });
         });
     }
 
+    //测试保存数据至GAC,data为JSON数据格式
+    function testSaveToDoc(data){
+        saveToGDoc(data);
+    }
+
+    // 修复XMLHttpRequest封装，仅在请求完成（readyState=4）时处理响应
     function U_XMLHttpRequest(method, url) {
-//        console.log(method);
-//        console.log(url);
         return new Promise((res, err) => {
             const xhr = new XMLHttpRequest();
-            //Cache-Control: no-cache
             xhr.open(method, url, true);
-            xhr.setRequestHeader("Cache-Control","no-cache");
+            xhr.setRequestHeader("If-Modified-Since", "0");
             xhr.onreadystatechange = function() {
+                // 仅在请求完全完成时处理（readyState=4）
                 if (xhr.readyState === 4) {
-                    //console.log(xhr.status);
                     if (xhr.status === 200) {
-                        res(xhr.responseText);
-                    } else if(xhr.status === 404){
-                        res(xhr.responseText);
-                    } else if(xhr.status==401){
-                        let msg = JSON.parse(xhr.responseText);
-                        //console.log(login);
-                        if(msg){
-                            setTimeout(function(){
-                                let login = document.querySelector("app-login");
-                                if(msg.message=="Unauthorized" & !login) {
-                                    mywin.location.reload();
-                                }
-                            },5000);
-                        }
+                        res(xhr.responseText); // 成功：返回响应文本
                     } else {
-                        console.log("err:",xhr.status);
-                        err(xhr.statusText);
+                        const errorMsg = `${method}:${url} 失败（状态码：${xhr.status}）`;
+                        console.log(errorMsg);
+                        err(new Error(errorMsg)); // 失败：返回错误对象
                     }
                 }
             };
             xhr.onerror = function() {
-                //err(xhr.statusText);
+                const errorMsg = `${method}:${url} 网络错误`;
+                console.log(errorMsg);
+                err(new Error(errorMsg));
             };
             xhr.send();
         }).catch(e => {
-//            console.log('Promise', e)
+            console.log(`${method}:${url} 捕获错误：${e.message}`);
+            throw e; // 重新抛出错误，让调用方处理
         });
-    };
+    }
 
     //监听http请求，不同的页面实现不同功能
     (function (open) {
         XMLHttpRequest.prototype.open = function (method, url) {
-//            console.log(method);
-//            console.log(url);
-            if(url.indexOf("pub-e7310217ff404668a05fcf978090e8ca.r2.dev")>=0){
-//                this.addEventListener('load', getData, false);
+            //console.log(url);
+            //console.log(method);
+            //提示需重新登录
+            if(url === "/api/v1/vault/loginconfig")
+            {
+                console.log(url);
+                //不好使
+                /*
+                console.log("loginNotice1",loginNotice);
+                if(!loginNotice)
+                {
+                    console.log("loginNotice2",loginNotice);
+                    loginNotice = userNotice("登录", {
+                        body: "需要登录",
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                        requireInteraction: true});
+                }
+                console.log("loginNotice3",loginNotice);*/
+                if(!messageNotice.alertwindow){
+                    createNotify("登录", {
+                        body: "需要登录",
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                        requireInteraction: false
+                    });
+                    messageNotice.alertShow();
+                }
             }
-            if (url == '/api/v1/vault/properties' && method == 'GET') {
-                this.addEventListener('load', getUser, false);
+            //审核，调用injectTimer
+            if (url === '/api/v1/vault/review' && method == 'GET') {
+                scoreAlready = false ;
+                let seditGYM = localStorage.editGYMAuto;
+                if(seditGYM) {editGYMAuto=seditGYM};
+                let sreviewPortalAuto = localStorage.reviewPortalAuto;
+                if(sreviewPortalAuto) {reviewPortalAuto=localStorage.reviewPortalAuto};
+                //mywin.clearInterval(ttm);
+                //ttm = null;
+                //mywin.clearInterval(timer);
+                //timer=null;
+                this.addEventListener('load', injectTimer, false);
             }
-            if (url == '/api/v1/vault/review' && method == 'GET') {
-                this.addEventListener('load', injectLoadData, false);
-            }
-            if (url == '/api/v1/vault/review' && method == 'POST') {
+            //提交审核，保存数据至本地(使用saveReviewtoLocal)，并重置timer
+            if (url === '/api/v1/vault/review' && method == 'POST') {
                 let send = this.send;
                 let _this = this;
                 this.send = function (...data) {
-                    try{
-                        let tmpdata = JSON.parse(data[0]);
-                        //console.log("olddata",data);
-                        //console.log("cloudReviewData",cloudReviewData);
-                        //NEW+挪po,直接用网络审核结果覆盖data
-                        if(cloudReviewData!=null) {
-                            if(cloudReviewData.newLocation) {
-                                let lll=cloudReviewData.newLocation;
-                                let lat = parseFloat(lll.substring(0,lll.indexOf(",")-1));
-                                let lng = parseFloat(lll.substring(lll.indexOf(",")+1));
-                                lat = lat + Math.random()/1000000;
-                                lng = lng + Math.random()/1000000;
-                                let sss = lat.toString() +","+lng.toString();
-                                tmpdata.newLocation = sss;
-                                data[0] = JSON.stringify(tmpdata);
-                                console.log("newdata",data);
-                                console.log("挪至新位置：",JSON.parse(data[0]).newLocation);
-                            }
-                        }
-
-                        //跟po，保存记录至本地：用户名+follow
-                        //console.log("查看是否跟po，保存至本地",tmpfollow);
-                        savePostData(tmpfollow,data);
-                        //console.log("tmpdata",tmpdata);
-                        return send.apply(_this,data);
-                    } catch(e) {
-                        console.log(e);
-                    }
+                    //console.log(data);
+                    //clearInterval(timer);
+                    mywin.clearInterval(timer);
+                    timer = null;
+                    //console.log("保存审po数据到本地-portaldata",portalData);
+                    //console.log("保存审po数据到本地-data",data);
+                    saveReviewtoLocal(portalData,data);
+                    //submitCountDown = null;
+                    return send.apply(_this,data);
                     //saveReviewData(data);
                 }
             }
-            if (url == '/api/v1/vault/review/skip' && method == 'POST'){
+            //https://wayfarer.nianticlabs.com/api/v1/vault/review/skip  //7e221f605682750b87a54d393063b9c5
+            //略过时，重置timer
+            if (url === '/api/v1/vault/review/skip' && method == 'POST'){
                 let send = this.send;
                 let _this = this;
                 this.send = function (...data) {
-                    console.log("查看是否跟po，保存至本地",tmpfollow);
-                    if(tmpfollow.id!=null){
-                        let localpd1 = [];
-                        if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
-                        if(localpd1.length==0){
-                            console.log("saving local follow 1");
-                            localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
-                        } else {
-                            console.log("saving local follow n");
-                            localpd1.push(tmpfollow);
-                            localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
-                        }
-                    }
-
-                    //let iautolabel = document.querySelector("p[id='idautolabel']");
-                    //if (iautolabel.textContent == "手动"){
-                        //console.log("data",JSON.parse(data));
-                        let ic =0;
-                        if(cloudReviewData){
-                            if (cloudReviewData.skip) ic=1; else ic=0;
-                        } else {
-                            ic=0;
-                        }
-                        console.log("调用上传接口",isUserClick);
-                        uploadPostData(portalData,JSON.parse(data),ic,true);
-                    //}
-
-                    console.log("skip",data);
-                    console.log("skip",portalData);
+                    //console.log("skip",data);
+                    mywin.clearInterval(timer);
+                    timer = null;
+                    //console.log("skip",portalData);
                     return send.apply(_this,data);
                 }
             }
-
-            if (url == '/api/v1/vault/manage'){
-                this.addEventListener('load', injectManage, false);
+            //初始的时候，保存当前用户的email
+            if (url === '/api/v1/vault/profile' && method == 'GET') {
+                if(!userEmail) {
+                    userEmail = getUser();
+                }
+                this.addEventListener('load', getUserList, false);
+            }
+            //首页，显示审po列表
+            if (url === '/api/v1/vault/home' && method == 'GET') {
+                //console.log(loginNotice);
+                this.addEventListener('load', showReviewedHome, false);
             }
             open.apply(this, arguments);
         };
     })(XMLHttpRequest.prototype.open);
 
-    //用于截获send请于，如果错误在U_XMLHttpRequest能被截获(应该不一样，U_XMLHttpRequest只能得到自己发的请求)，那么这个可能用处不大
-    (function (send) {
-        XMLHttpRequest.prototype.send = function (method, url) {
-            // 记录xhr
-            var xhrmsg = {
-                'url': this.reqUrl,
-                'type': this.reqMethod,
-                // 此处可以取得 ajax 的请求参数
-                'data': arguments[0] || {}
-            }
-            this.addEventListener('readystatechange', function () {
-                if(this.status>400 & this.status!=404 & this.status!=401) {
-                    console.log("send status",this.status);
-                    console.log("send response",this.response);
-                }
-                if (this.readyState === 4) {
-                    // 此处可以取得一些响应信息
-                    // 响应信息
-                    xhrmsg.res = this.response;
-                    xhrmsg.status = this.status;
-                    this.status >= 200 && this.status < 400 ?
-                        xhrmsg.level = 'success' : xhrmsg.level = 'error';
-                    //xhrArray.push(xhrmsg);
-                }
-            });
-            send.apply(this, arguments);
-        };
-    })(XMLHttpRequest.prototype.send);
-
+    //循环10次，用于等待某项加载完成
     const awaitElement = get => new Promise((resolve, reject) => {
         let triesLeft = 10;
         const queryLoop = () => {
             const ref = get();
             if (ref) resolve(ref);
             else if (!triesLeft) reject();
-            else setTimeout(queryLoop, 100);
+            else setTimeout(queryLoop, 250);
             triesLeft--;
         }
         queryLoop();
     }).catch(e => {
         console.log('Promise', e)});
 
-    function getUser(){
-        const resp = U_XMLHttpRequest("GET","https://wayfarer.nianticlabs.com/api/v1/vault/properties")
-        resp.then
-        (res=>{
-            if(res){
-                let restext = JSON.parse(res);
-                if(restext.result.socialProfile.email)
-                {
-                    useremail = restext.result.socialProfile.email;
+    //构造计时器(在wf-logo已经加载下)，并调用初始化计时器initTimer
+    /////////json.result中有portal数据，包括nearby portals，可判断重复，有问题直接发消息，并暂停自动提交
+    ///////////根据经纬度、portalname判断池中、本地、外地 ， 需要暂停的po，发消息，并暂停自动提交
+    function injectTimer() {
+        submitButtonClicked = false;
+        tryNumber = 10;
+        awaitElement(() => document.querySelector('wf-logo'))
+            .then((ref) => {
+            try {
+                const response = this.response;
+                const json = JSON.parse(response);
+                if (!json) return;
+                //console.log(json);
+                if(bNextAuto){
+                    autoReview = "true";
+                    localStorage.setItem("autoReview", autoReview );
+                } else
+                    autoReview = localStorage.autoReview;
+                portalData = json.result;
+                //console.log("injectTimer:needCaptcha",needCaptcha);
+                if (json.captcha) {
+                    if(needCaptcha === "true"){
+                        createNotify("需要验证", {
+                            body: "需要验证！",
+                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                            requireInteraction: true
+                        });
+                    } else {
+                        createNotify("需要验证", {
+                            body: "需要验证！",
+                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                            requireInteraction: false
+                        });
+                    }
+                    return;
                 }
-                return restext.result.socialProfile.email;
+                if(json === null) {
+                    console.log("injectTimer:json为空",json);
+                    return;
+                }
+                if(portalData === null) {
+                    console.log("injectTimer:portalData为空",portalData);
+                    return;
+                }
+                //console.log('portalData',portalData);
+                uploadReviewMark(portalData);  //上传数据至用户打卡
+                expireTime = portalData.expires;
+                initTimer(ref.parentNode.parentNode, portalData.expires ,portalData);
+            } catch (e) {
+                console.log(e);
             }
         });
     }
+
+    //初始化计时器(检测到review/edit/photo的card下) 在顶部增加时间标签 ，当前用户标签，并调用updateTime设置走秒，增加提交倒计时 注入按钮：自动/手动切换
+    function initTimer(container, expiry , portalData1) {
+        awaitElement(() => (
+            document.getElementById('appropriate-card') ||
+            document.querySelector('app-review-edit') ||
+            document.querySelector('app-review-photo')
+        )).then(ref => {
+            //在顶部增加计时标签
+            if(portalData1.type=="NEW") {
+                document.getElementById("title-description-card").setAttribute("class","card");
+                let dd = document.getElementById("title-description-card").parentNode;
+                let dd1 = dd.nextSibling;
+                let dd2 = dd1.nextSibling;
+                dd.parentNode.insertBefore(dd1,dd);
+                dd.parentNode.insertBefore(dd2,dd);
+                let lbtitle = document.querySelector('.review-new.ng-star-inserted').childNodes[0].childNodes[0];
+                if(lbtitle) lbtitle.textContent = portalData1.title;
+            }
+            document.querySelector("h2[class='wf-page-header__title ng-star-inserted']").replaceWith("");
+            let liddvall = document.getElementById("iddvall");
+            let ltimerlabel2 = document.getElementById("idltimerlabel");
+            let countdown = document.getElementById("idcountdown");
+            //console.log("countdown",countdown);
+            if(countdown === null){  //标签不存在则创建
+                let loc = "";
+                const divall=document.createElement("div");
+                const spblank=document.createElement("span");
+                const dvauto = document.createElement("div");
+                const dvautobtn = document.createElement("button");
+                const dvautolabel = document.createElement('p');
+                const dv=document.createElement("div");
+                const div1=document.createElement("div");
+                const ltimerlabel1 = document.createElement('p');
+                let divcountdown=document.createElement("div");
+                let dvupdown = document.createElement("div");
+                let countuplabel = document.createElement('span');
+                let countdownlabel = document.createElement('span');
+                let dvcdown = document.createElement("div");
+                let dvcdown1 = document.createElement("div");
+                let dvcdown2 = document.createElement("div");
+                let dvcdown3 = document.createElement("div");
+                const divuser=document.createElement("div");
+                const userlabel = document.createElement('p');
+                const uname = document.createElement('p');
+                const divaddscore = document.createElement('div');
+                const divaddr = document.createElement('p');
+                const divlocscore = document.createElement('div');
+                const divloc = document.createElement('span');
+                const divblank = document.createElement('span');
+                const divscore = document.createElement('span');
+                {
+                    loc =getLocation(portalData1);
+                    //共注入五部份 divall为总 dvauto dv divuser divcountdown divaddrscore
+                    divall.id="iddvall";
+                    divall.style="width:80%;font-size:16px;";
+                    divall.className="clusertop";
+                    spblank.textContent="　　";
+
+                    //dvauto = dvautobtn + dvautolabel
+                    dvauto.style="width:10%;font-size:16px";
+                    dvauto.className="clusertop1";
+                    dvautobtn.id="btnauto";
+                    dvautobtn.className="txtcenter";
+                    dvautobtn.type="button";
+                    dvautobtn.textContent = "切换";
+                    dvautobtn.style="background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:30px;border-radius:10px;";
+                    dvautobtn.setAttribute("onClick", "startstopAuto()");
+                    dvautolabel.id = "idautolabel";
+                    dvautolabel.textContent = '自动';
+                    dvautolabel.className="txtcenter";
+                    dvauto.appendChild(dvautobtn);
+                    dvauto.appendChild(dvautolabel);
+
+                    //dv = div1 = ltimerlabel1 + ltimerlabel2
+                    dv.style="width:10%;font-size:16px;";
+                    dv.className="clusertop1";
+                    div1.className = 'txtcenter';
+                    ltimerlabel1.id = "idltimerlabel";
+                    ltimerlabel1.textContent = '计时: ';
+                    ltimerlabel2 = document.createElement('p');
+                    ltimerlabel2.id = "idtimerdata";
+                    ltimerlabel2.classList.add("clptimerdata");
+                    //ltimerlabel2.textContent = '开始: ';
+
+                    div1.appendChild(ltimerlabel1);
+                    div1.appendChild(ltimerlabel2);
+                    dv.appendChild(div1);
+
+                    //divcountdown = countdownlabel + countdown
+                    //增加提交倒计时
+                    divcountdown.style="width:10%;font-size:14px";
+                    divcountdown.className="txtcenter";
+                    //增加提交倒计时label
+                    dvupdown.style="width:10%;font-size:20px";
+                    dvupdown.className="txtcenter";
+                    countuplabel.className = 'cluplabel';
+                    countuplabel.style="color:#d9d6c3;";
+                    countuplabel.id = "iduplabel";
+                    countuplabel.textContent = '↑';
+                    //增加提交倒计时label
+                    countdownlabel.className = 'clcountdownlabel';
+                    countdownlabel.id = "idcountdownlabel";
+                    countdownlabel.style="color:#d9d6c3;";
+                    countdownlabel.textContent = '↓';
+                    dvupdown.appendChild(countuplabel);
+                    dvupdown.appendChild(countdownlabel);
+                    divcountdown.appendChild(dvupdown);
+                    //增加提交倒计时标签
+                    dvcdown.style="width:100%;font-size:16px;display:flex;justify-content:flex-center;";
+                    dvcdown.className="txtcenter";
+                    dvcdown1.style="width:5%";
+                    dvcdown1.className="txtcenter";
+                    dvcdown2.style="width:33%";
+                    dvcdown2.className="txtcenter";
+                    dvcdown3.style="width:33%";
+                    dvcdown3.className="txtcenter";
+                    countdown = document.createElement('span');
+                    countdown.className = 'txtcenter';
+                    countdown.id = "idcountdown";
+                    dvcdown2.appendChild(countdown);
+                    dvcdown.appendChild(dvcdown1);
+                    dvcdown.appendChild(dvcdown2);
+                    dvcdown.appendChild(dvcdown3);
+                    //countdown.textContent = '';
+                    //countdown.style.display = 'justify-content: center;';
+                    divcountdown.appendChild(dvcdown);
+                    //console.log(countdown);
+
+                    //divuser = userlabel+uname
+                    divuser.style="width:25%;font-size:14px";
+                    divuser.className="clusertop1";
+                    //增加当前用户label
+                    userlabel.className = 'cluserlabel';
+                    userlabel.id = "iduserlabel";
+                    userlabel.textContent = '当前用户: ';
+                    divuser.appendChild(userlabel);
+                    //增加当前用户标签
+                    uname.className = 'clusername';
+                    uname.id = "idusername";
+                    uname.textContent = '';
+                    uname.textContent = userEmail;
+                    divuser.appendChild(uname);
+
+                    //divaddscore = divaddr + divlocscore( divloc +divblank)
+                    //增加地址、池中本地外地、打分标签
+                    divaddscore.style="width:100%;font-size:14px";
+                    divaddscore.className="clusertop1";
+                    //增加地址
+                    divaddr.className = 'claddr';
+                    divaddr.id = "idaddr";
+                    divaddr.textContent = '';
+                    //增加池中本地外地、打分
+                    divlocscore.className="clusertop1";
+                    //增加池中本地外地
+                    divloc.className = 'clusertop1';
+                    divloc.id = "idloc";
+                    divloc.style="justify-content: flex-start;";
+                    divloc.textContent = '';
+                    //增加空白
+                    divblank.className = 'clusertop1';
+                    divblank.textContent = '.  ||  .';
+                    //增加打分
+                    divscore.className = 'clusertop1';
+                    divscore.id="idscore";
+                    divscore.textContent="";
+
+                    divlocscore.appendChild(divloc);
+                    divlocscore.appendChild(divblank);
+                    divlocscore.appendChild(divscore);
+                    divaddscore.appendChild(divlocscore);
+                    divaddscore.appendChild(divaddr);
+
+                    divall.appendChild(dvauto);
+                    divall.appendChild(dv);
+                    divall.appendChild(divcountdown);
+                    divall.appendChild(divuser);
+                    divall.appendChild(spblank);
+                    divall.appendChild(divaddscore);
+
+                    if(portalData1.type === "NEW") {updateAddress(divaddr);}
+                    switch(loc){
+                        case "池中":
+                            divloc.style="justify-content: flex-start;color:red";break;
+                        case "本地":
+                            divloc.style="justify-content: flex-start;color:blue";break;
+                        case "外地":
+                            divloc.style="justify-content: flex-start;color:black";break;
+                        default :
+                            divloc.style="justify-content: flex-start;";
+                    }
+                    divloc.textContent = "定位："+loc +".||.经纬："+portalData1.lat+","+portalData1.lng;
+                }
+                //兼容Wayfarer Review Timer
+                let pnode = document.querySelector("div[class='wayfarerrtmr']");
+                //console.log(pnode);
+                if(pnode) {
+                    //console.log(pnode.parentNode);
+                    pnode.parentNode.after(divall);
+                } else {
+                    //console.log(container);
+                    container.after(divall);
+                }
+                //showReviewedReview();
+                let submitCountDown = null;
+                if(Math.ceil((new Date().getTime() - expiry + reviewTime*60000) / 1000)>postPeriod[1]){
+                    submitCountDown = 10;
+                } else {
+                    submitCountDown = (postPeriod[0] + ((postPeriod[1] - postPeriod[0]) * Math.random() ) );
+                }
+                //      getSubmitButtonClick();
+                //      mywin.location.reload("#iddvall");
+                //      setTimeout(function(){$("#iddvall").load(location.href+" #iddvall");},0);
+                //console.log(timer);
+                //更新计时器
+//                timer = null;
+                countdown.textContent = Math.ceil(submitCountDown);
+
+                //if(ttm==null) {
+                //console.log("ttm:",ttm);
+                    ttm = mywin.setInterval(() => {
+                        //console.log("ttm",autoReview);
+                        if(autoReview=="true"){
+                            dvautolabel.textContent = '自动';
+                        } else {
+                            dvautolabel.textContent = '手动';
+                        }
+                    },1000);
+               //}
+                if(timer==null) { timer = mywin.setInterval(() => {
+
+                    //超时了
+                    {
+                        let expModal = document.querySelector('app-review-expired-modal');
+                        let expButton = expModal ? expModal.querySelector('.wf-button.wf-button--primary') : null;
+                        if (expButton) {
+                            console.log('超时了',portalData1.title+","+portalData1.id);
+                            //保存到本地超时部分
+                            let reviewExpList = [];
+                            try {
+                                const reviewExpData = localStorage.getItem('reviewExpList');
+                                if (reviewExpData) {
+                                    reviewExpList = JSON.parse(reviewExpData);
+                                    if (!Array.isArray(reviewExpList)) {
+                                        console.warn(`reviewExpList 数据格式错误，已重置为空数组`);
+                                        reviewExpList = [];
+                                    }
+                                }
+                            } catch (error) {
+                                console.error(`解析${reviewExpList}数据失败：`, error);
+                                reviewExpList = [];
+                            }
+                            let reExpData = {email:userEmail,id:portalData1.id,title:portalData1.title,lat:portalData1.lat,lng:portalData1.lng,dateTime:new Date(),review:'超时'};
+                            reviewExpList.push(reExpData);
+                            localStorage.setItem('reviewExpList',JSON.stringify(reviewExpList));
+                            //点击下一个按钮
+                            setTimeout(function(){
+                                expButton.click();
+                            },500);
+                        }
+                    }
+
+                    if(countdown.textContent.indexOf("+")>0){
+                        const ss=countdown.textContent;
+                        const iright=parseInt(ss.substring(ss.indexOf("+")+1,ss.length));
+                        submitCountDown += iright;
+                    }
+                    countdown.textContent = Math.ceil(submitCountDown);
+                    //不重新取一下，切换页面后不更新，非常神奇
+                    let sss = document.getElementById("idcountdown");
+                    if(sss) {
+                        sss.textContent = Math.ceil(submitCountDown);
+                    }
+                    let ltd = document.getElementById("idtimerdata");
+                    if(ltd) updateTime(ltd, expiry);
+                    //updateTime(ltimerlabel2, expiry);
+                    //console.log(submitCountDown);
+                    let ss1=document.getElementById('appropriate-card');
+                    if (document.getElementById('appropriate-card') || document.querySelector('app-review-edit') || document.querySelector('app-review-photo'))
+                    {
+                        //console.log(scoreAlready);
+                        if (!scoreAlready){
+                            setTimeout(function(){
+                                showReviewedReview();
+                            },1000);
+                            let score = commitScore(portalData1,loc);
+                            divscore.textContent = "打分："+score;
+                            scoreAlready = true;
+                        }
+                        //console.log(countdown);
+                        //console.log(submitCountDown);
+                        let tmpautoReview = localStorage.autoReview; let ilimit = reviewTime * 60 +60 ;
+                        if(tmpautoReview) {
+                            if(tmpautoReview == "true") {
+                                ilimit = postTimeoutLimit;
+                            }
+                        }
+                        if(Math.ceil((expiry - new Date().getTime()) / 1000) < ilimit +10 & Math.ceil((expiry - new Date().getTime()) / 1000) >= ilimit +9) {
+                            createNotify("注意", {
+                                body: "将到截止时间，10秒后强制提交!",
+                                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                                requireInteraction: false
+                            });
+                        }
+                        //console.log(Math.ceil((expiry - new Date().getTime())) < ilimit);
+                        //console.log("autoReview",autoReview);
+                        if(( autoReview === "true") || ( autoReview === "false" & ( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit)) ){
+                            //console.log(( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit) );
+                            //console.log(Math.ceil((expiry - new Date().getTime()) / 1000));
+                            //console.log(ilimit);
+                            //console.log(false || false);
+                            if(submitCountDown <= 0){  //倒计时0，提交
+                                //如果秒数负数太多，且提交按钮不可用，则reload
+                                if(submitCountDown <= -60){
+                                }
+                                if(portalData){
+                                    setTimeout(function(){
+                                        clearInterval(ttm);
+                                        mywin.clearInterval(ttm);
+                                        ttm=null;
+                                    },10);
+                                    //错误po 忽略
+                                    if(errPortal.indexOf(portalData.id)>=0){
+                                        let perr = document.querySelector('button[title=""]');
+                                        if(perr) {
+//                                            if(perr.textContent=" 略過 "){
+                                            console.log("timer","cancel");
+                                            createNotify("错误po", {
+                                                body: "忽略："+portalData.title,
+                                                icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                                                requireInteraction: false
+                                            });
+                                            perr.click();
+//                                            }
+                                        }
+                                    } else {
+                                        let isub = false;
+                                        //适当拒
+                                        let rej1 = document.querySelector("app-appropriate-rejection-flow-modal");
+                                        //console.log("rej1",rej1);
+                                        if(rej1) {//wf-button wf-split-button__main wf-button--primary
+                                            let rejbutton = rej1.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                            if (rejbutton) {
+                                                console.log("timer submit","适当性拒！");
+                                                isub = true;
+                                                rejbutton.click();
+                                            }
+                                        }
+                                        //安全拒
+                                        let rej2 = document.querySelector("app-safe-rejection-flow-modal");
+                                        //console.log("rej2",rej2);
+                                        if(rej2) {
+                                            let rejbutton = rej2.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                            if (rejbutton) {
+                                                console.log("timer submit","安全拒！");
+                                                isub = true;
+                                                rejbutton.click();
+                                            }
+                                        }
+                                        //准确拒
+                                        let rej3 = document.querySelector("app-accuracy-rejection-flow-modal");
+                                        if(rej3) {
+                                            let rejbutton = rej3.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                            if (rejbutton) {
+                                                console.log("timer","准确拒！");
+                                                isub = true;
+                                                rejbutton.click();
+                                            }
+                                        }
+                                        //永久拒
+                                        let rej4 = document.querySelector("app-location-permanent-rejection-flow-modal");
+                                        if(rej4) {
+                                            let rejbutton = rej4.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                            if (rejbutton) {
+                                                console.log("timer","永久拒！");
+                                                isub = true;
+                                                rejbutton.click();
+                                            }
+                                        }
+                                        //重复
+                                        setTimeout(function(){
+                                            if(!isub){
+                                                let supcommit = document.querySelector("app-confirm-duplicate-modal");
+                                                let supcommitbtn = null;
+                                                if(supcommit){
+                                                    //console.log(supcommit);
+                                                    supcommitbtn = supcommit.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                                    if(supcommitbtn) {
+                                                        console.log("timer submit","duplicate clicked!");
+                                                        isub = true;
+                                                        supcommitbtn.click();
+                                                    }
+                                                }
+                                            }},200);
+                                        setTimeout(function(){
+                                            if(!isub){
+                                                let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                                if (p1){
+                                                    if(!submitButtonClicked){
+                                                        //console.log(submitButtonClicked);
+                                                        submitButtonClicked = true;
+                                                        console.log("timer","submit!");
+                                                        submitCountDown=null;
+                                                        p1.click();
+                                                    }
+                                                }
+                                            }},200);
+                                    }
+                                }
+                            }
+                            if(autoReview === "true") {
+                                submitCountDown--;
+                                //console.log("switch",autoReview);
+                                dvautolabel.textContent = '自动';
+                            }
+                        } else
+                        {
+                            dvautolabel.textContent = '手动';
+                        }
+                    }
+                }, 1000);} else {
+                    //updateTime(ltimerlabel2, expiry);
+                }
+            } else {
+            }
+        });
+    }
+
+    //更新计时器
+    function updateTime(counter, expiry) {
+        //1分钟的时间戳值:60000 20分钟是1200000
+        let diff = Math.ceil((expiry - new Date().getTime()) / 1000);
+        let timegoing = Math.ceil((new Date().getTime() - expiry + reviewTime*60000) / 1000);
+        //    console.log(timegoing);
+        if (diff < 0) {
+            counter.textContent = "Expired";
+            return;
+        }
+        let minutes = Math.floor(timegoing / 60);
+        let seconds = Math.abs(timegoing % 60);
+        if (minutes < 10) minutes = `0${minutes}`;
+        if (seconds < 10) seconds = `0${seconds}`;
+        counter.textContent = `${minutes}:${seconds}`;
+    }
+
+    // 地址更新函数
+    // divaddr: 用于显示地址的DOM元素
+    // maxAttempts: 最大尝试次数（默认3次）
+    // interval: 每次尝试的间隔时间（毫秒，默认500ms）
+    function updateAddress(divaddr, maxAttempts = 5, interval = 500) {
+        // 递归获取地址的内部函数
+        const fetchAddress = (attemptsLeft) => {
+            // 查找地址元素
+            const addrElement = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+
+            // 尝试次数用尽，退出递归
+            if (attemptsLeft <= 0) {
+                console.log("已达到最大尝试次数，未能获取有效地址");
+                return;
+            }
+
+            // 检查元素是否存在
+            if (!addrElement) {
+                console.log(`地址元素未找到，剩余尝试次数: ${attemptsLeft - 1}`);
+                setTimeout(() => fetchAddress(attemptsLeft - 1), interval);
+                return;
+            }
+
+            // 检查地址是否加载完成（不含"載入中"）
+            const addressText = addrElement.childNodes[1]?.innerText;
+            if (!addressText) {
+                console.log(`地址文本为空，剩余尝试次数: ${attemptsLeft - 1}`);
+                setTimeout(() => fetchAddress(attemptsLeft - 1), interval);
+                return;
+            }
+
+            if (addressText.indexOf("載入中") === -1) {
+                // 地址已加载，处理并更新显示
+                let address = addressText.split(":")[1] || "";
+                address = address.replace(" 邮政编码", "").trim();
+                divaddr.textContent = `地址:${address}`;
+                console.log(`成功获取地址（尝试次数: ${maxAttempts - attemptsLeft + 1}）`);
+            } else {
+                // 仍在加载中，继续尝试
+                console.log(`地址加载中，剩余尝试次数: ${attemptsLeft - 1}`);
+                setTimeout(() => fetchAddress(attemptsLeft - 1), interval);
+            }
+        };
+
+        // 开始第一次尝试
+        fetchAddress(maxAttempts);
+    }
+
+    /*
+    function updateAddress(divaddr){
+        setTimeout(function(){
+                let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+                if(addr ){
+                    if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
+                        let address=addr.childNodes[1].innerText.split(":")[1];
+                        address=address.replace(" 邮政编码","");
+                        divaddr.textContent = "地址:"+address;
+                        return;
+                    }
+                    setTimeout(function(){
+                        let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+                        if(addr ){
+                            if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
+                                let address=addr.childNodes[1].innerText.split(":")[1];
+                                address=address.replace(" 邮政编码","");
+                                divaddr.textContent = "地址:"+address;
+                                console.log("第二次取地址");
+                                return;
+                            }
+                            setTimeout(function(){
+                                let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+                                if(addr ){
+                                    if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
+                                        let address=addr.childNodes[1].innerText.split(":")[1];
+                                        address=address.replace(" 邮政编码","");
+                                        divaddr.textContent = "地址:"+address;
+                                        console.log("第三次取地址");
+                                        return;
+                                    }
+                                }
+                            },1000);
+                        }
+                    },1000);
+                }
+        },500);
+    }
+    function updateAddress1(divaddr){
+        setTimeout(function(){
+            let itry = 3;
+            const queryloop = () => {
+                let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
+                if(addr ){
+                    if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
+                        let address=addr.childNodes[1].innerText.split(":")[1];
+                        address=address.replace(" 邮政编码","");
+                        divaddr.textContent = "地址:"+address;
+                    };
+                    itry--;
+                    if(itry<=1){
+                        return;
+                    }
+                }
+            };
+            queryloop();
+        },500);
+    }
+    */
+
+    saveUserNameList = function (){
+        let cbsuser = document.querySelectorAll("input[class='cbxusername']");
+        let usernamelist="";
+        if(cbsuser) {
+            for(let i=0;i<cbsuser.length;i++){
+                if(cbsuser[i].checked){
+                    usernamelist+=cbsuser[i].value+",";
+                }
+            }
+            usernamelist=usernamelist.substr(0,usernamelist.length-1);
+            localStorage.setItem(userEmail+"user",usernamelist);
+        }
+    }
+    function getUserList(){
+        awaitElement(() => document.querySelector("div[class='wf-page-header']"))
+            .then((ref) => {
+            try {
+                const response = this.response;
+                const json = JSON.parse(response);
+                if (!json) return;
+                let userprofile = json.result;
+                let arrjson = [];
+                arrjson.push(JSON.stringify(json));
+                //console.log(arrjson);
+                //      console.log(userprofile);
+                //console.log(needCaptcha);
+                if (json.captcha) {
+                    if(needCaptcha=="true"){
+                        createNotify("需要验证", {
+                            body: "需要验证！",
+                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                            requireInteraction: true
+                        });
+                    } else {
+                        createNotify("需要验证", {
+                            body: "需要验证！",
+                            icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
+                            requireInteraction: false
+                        });
+                    }
+                    return;
+                }
+                if(document.querySelector("div[class='wf-page-header']")) {
+                    let userlist = [];
+                    if(localStorage.userList) {userlist = JSON.parse(localStorage.userList)};
+                    let suser="";
+                    if(userlist){
+                        let localuserlist=localStorage[userEmail+"user"];
+                        if(!localuserlist) localuserlist="";
+                        suser+="<div><span>当前用户："+userEmail+"</span>　　<button type='button' style='background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:30px;border-radius:10px;'"+
+                            "onclick=saveUserNameList()>保存</button><div><p>";
+                        for(let i=0;i<userlist.length - 1;i++){
+                            if(userlist[i].indexOf("@") == -1) {
+                                if(localuserlist.indexOf(userlist[i])>=0){
+                                    suser+="<input type='checkbox' class='cbxusername' checked id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
+                                } else {
+                                    suser+="<input type='checkbox' class='cbxusername' id='cbx"+i+"' value='"+userlist[i]+"'>"+userlist[i]+"</input><span>　　<span>";
+                                }
+                            }
+                            if((i+1)%5==0){
+                                suser+="<p>";
+                            }
+                        }
+                        suser="<div id='dvuserlist'>"+suser+"</div>";
+                    }
+                    let bnext = "";
+                    //console.log("bNextAuto",bNextAuto);
+                    if(bNextAuto){
+                        bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' checked onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
+                    } else {
+                        bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
+                    }
+                    let cbxcaptcha=localStorage.captchasetting;
+                    //console.log(cbxcaptcha);
+                    let cap ="";
+                    if(cbxcaptcha=="true") {
+                        cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' checked onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
+                    } else {
+                        cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
+                    }
+                    //let scookie="<p><div><button id='btncookie' style='background-color:#e7e7e7;color:black;display:inline-block;width:60px;height:30px;border-radius:10px;' onclick='saveCookie()'>保存</button><input id='txtCookie' type='text' style='width:90%'></input></div></p>";
+                    //$("wf-page-header").after(scookie);
+                    $("wf-page-header").after(cap);
+                    $("wf-page-header").after(bnext);
+                    $("wf-page-header").after(suser);
+                }
+            } catch (e) {
+                console.log(e);
+            }
+        });
+    }
+
+    saveNextAutoSetting = function(){
+        let cbx = document.querySelector("input[id='idnextauto']");
+        //      console.log(cbx.checked);
+        bNextAuto = cbx.checked;
+        localStorage.setItem("bnextauto",cbx.checked);
+    }
+    saveCaptchaSetting = function() {
+        let cbx = document.querySelector("input[id='idcaptcha']");
+        //      console.log(cbx.checked);
+        localStorage.setItem("captchasetting",cbx.checked);
+    }
+
+    startstopAuto = function() {
+        if(autoReview == "true")
+        {
+            autoReview ="false";
+        } else
+        {
+            autoReview ="true";
+        }
+        localStorage.setItem("autoReview", autoReview );
+        //console.log("switch auto",autoReview);
+    }
+
     // 简化getUser，只负责获取和解析原始数据
-    function getUserPromise() {
+    function getUser() {
         return U_XMLHttpRequest("GET", "https://wayfarer.nianticlabs.com/api/v1/vault/properties")
             .then(res => {
             //console.log("getUser 响应内容：", res);
@@ -487,1237 +1259,1289 @@
         });
     }
 
-    function injectLoadData() {
-        awaitElement(() => document.querySelector('wf-logo'))
-            .then((ref) => {
-            try {
-                const response = this.response;
-                const json = JSON.parse(response);
-                if (!json) return;
-                if (json.captcha || json==null) {
-                    return;
-                }
-                portalData = json.result;
-                if(!portalData) return;
-                if (missionGDoc.length === 0) {missionGDoc = JSON.parse(localStorage.missionGDoc);}
-                console.log("开始新审核:",portalData.title);
-                console.log("原始po数据:",portalData);
-//                if(!portalData.id || portalData.id==null) return;
-                setTimeout(function(){ loadReviewData(portalData); },1000);
-//                let testid = "74908645df72e5da08ebd13be138275c";
-//                loadReviewData(testid);
-            } catch (e) {
-                console.log(e);
-            }
-        });
-    }
 
-    //申请页面
-    function injectManage() {
-
-        awaitElement(() => document.querySelector('app-submissions'))
-            .then((ref) => {
-            try {
-                const response = this.response;
-                const json = JSON.parse(response);
-                if (!json) return;
-                if (json.captcha || json==null) {
-                    return;
-                }
-                let pData = json.result;
-                //console.log("pData",pData);
-                let missionGDocstr = localStorage.missionGDoc;
-                if(missionGDocstr) {missionGDoc = JSON.parse(missionGDocstr);} else {return;}
-
-                missionGDoc.forEach(item => {
-                });
-
-                //console.log("missionGDoc",missionGDoc);
-                if(pData.submissions){
-                    missionGDoc.forEach(item => {
-                        //console.log('item',item);
-                        let isave=0;
-                        let iphoto=0;let iphoto1=0;
-                        if(item.types === "图片"){
-                            //console.log("injectManage-item",item);
-                        }
-                        for(let i=0;i<pData.submissions.length;i++){
-                            //console.log("申请:",pData.submissions[i]);
-                            //1分钟的时间戳值:60000 20分钟是1200000
-                            if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
-                            {
-                                if(item.title === "1905文化创意园" || pData.submissions[i].title === "1905文化创意园"){
-                                console.log("injectManage-item",item);
-                                console.log(`injectManage-pData.submissions[${i}]`,pData.submissions[i]);
-                                    console.log("injectManage-NotPHOTO-item",item);console.log("injectManage-NotPHOTO-pData.submissions[i]",pData.submissions[i]);
-                                }
-                                //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
-                                if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - 60000*60*24*3 ) )
-                                {
-                                    //pData.submissions.status === "NIANTIC_REVIEW" 系统审 !!!!!!!!!!!!!!!!!!!!!!!!!
-                                    let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
-                                    if(pData.submissions[i].type === "PHOTO"){
-                                        if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED"))
-                                        {
-                                            iphoto+=0;
-                                            console.log("iphoto+0");
-                                        }
-                                        //开审 : 否则也算开审，否则任务里可能不再显示，将来无法再更新成通过
-                                        if(pData.submissions[i].status === "VOTING") {
-                                            console.log("iphoto+1");
-                                            iphoto+=1;
-                                        }
-                                        if(pData.submissions[i].status === "NIANTIC_REVIEW") {
-                                            console.log("iphoto1+1");
-                                            iphoto1+=1;
-                                        }
-                                    } else {
-                                        if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED") & item.status != "通过") {
-                                            item.status = "通过";
-                                            isave=1;
-                                            console.log("injectManage-NotPHOTO-","isave1:通过");
-                                        }
-                                        //开审
-                                        if(pData.submissions[i].status == "VOTING" & item.status != "审核") {
-                                            item.status = "审核";
-                                            isave=1;
-                                            console.log("isave2：审核");
-                                        }
-                                    }
-                                    //审核人写错
-                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") & item.submitter != useremail) {
-                                        item.submitter = useremail ;
-                                        isave=1;
-                                        console.log("isave3：更新邮箱");
-                                    }
-                                    //更新经纬度、id
-                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") &
-                                       (pData.submissions[i].lat != item.lat || pData.submissions[i].lng != item.lng )){
-                                        console.log("ptitle",pData.submissions[i].title);
-                                        console.log("mtitle",JSON.stringify(item.title));
-                                        console.log("plat",JSON.stringify(pData.submissions[i].lat));
-                                        console.log("mlat",JSON.stringify(item.lat));
-                                        console.log("plng",JSON.stringify(pData.submissions[i].lng));
-                                        console.log("mlng",JSON.stringify(item.lng));
-                                        item.lat = pData.submissions[i].lat;item.lng = pData.submissions[i].lng;
-                                        isave=1;
-                                        console.log("isave1：更新经纬度及id");
-                                    }
-                                }
-                            } else {
-                                //名字如果写错，将进行智能匹配
-                                let iTitle1 = approximateMatch(item.title,pData.submissions[i].title);
-                                let iTitle2 = approximateMatch(item.title,pData.submissions[i].poiData.title);
-                                /*if(item.title === "万达木馬"){
-                                console.log(item.title+","+pData.submissions[i].title,iTitle1);
-                                console.log(item.title+","+pData.submissions[i].poiData.title,iTitle2);
-                            }*/
-                                if(iTitle1 || iTitle2){
-                                    console.log(pData.submissions[i].title || pData.submissions[i].poiData?.title || item.title);
-                                    item.title = pData.submissions[i].title || pData.submissions[i].poiData?.title ;
-                                    isave = 1;
-                                    console.log("名字写错");
-                                }
-                            }
-                        }
-                        //console.log(`injectManage-iphoto:${iphoto}`);
-                        if(item.types === "图片"){
-                            // 使用switch处理item.status的多状态判断
-                            switch (item.status) {
-                                case "提交":
-                                    // 处理"提交"状态的逻辑
-                                    console.log(`任务《${item.title}》处于提交状态`);
-                                    if(iphoto === 0){//修改过，需测试是否影响其它
-                                        item.status = "通过";
-                                        isave=1;
-                                        console.log("isave1：多图片更新为通过");
-                                    } else {
-                                        item.status = "审核";
-                                        isave=1;
-                                        console.log("isave1：多图片更新为审核");
-                                    }
-                                    break;
-                                case "审核":
-                                    // 处理"审核"状态的逻辑
-                                    console.log(`任务《${item.title}》正在审核中`);
-                                    if(iphoto === 0){
-                                        if(iphoto1 > 0) {//只有官方审核，改为提交
-                                            item.status = "提交";
-                                            isave=1;
-                                            console.log("isave5：多图片仅官方审核为提交");
-                                        } else {
-                                            item.status = "通过";
-                                            isave=1;
-                                            console.log("isave1：多图片更新为通过");
-                                        }
-                                    } else {
-                                    }
-                                    break;
-                                case "通过":
-                                    // 处理"通过"状态的逻辑
-                                    if(iphoto === 0){
-                                    } else {
-                                    }
-                                    console.log(`任务《${item.title}》已通过审核`);
-                                    break;
-                                default:
-                                    // 处理所有未明确声明的状态（默认分支）
-                                    console.warn(`发现未知状态：${item.status}，任务标题：${item.title}`);
-                                    break;
-                            }
-                        }
-                        //console.log(item.title +':isave',isave);
-                        //更新云中任务
-                        if(isave === 1){
-                            console.log("更新任务至GDoc",item.title);
-                            setTimeout(function(){
-                                localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
-                                saveToGDoc(item);
-                            },500);
-                        }
-                    })
-                }
-            } catch (e) {
-                console.log(e);
-            }
-        });
-    }
-
-    //NEW:根据标题名有重合，给提示是否重复，并加20秒倒计时
-    function isDuplicate(pData){
-        if(pData.nearbyPortals.find(p=>{return p.title==pData.title})){
-            setTimeout(function(){
-                let iauto = document.getElementById("idautolabel");
-                //console.log(iauto);
-                let sc = document.getElementById("idcountdown");
-                sc.textContent = sc.textContext + "+20";
-                if (iauto)
-                {
-                    if (iauto.textContent == "自动"){
-                        let ibtn = document.getElementById("btnauto");
-                        //console.log(ibtn);
-                        if (ibtn) {
-                            //可能重复po后，改手动(不再改手动)
-                            //ibtn.click();
-                        }
-                    }
-                }
-                console.log("重复po");
-                console.log("duplicate dialog",document.querySelector("app-confirm-duplicate-modal"));
-                createNotify("可能有重复po", {
-                    body: pData.nearbyPortals.find(p=>{return p.title==pData.title}).title,
-                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
-                    requireInteraction: false
-                });
-                //这两个判断应该重复了，需测试确认，也许下面这个不可靠，因为地图不加载
-                if (document.querySelector("[alt='"+pData.title+"']")) {
-                    document.querySelector("[alt='"+pData.title+"']").click();
-                }
-            },500);
-            //}
-        }
-    }
-
-    //PHOTO:未找到网络审核，按任务中选/瞎选一个
-    function photoReview(pdata){
-        //console.log("follow-photoReview",pdata);
-        if(pdata.type!="PHOTO") return;
-        let tmptext = "";
-        let shouldBreak = false ;
-        missionGDoc.forEach(item => {
-            //任务里有，全选：photo只能做到全选
-            //console.log("photoReview-item",item);console.log("photoReview-pdata",pdata);
-            if (shouldBreak) return;
-            if(item.id === pdata.id){
-                const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
-                if(photoall.className.indexOf("photo-card--reject")==-1){
-                    //以下，不一定哪个会被点击，很奇怪
-                    photoall.parentNode.parentNode.click();
-                    photoall.click();
-                }
-                tmptext = "任务po:全选";
-                shouldBreak = true;
-            }
-            else if(item.title === pdata.title){
-                const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
-                if(photoall.className.indexOf("photo-card--reject")==-1){
-                    //以下，不一定哪个会被点击，很奇怪
-                    photoall.parentNode.parentNode.click();
-                    photoall.click();
-                }
-                tmptext = "任务po:全选";
-                shouldBreak = true;
-            }
-        })
-        console.log("follow-shouldBreak",shouldBreak);
-        if(!shouldBreak){
-            const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
-            if (photo)
-            {
-                //console.log("follow-photo",photo[0]);
-                if(photo[0].className.indexOf("photo-card--reject") === -1) photo[0].click();
-                tmptext = "瞎选第一个";
-                //以下，不一定哪个会被点击，很奇怪
-                const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
-                if(photoall.className.indexOf("photo-card--reject")==-1){
-                    //以下，不一定哪个会被点击，很奇怪
-                    photoall.parentNode.parentNode.click();
-                    //photoall.click();
-                }
-            }
-        }
-        setTimeout(function(){
-            let ilabel = document.getElementById("idscore");
-            if(ilabel) ilabel.textContent = tmptext;
-            console.log("idscore",tmptext);
-        },500);
-    }
-
-    //EDIT:未找到网络审核，按任务中选/瞎选
-    function editReview(pdata){
-        if(pdata.type!="EDIT") return;
-        let iplan = null;let tmptext = "";
-        //任务里有：其它瞎选，经纬度按任务挪
-        missionGDoc.forEach( item => {
-            if(item.id === pdata.id){
-            } else if(item.title === pdata.title){
-                if(item.moveoptions === "右") iplan =10;
-                if(item.moveoptions === "下") iplan =20;
-                if(item.moveoptions === "左") iplan =(parseInt(item.moveplace || 1, 10));
-                if(item.moveoptions === "上") iplan =(parseInt(item.moveplace || 1, 10)) + 10;
-            }
-        })
-
-        //标题：点第一个
-        let icnt2 = 0;
-        let optp2 = document.querySelector('app-select-title-edit mat-radio-button');
-        if (optp2) {
-            optp2.scrollIntoView(true);
-            //console.log(opt2);
-            awaitElement(() => optp2.querySelector("label[class='mat-radio-label']"))
-                .then((ref) => {
-                let opt2 = optp2.querySelector("label[class='mat-radio-label']");
-                opt2.click();
-                tmptext = "瞎选第一个";
-                console.log("title click!");
-            })
-        }
-
-        //描述：点第一个
-        let icnt3 = 0;
-        let optp3 = document.querySelector('app-select-description-edit mat-radio-button');
-        if (optp3) {
-            optp3.scrollIntoView(true);
-            awaitElement(() => optp3.querySelector("label[class='mat-radio-label']"))
-                .then((ref) => {
-                let opt3 = optp3.querySelector("label[class='mat-radio-label']");
-                opt3.click();
-                tmptext = "瞎选第一个";
-                console.log("description click!");
-            })
-        }
-
-        //点地图中的第一个点
-        let icnt1 = 0;
-        let optp = document.querySelector('agm-map');
-        if (optp) {
-            //optp.scrollIntoView(true);
-            optp.scrollTo({top:0,left:0,behavior:'smooth'});
-            //setTimeout(scrollToBottom, 100);
-            let ccard = document.querySelector("wf-review-card[id='categorization-card']");
-            if(ccard){
-                ccard.scrollIntoView(true);
-            }
-            setTimeout(function(){
-                //地图不出来，所以先滚动到下面categorization处
-                awaitElement(() => document.querySelector("wf-checkbox mat-checkbox input"))
-                    .then((ref) => {
-                    let cbxpt = document.querySelector("wf-checkbox mat-checkbox input");
-                    let btnpt = document.querySelectorAll('agm-map div[role="button"]');
-                    if (cbxpt) {
-                        console.log("iplan",iplan);
-                        console.log("iplan & iplan>=0",iplan & iplan>=0);
-                        if(iplan){
-                        if(iplan>=0)
-                        {
-                            console.log("iplam1",iplan);
-                            let ptbutton = document.querySelectorAll('agm-map div[role="button"]');
-                            let ptstruct = getbtnStruct(ptbutton);
-                            //console.log(editGYMPosition[ititle]);
-                            //console.log(editGYMPosition[ititle][2]);
-                            //let iplan = editGYMPosition[ititle][2];
-                            //按计划对要挪的坐标点进行排序
-                            let resortdata = getclickedbtn(ptstruct,iplan);
-                            let movepos = parseInt(iplan);
-                            if( movepos >10) movepos = movepos-10;
-                            console.log("GYMData",ptstruct);
-                            console.log("resortGYM",resortdata);
-                            console.log("movepos",movepos);
-                            //console.log(resortdata.length);
-                            if(movepos<=resortdata.length || movepos == 10){
-                                let resdata=null;
-                                if(movepos==10) {resdata=resortdata[resortdata.length - 1];} else {resdata=resortdata[movepos-1];}
-                                console.log("resdata",resdata);
-                                ptbutton.forEach((ptbtn)=>{
-                                    //left: 65px; top: -135px;
-                                    if(ptbtn.getAttribute('style').indexOf("left: "+resdata.left +"px; top: "+resdata.top)>=0){
-                                        console.log("选中",ptbtn);
-                                        let idscore = document.querySelector("span[id='idscore']");
-                                        if(idscore) {
-                                            setTimeout(function(){
-                                                if(iplan<10){
-                                                    idscore.textContent = "左第"+iplan+"个";
-                                                } else if(iplan==10){
-                                                    idscore.textContent = "最右边";
-                                                } else if(iplan<20){
-                                                    idscore.textContent = "上第"+(iplan-10)+"个";
-                                                } else if(iplan==20){
-                                                    idscore.textContent = "最下";
-                                                }
-                                            },1000);
-                                        }
-                                        ptbtn.click();
-                                        return;
-                                    }
-                                })
-                            }
-                        }
-                        }
-                        else
-                        {
-                            if(btnpt.length>0){
-                                btnpt[0].click();
-                                tmptext = "瞎选第一个";
-                            }
-                        }
-                    }
-                    console.log("map click!");
-                })
-            },1000);
-        }
-
-        //滚回顶部
-        setTimeout(function(){
-            var conpan = document.querySelector('mat-sidenav-content[class="mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100"]');
-            if(conpan)
-            {
-                conpan.scrollTo({top:0,left:0,behavior:'smooth'});
-            }
-            let ilabel = document.getElementById("idscore");
-            if(ilabel) ilabel.textContent = tmptext;
-            console.log("idscore",tmptext);
-        },1500);
-    }
-
-    //判断云端是否有审核记录，执行跟审或任务审
-    function loadReviewData(pdata){
-        //console.log(id);
-        //let sid="05a6bef32a01cc9e39c967677e18763f";
-        //console.log("email",useremail);
-        let tmptext = '';
-        let id=pdata.id;
-        tmpfollow.id = null; tmpfollow.title = null; tmpfollow.lat = null; tmpfollow.lng = null; tmpfollow.review = null;
-        //console.log(durl+"/portal/portalreview/portal." +id +".json");
-        //let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
-        //console.log("loadReviewData",pdata);console.log("id",id);
-        let resp = readR2File("portal/portalreview/portal." +id +".json")
-        .then(res=>{
-            //console.log("getjson",res);
-            let idown = document.getElementById("idcountdownlabel");
-            let ilabel = document.getElementById("iduserlabel");
-            //getLocalMissionList();
-            //console.log("follow-loadReviewData-res",res);
-            if(!res) {
-                //修改首页下载显示
-                //console.log("getjsonerr");
-                cloudReviewData = null;
-                setTimeout(function(){
-                    if(ilabel) ilabel.textContent = "未找到网络审核记录";
-                    if(idown) idown.style="font-weight:bold;color:yellow";
-                },1000);
-                //未找到网络审核时，去判断是否有重复可能
-                if(pdata.type === "EDIT") editReview(pdata);
-                if(pdata.type === "PHOTO") photoReview(pdata);
-                if(pdata.type === "NEW") isDuplicate(pdata);
-                return null;
-            }
-            let restext = JSON.stringify(res.content);
-            if(restext.indexOf("Error 404")>=0) {
-                //修改首页下载显示
-                //中黄：ffe600
-                if(idown) idown.style="font-weight:bold;color:#ffe600";
-                console.log("未找到json");
-                cloudReviewData = null;
-                setTimeout(function(){
-                    if(ilabel) ilabel.textContent = "未找到网络审核记录";
-                },1000);
-                //未找到网络审核时，去判断是否有重复可能
-                if(pdata.type=="EDIT") editReview(pdata);
-                if(pdata.type=="PHOTO") photoReview(pdata);
-                if(pdata.type=="NEW") isDuplicate(pdata);
-                return null;
-            }
-            if(restext.indexOf("<!DOCTYPE html>")>=0){
-                cloudReviewData = null;
-                setTimeout(function(){
-                    if(ilabel) ilabel.textContent = "未找到网络审核记录";
-                },1000);
-                //未找到网络审核时，去判断是否有重复可能
-                if(pdata.type=="EDIT") editReview(pdata);
-                if(pdata.type=="PHOTO") photoReview(pdata);
-                if(pdata.type=="NEW") isDuplicate(pdata);
-                return null;
-            }
-            //20241106，将原审核记录通过脚本移动到portal/portalreview下，导致20141105以前的文件中多了：
-            //  开头"(应该没有)  结尾:"(应该没有)  中间\"(应该无\)
-            //20241106以后生成的审核记录应该无此问题
-            let res1 = null;
-            if(restext.substring(0,1)=='"')
-            {
-                res1=restext.substring(1,restext.length-1);
-                res1=res1.replace(/\\/g,"");
-            } else res1=restext;
-
-            //console.log("res1",JSON.parse(res1));
-            let creviewdata = null;
-            let title=pdata.title;let lat=pdata.lat;let lng=pdata.lng;
-            if(res1.substring(0,1)=="[") {
-                //console.log("searching review record：",JSON.parse(JSON.parse(res1)[0]));
-                creviewdata = JSON.parse(JSON.parse(res1)[0]);   //网络审核记录
-            } else {
-                //console.log("searching review record：",JSON.parse(res));
-                creviewdata = JSON.parse(res1);   //网络审核记录
-            }
-            if(idown) idown.style="font-weight:bold;color:#1d953f";
-            cloudReviewData = creviewdata ;
-            if(creviewdata==null) { return null; }
-            console.log("cloudReviewData",cloudReviewData);
-            let rdata = creviewdata;
-            //rejectReasons 是个数组
-            tmpfollow.id=id;tmpfollow.title=title;tmpfollow.lat=lat;tmpfollow.lng=lng;
-            //skip：NEW,EDIT,PHOTO都有
-            if(rdata.skip){
-                if(pdata.canSkip){
-                    tmptext = "照抄网络审核：略过";
-                    tmpfollow.review="skip";
-                    let perr = document.querySelector('button[title=""]');
-                    if(perr) {
-                        if(perr.textContent=" 略過 "){
-                            console.log("略过","略过按钮被点击");
-                            setTimeout(function(){
-                                perr.click();
-                            },5000);
-                        }
-                    }
-                } else {
-                    console.log("错误","此号不能再略过");
-                    createNotify("错误po", {
-                        body: "网络审核是略过，但此号已经不能再略过，需人工干预！"+pdata.title,
-                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
-                        requireInteraction: true
-                    });
-                }
-            }
-            //pdata.type=="PHOTO"
-            if(pdata.type=="PHOTO"){
-                tmptext = "照抄网络审核：";
-                const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
-                const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
-                if(rdata.rejectPhotos.length==0){
-                    if(photoall.className.indexOf("photo-card--reject") === -1){
-                        setTimeout(function(){ console.log('photoall',photoall);
-                                              //以下，不一定哪个会被点击，很奇怪
-                                              photoall.parentNode.parentNode.click();
-                                              photoall.click();
-                                             },500);
-                        tmptext = "照抄网络审核：全选";
+    //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
+    function uploadReviewMark(portaldata){
+        try{
+            //console.log("uploadReviewMark:portaldata",portaldata);
+            //console.log("uploadReviewMark:missionGDoc",missionGDoc);
+            if(!missionGDoc){ return;}
+            let pname = null; let preview=null;
+            missionGDoc.forEach(item => {
+                let isMissPortal = false ;
+                if(item.portalID != null) {
+                    if(item.portalID === portaldata.id) {
+                        isMissPortal = true;
+                        console.log("任务po有人审过",portaldata.id+","+portaldata.title);
                     }
                 } else{
-                    setTimeout(function(){
-                        for(let i=0;i<pdata.newPhotos.length;i++){
-                            if(photo[i].className.indexOf("photo-card--reject")>=0){
-                                photo[i].click();
-                            }
-                            for(let j=0;j<rdata.rejectPhotos.length;j++){
-                                if (rdata.rejectPhotos[j] == pdata.newPhotos[i].hash) {
-                                    photo[i].click();
-                                    tmptext+=(i+1)+"/";
-                                }
-                            }
+                    if (item.title === portaldata.title) {
+                        if(Math.abs(item.lat-portaldata.lat)<=0.001 & Math.abs(item.lng-portaldata.lng)<=0.01) {
+                            isMissPortal = true;
+                            console.log("任务po没人审过",portaldata.id+","+portaldata.title);
+                            pname = portaldata.title;preview=item.status;
                         }
-                    },500);
-                }
-            }//pdata.type=="PHOTO"
-            //pdata.type=="EDIT"
-            if(pdata.type=="EDIT"){
-                tmptext = "照抄网络审核：";
-                //rdata selectedLocationHash selectedTitleHash selectedDescriptionHash
-                //pdata titleEdits[] descriptionEdits[] locationEdits[]
-                //titleUnable : 以上皆非
-                let ilat = null;let ilng = null;
-                for(const item of pdata.locationEdits) {
-                    if(item.hash === rdata.selectedLocationHash){
-                        ilat = item.lat; ilng = item.lng;
                     }
                 }
-                if(ilat !== null) {
-                    let stmp = "";
-                    if(ilat > pdata.lat ) stmp = "上";
-                    if(ilat < pdata.lat ) stmp = "下";
-                    if(ilat === pdata.lat && ilng === pdata.lng) stmp = "不变";
-                    if(ilng > pdata.lng ) stmp += ";右";
-                    if(ilng < pdata.lng ) stmp += ";左";
-                    tmptext = "照抄网络审核："+stmp;
-                }
-                setTimeout(function(){
-                    let btntitle = document.querySelector('app-select-title-edit');
-                    if(btntitle) {
-                        let labdesc = btntitle.querySelectorAll("label[class='mat-radio-label']");
-                        if(rdata.titleUnable){
-                            tmptext += "名称否";
-                            labdesc[labdesc.length-1].click();
-                        } else if(rdata.selectedTitleHash){
-                            for (let i=0;i<pdata.titleEdits.length;i++){
-                                if(rdata.selectedTitleHash == pdata.titleEdits[i].hash) {
-                                    labdesc[i].click();
-                                }
-                            }
-                        }
+                if (item.title === portaldata.title) {
+                    if(Math.abs(item.lat-portaldata.lat)<=0.001 & Math.abs(item.lng-portaldata.lng)<=0.01) {
+                        pname = portaldata.title;preview=item.status;
                     }
-                    //descriptionUnable : 以上皆非
-                    let btndesc = document.querySelector('app-select-description-edit');
-                    if(btndesc) {
-                        let labdesc = btndesc.querySelectorAll("label[class='mat-radio-label']");
-                        if(rdata.descriptionUnable){
-                            tmptext += ",描述否";
-                            labdesc[labdesc.length-1].click();
-                        } else if(rdata.selectedDescriptionHash){
-                            for (let i=0;i<pdata.descriptionEdits.length;i++){
-                                if(rdata.selectedDescriptionHash == pdata.descriptionEdits[i].hash) {
-                                    labdesc[i].click();
-                                }
-                            }
-                        }
-                    }
-                    //locationUnable : 找不到实际位置
-                    let agmmap = document.querySelector('agm-map');
-                    if (agmmap) {
-                        agmmap.scrollIntoView(true);
-                        if(rdata.locationUnable){
-                            tmptext += ",位置否";
-                            document.querySelector("wf-checkbox mat-checkbox input").click();
-                        } else if(rdata.selectedLocationHash){
-                            setTimeout(function(){
-                                let ccard = document.querySelector("wf-review-card[id='categorization-card']");
-                                if(ccard){
-                                    ccard.scrollIntoView(true);
-                                }
-                                let btnloc = agmmap.querySelectorAll('div[role="button"]');
-                                if (btnloc) {
-                                    for (let i=0;i<pdata.locationEdits.length;i++){
-                                        if(rdata.selectedLocationHash == pdata.locationEdits[i].hash) {
-                                            btnloc[i].click();
-                                        }
-                                    }
-                                }
-                            },500);
-                            //上面显示跟审挪po的情况
-                            const foundItem = missionGDoc.find(item => item.portalID === rdata.id);
-                            //console.log('findItem:missionGDoc',missionGDoc);
-                            //console.log('foundItem',foundItem);
-                            let idscore = document.querySelector("span[id='idscore']");
-                            idscore.textContent = foundItem ? foundItem.moveoptions + foundItem.moveplace : "" ;
-                        }
-                        //滚回顶部
-                        setTimeout(function(){
-                            var conpan = document.querySelector('mat-sidenav-content');
-                            if(conpan)
-                            {
-                                conpan.scrollTo({top:0,left:0,behavior:'smooth'});
-                            }
-                        },500);
-                    }
-                },500);
-            }//pdata.type=="EDIT"
-            if(pdata.type=="NEW"){
-                if(rdata.duplicate){
-                    tmptext = "照抄网络审核：重复";
-                    tmpfollow.review="重复："+creviewdata.duplicateOf;
-                    let nbportal = pdata.nearbyPortals;
-                    console.log("审核记录：重复！");
-                    //console.log(nbportal);
-                    //let testdupid="513b37393fb04a8e95281c81513c6ecc.16";
-                    //console.log(nbportal.find(p=>{return p.guid==rdata.duplicateOf}));
-                    if(nbportal.find(p=>{return p.guid==rdata.duplicateOf})){
-                        //console.log((nbportal.find(p=>{return p.guid==rdata.duplicateOf})).title);
-                        let dbtitle = (nbportal.find(p=>{return p.guid==rdata.duplicateOf})).title;
-                        //console.log(dbtitle);
-                        setTimeout(function(){
-                            //console.log(document.querySelector("[alt='"+dbtitle+"']"));
-                            if (document.querySelector("[alt='"+dbtitle+"']")) {
-                                document.querySelector("[alt='"+dbtitle+"']").click();
+                    if(pname === null) {return;}
 
-                            }
-                            setTimeout(function(){
-                                let dupbut = document.querySelector("div[role='dialog']").querySelector("button[wftype='primary'");
-                                if(dupbut){
-                                    dupbut.click();
-                                }
-                            },500);
-                        },500);
-                    }
-                } else if(rdata.quality) {
-                    //console.log(rdata);
-                    if(rdata.cultural==5 & rdata.exercise==5 & rdata.location==5 & rdata.quality==5 & rdata.safety==5 & rdata.socialize==5 & rdata.uniqueness==5)
-                    {
-                        if(rdata.newLocation) {
-                            tmptext = "照抄网络审核：五星+挪po";
-                            tmpfollow.review = "五星+挪:" + rdata.newLocation;
-                        } else {
-                            tmptext = "照抄网络审核：五星";
-                            tmpfollow.review="五星";
-                        }
-                        console.log("审核记录：五星");
-                        const appcard=["appropriate-card","safe-card","accurate-and-high-quality-card","permanent-location-card","socialize-card","exercise-card","explore-card"];
-                        setTimeout(function(){
-                            for(let i=0;i<=appcard.length-1;i++){
-                                if(document.querySelector('#'+appcard[i])) {
-                                    let bappcard = document.querySelector('#'+appcard[i]);
-                                    if(bappcard.querySelectorAll("button")){
-                                        let tmpbtn=bappcard.querySelectorAll("button")[1];
-                                        if(tmpbtn.className.indexOf("is-selected")<0){
-                                            tmpbtn.click();
-                                        }
-                                    }
-                                }
-                            }
-                            let idscore = document.querySelector("span[id='idscore']");
-                            idscore.textContent = "YYYYYYY";
-                        },3000);
-                    }
-                    else {
-                        tmptext = "照抄网络审核：非重复";
-                        tmpfollow.review="正常非重复";
-                    }
-                } else if(rdata.rejectReasons){
-                    tmptext = "照抄网络审核：否决";
-                    tmpfollow.review="否决:"+rdata.rejectReasons;
-                    console.log("审核记录拒",rdata.rejectReasons);
-                    for(let i=0;i<rdata.rejectReasons.length;i++){
-                        if(rdata.rejectReasons[i]=="PRIVATE" || rdata.rejectReasons[i]=="INAPPROPRIATE" || rdata.rejectReasons[i]=="SCHOOL" ||
-                           rdata.rejectReasons[i]=="SENSITIVE" || rdata.rejectReasons[i]=="EMERGENCY" || rdata.rejectReasons[i]=="GENERIC")
-                        {
-                            console.log("适当拒");
-                            setTimeout(function(){
-                                //console.log(document.querySelector('#appropriate-card'));
-                                if(document.querySelector('#appropriate-card').querySelectorAll('button')[2])
-                                { //
-                                    if(document.querySelector('#appropriate-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
-                                        document.querySelector('#appropriate-card').querySelectorAll('button')[2].click();
-                                    }
-                                    setTimeout(function(){
-                                        let icbx = document.querySelector("input[value='"+rdata.rejectReasons[i]+"']");
-                                        //console.log("icbx",icbx);
-                                        if(icbx) {
-                                            //let ic = document.getElementById(document.querySelector("input[value='GENERIC']").getAttribute("id"));
-                                            //console.log(icbx);
-                                            //setTimeout(function(){ic.checked = true;},500);
-                                            icbx.parentNode.click();
-                                        }
-                                    },500);
-                                }
-                            },500);
-                        }
-                        else if (rdata.rejectReasons[0] == "UNSAFE")
-                        {
-                            //setTimeout(function(){
-                            if(document.querySelector('#safe-card').querySelectorAll('button')[2])
-                            { //
-                                if(document.querySelector('#safe-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
-                                    document.querySelector('#safe-card').querySelectorAll('button')[2].click();
-                                }
-                            }
-                            //},1000);
-                        }
-                        else if (rdata.rejectReasons[0] == "TEMPORARY")
-                        {
-                            setTimeout(function(){
-                                if(document.querySelector('#permanent-location-card').querySelectorAll('button')[2])
-                                { //
-                                    if(document.querySelector('#permanent-location-card').querySelectorAll('button')[2].className!="wf-button thumbs-button wf-button--icon is-selected") {
-                                        document.querySelector('#permanent-location-card').querySelectorAll('button')[2].click();
-                                    }
-                                }
-                            },500);
-                        }
-                        else {
-                            if(rejcbxengstr.indexOf(rdata.rejectReasons[i])>=0) {
-                                console.log("准确拒",rdata.rejectReasons);
-                                let dcbxstr = rejcbxchnstr[rejcbxengstr.indexOf(rdata.rejectReasons[i])];
-                                //setTimeout(function(){
-                                let accd = document.querySelector('#accurate-and-high-quality-card');
-                                if(accd) {
-                                    setTimeout(function(){
-                                        if(accd.querySelectorAll('button'))
-                                        { //
-                                            //                                            console.log(accd);
-                                            let tmpbtns = accd.querySelectorAll('button')[2];
-                                            //                                            console.log(tmpbtns);
-                                            if(tmpbtns.className!="wf-button thumbs-button wf-button--icon is-selected") {
-                                                tmpbtns.click();
-                                            }
-                                        }},500);
-                                }
-                                //},500);
-                                //setTimeout(function(){
+                    if(portaldata.id){
+                        console.log("任务po，保存用户审核打卡...");
+                        //let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
+                        let resp1 = readR2File("portal/portaluseremail/portal."+portaldata.id+".useremail.json")
+                        .then(res=>{
+                            //如果任务未开审，则更新任务为开审并加id
+                            //console.log("preview",preview);
+                            item.status = "审核";
+                            item.portalID = portaldata.id;item.responsedate = formatDate(new Date(),"yyyy-MM-dd");
+                            saveToGDoc(item);
+
+                            console.log("读取用户打卡");
+                            //console.log("res",res);
+                            if(!res) {
                                 setTimeout(function(){
-                                    let spanarr = document.querySelectorAll("span[class='mat-checkbox-label']");
-                                    //console.log(dcbxstr);
-                                    spanarr.forEach(spanele => {
-                                        if(spanele.textContent.indexOf(dcbxstr)>=0) {
-                                            let rejcbx = spanele.parentNode.querySelector("input[type='checkbox']");
-                                            //console.log(rejcbx);
-                                            if(rejcbx) {
-                                                rejcbx.parentNode.click();
-                                                //rejcbx.parentNode.checked = true;
-                                            }
-                                        }
-                                    });
-                                },500);
-                                //},1000);
+                                    console.log("读取用户打卡","未找到用户打卡记录");
+                                    //保存任务id :
+                                    let susermark='[{"useremail":"' + userEmail +'",'
+                                    + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
+                                    +'"performance":"' + performance +'"'
+                                    + "}]";
+                                    //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
+                                    uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",JSON.parse(susermark));
+                                },1000);
+                                return;
+                            } else {
+                                const dupload = res.content;
+                                console.log("res",res);
+                                //const dupload = JSON.parse(res.content);
+                                for(let i=0;i<dupload.length;i++){
+                                    if(dupload[i].useremail == userEmail) {
+                                        console.log("存过打卡了");
+                                        return;
+                                    }
+                                }
+                                //console.log(dupload);
+                                let dupdata = dupload ;
+                                //dupdata.push(dupload);
+                                let susermark={useremail:userEmail,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),performance:performance};
+                                dupdata.push(susermark);
+                                //console.log(dupdata);
+                                //console.log(JSON.stringify(dupdata));
+                                //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
+                                uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",dupdata);
                             }
-                        }
+                        },err=>{
+                            console.log(err);
+                        });
                     }
+                    return ; //找到一个，就不进行下一个循环
                 }
-            }//pdata=="NEW"
-            //改显示标签
-            setTimeout(function(){
-                let ilabel = document.getElementById("iduserlabel");
-                if(ilabel) ilabel.textContent = tmptext;
-                console.log("iduserlabel",tmptext);
-            },500);
-            //console.log("return true");
-            return true;
-        },
-              err=>{
-            console.log("未找到审核记录:"+id);
-            return null;
+            });
+        } catch(e) {
+            console.log(e);
         }
-             )
-        return null;
     }
 
-
-    //保存审核数据到本地，并判断是否需要上传
-    async function savePostData(tmpfollow,data){
-        let rd1=cloudReviewData;
-        let rd2=JSON.parse(data);
-        //云端非空：跟审
-        //console.log("rd1",rd1);console.log("rd2",rd2);console.log("jsondata0",JSON.parse(data[0]));
-        if(cloudReviewData !== null ) {
-            try{
-                //console.log("savePostData-portalData",portalData);
-                //console.log("savePostData-tmpfollow",tmpfollow);
-                //console.log("savePostData-data",data);
-                tmpfollow.id = rd2.id;tmpfollow.title=portalData.title;tmpfollow.lat=portalData.lat;tmpfollow.lng=portalData.lng;
-                //console.log("rd2.EDIT,selectedLocationHash",rd2.type === "EDIT" & rd2.selectedLocationHash !== null);
-                if(rd2.type === "EDIT" & rd2.selectedLocationHash !== null){
-                    let ilat = null;let ilng = null; let idlat = null;let idlng = null; let stmp ="";
-                    for(const item of portalData.locationEdits) {
-                        if(item.hash === rd1.selectedLocationHash){
-                            ilat = item.lat; ilng = item.lng;
-                        }
-                        if(item.hash === rd2.selectedLocationHash){
-                            idlat = item.lat; idlng = item.lng;
-                        }
-                    }
-                    //console.log("ilat",ilat);
-                    //console.log("idlat",idlat);
-                    if(idlat !== null) {
-                        if(ilat > portalData.lat ) stmp = "上:"+ilat;
-                        if(ilat < portalData.lat ) stmp = "下:"+ilat;
-                        if(ilat === portalData.lat ) stmp = "不变:"+ilat;
-                        if(ilng > portalData.lng ) stmp += ";右:"+ilng;
-                        if(ilng < portalData.lng ) stmp += ";左:"+ilng;
-                        if(ilng === portalData.lng ) stmp += ";不变:"+ilng;
-                        if(rd1.selectedLocationHash === rd2.selectedLocationHash){
-                            tmpfollow.review = stmp + "|与云一致";
-                        } else {
-                            stmp += "|实际:";
-                            if(idlat > portalData.lat ) stmp += "上:"+idlat;
-                            if(idlat < portalData.lat ) stmp += "下:"+idlat;
-                            if(idlat === portalData.lat ) stmp += "不变:"+idlat;
-                            if(idlng > portalData.lng ) stmp += ";右:"+idlng;
-                            if(idlng < portalData.lng ) stmp += ";左:"+idlng;
-                            if(idlng === portalData.lng ) stmp += ";不变:"+idlng;
-                            tmpfollow.review = stmp;
-                        }
-                        //console.log("savePostData-tmpfollow",tmpfollow);
-                    }
-                }
-
-                let localpd1 = [];
-                tmpfollow.dateTime = new Date();
-                if(useremail === null || useremail === "" ){
-                    const restext = await getUserPromise();
-                    // 处理用户信息
-                    useremail = restext.result.socialProfile.email;
-                    if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
-                    console.log("得到用户并保存跟审-"+useremail,tmpfollow);
-                    if(localpd1.length === 0){
-                        //console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
-                        localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
-                    } else {
-                        //console.log(useremail+"follow n",JSON.stringify(tmpfollow));
-                        localpd1.push(tmpfollow);
-                        localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
-                    }
+    //保存审po记录到本地：review1,review2 ; 新6.1.0以后：reviewLista reviewListb
+    //reviewa: user,title,type,lat,lng,score,dt,id,follow
+    function saveReviewtoLocal(pageData,data) {
+        let localreview = [];
+        let tmpstorage = null ;
+        let sdt = formatDate(new Date(),"yyyy-MM-dd HH:mm:ss");
+        let i;
+        let sloc=getLocation(portalData);
+        let ssc=document.querySelector("span[id='idscore']");
+        let sscore="";
+        let pdata = JSON.parse(data);
+        //console.log("Main-saveReviewtoLocal:",pdata);
+        if(pdata){
+            if(pdata.type=="NEW"){
+                if(pdata.duplicate) {
+                    sscore = "重复："+pdata.duplicateOf;
+                } else if (pdata.rejectReasons) {
+                    sscore = "拒：" +pdata.rejectReasons;
                 } else {
-                    console.log("跟审useremail",useremail);
-                        if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
-                        console.log("保存跟审-"+useremail,tmpfollow);
-                        if(localpd1.length === 0){
-                            //console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
-                            localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
-                        } else {
-                            //console.log(useremail+"follow n",JSON.stringify(tmpfollow));
-                            localpd1.push(tmpfollow);
-                            localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
-                        }
-                    }
-            } catch(e){
-                console.log("错误",e);
-            }
-        }
-        else {
-            //console.log("无云审核数据");
-        }
-
-        let iautolabel = document.querySelector("p[id='idautolabel']");
-        console.log("云审核数据:",rd1);
-        if(rd1) {
-            rd1.acceptCategories=null;rd1.rejectCategories=null;
-            if(!rd1.skip) rd1.skip=false;
-        }
-        console.log("本次审核数据:",rd2);
-        if(rd2) {
-            rd2.acceptCategories=null;rd2.rejectCategories=null;
-            if(!rd2.skip) rd2.skip=false;
-        }
-        let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
-        let rsstr = "";
-        if(areObjectsEqual(rd1,rd2)) rsstr = "一致"; else rsstr = "不一致";
-        console.log("本地与云对比",rsstr);
-        setTimeout(function(){
-            if(isUserClick & rsstr === "不一致") {
-                //console.log("调用上传接口",isUserClick);
-                uploadPostData(portalData,JSON.parse(data),0,false);
+                    sscore = ":" + pdata.quality + pdata.safety + pdata.location + pdata.uniqueness + pdata.socialize + pdata.exercise + pdata.cultural;
+                    sscore = sscore.substring(1,sscore.length);
+                }
             } else {
-                console.log("不上传",rd2.id+":"+portalData.title);
-                console.log("审核结束:",rd2.id+":"+portalData.title);
+                if(ssc) sscore=ssc.textContent;
             }
-        },200);
-        if (iautolabel.textContent == "手动" & rsstr === "不一致"){
-            //console.log("data",JSON.parse(data));
-            //uploadPostData(portalData,JSON.parse(data),0,false);
         }
-    };
 
-    //判断是否需要上传审核至云端，及保存至本地：用户+upload
-    function uploadPostData(pdata,rdata,icloud,iskip){
-        let data = rdata ;
-        //console.log("检查是否需要上传审核数据...");
-        //console.log(data);
-        //console.log(iskip);
-        let localpd = [];
-        if(localStorage.getItem(useremail+"upload")) localpd = JSON.parse(localStorage.getItem(useremail+"upload"));
-        let tmpupload={id:null,title:null,lat:null,lng:null,review:null,dateTime:null};
-        tmpupload.id=data.id; tmpupload.dateTime = new Date();
+        try {
+            // 构建评审数据对象（通用数据结构）
+            const reviewData = {
+                user: localStorage.currentUser,
+                id:pageData.id,
+                title: pageData.title,
+                type: pageData.type,
+                lat: pageData.lat,
+                lng: pageData.lng,
+                score: sscore,
+                datetime: sdt,
+                follow: false
+            };
 
-        if(data.id=pdata.id){
-            tmpupload.title=pdata.title;tmpupload.lat=pdata.lat;tmpupload.lng=pdata.lng;
+            // 根据条件选择存储键
+            let miss = missionGDoc.find(mission => mission.portalID === pdata.id);
+            if (miss) {
+                // 符合条件：保存到reviewLista
+                miss.ownerstatus = true ;
+                //console.log("保存池中已审(id)-reviewLista",pageData.title);
+                saveReviewData('reviewLista', reviewData);
+            }
+            else if (privatePortal.indexOf(pageData.title) >= 0 || missionGDoc.some(item => item.title === pageData.title) || gpausePortal.indexOf(pageData.title) > 0 || sloc === "池中")
+            {
+                // 符合条件：保存到reviewLista
+                //console.log("保存池中已审(title)-reviewLista",pageData.title);
+                saveReviewData('reviewLista', reviewData);
+            } else {
+                // 不符合条件：保存到reviewListb
+                //console.log("保存池外已审reviewListb",pageData.title);
+                saveReviewData('reviewListb', reviewData);
+            }
+        } catch (e) {
+            console.error('处理评审数据时发生错误：', e);
         }
-        let isave =0;
-        data.skip = false ;
-        if(iskip & icloud==0){
-            tmpupload.review="skip";
-            isave=1;
-            data.skip = true;
-        } else if(data.type=="NEW"){
-//            console.log("duplicate",data.duplicate);
-//            console.log("rejectReasons",data.rejectReasons);
-            if(data.duplicate || data.rejectReasons ){
-//                console.log("duplicate or rejectReasons");
-                if(data.duplicate) tmpupload.review="重复:"+data.duplicateOf; else tmpupload.review="否决:" + data.rejectReasons;
-                isave=1;
-            } else if(data.cultural){
-                if(data.cultural==5 & data.exercise==5 & data.location==5 & data.quality==5 & data.safety==5 & data.socialize==5 & data.uniqueness==5){
-//                    console.log("five stars!");
-                    tmpupload.review = "五星";
-                    isave=1;
-                } else {
-                    if(pdata.nearbyPortals.find(p=>{return p.title==pdata.title})){
-                        isave=1;
-                    }
+    }
+    //监听提交按钮，调用saveReviewtoLocal保存审po记录到本地
+    function getSubmitButtonClick(){
+        let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+        console.log(p1);
+        if (p1) {
+            p1.addEventListener("click", function () {
+                console.log(portalData);
+                if(portalData){
+                    saveReviewtoLocal(portalData);
                 }
-            }
-            if(data.newLocation) {tmpupload.review = tmpupload.review+":挪"+data.newLocation; isave=1};
-        } else if(data.type=="EDIT"){
-            //pdata.locationEdits[i].hash = data.selectedhash => pdata.locationEdits[i].value
-            let ilat = null;let ilng = null;
-            for(const item of pdata.locationEdits) {
-                if(item.hash === data.selectedLocationHash){
-                    ilat = item.lat; ilng = item.lng;
-                }
-            }
-            if(ilat !== null) {
-                let stmp = "";
-                if(ilat > pdata.lat ) stmp = "上:"+pdata.lat+'=>'+ilat;
-                if(ilat < pdata.lat ) stmp = "下:"+pdata.lat+'=>'+ilat;
-                if(ilat === pdata.lat ) stmp = "上下不变:"+pdata.lat;
-                if(ilng > pdata.lng ) stmp += ";右:"+pdata.lng+'=>'+ilng;
-                if(ilng < pdata.lng ) stmp += ";左:"+pdata.lng+'=>'+ilng;
-                if(ilng === pdata.lng ) stmp += ";左右不变:"+pdata.lng;
-                tmpupload.review=stmp;
-            }
-            isave=1;
-        } else if(data.type=="PHOTO"){
-            isave=1;
+            })
         }
-        console.log("isave",isave);
-        if(isave==1){
-            try{
-                console.log("上传审核结果...");
-                if(icloud==0 || icloud==2){
-                    //保存至本地
-                    if(localpd.length==0){
-                        localStorage.setItem(useremail+"upload","["+JSON.stringify(tmpupload)+"]");
-                    } else {
-                        localpd.push(tmpupload);
-                        localStorage.setItem(useremail+"upload",JSON.stringify(localpd));
-                    }
-                    //上传至云端
-                    console.log("上传...",data.id);
-                    //gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
-                    uploadDataToR2("portal/portalreview/","portal."+data.id+".json",data);
-                    console.log("审核结束:",data.id);
-                } else {
-                    //保存审核记录至本地：以下未调试
-                    let creviewlist =[];
-                    creviewlist= JSON.parse(localStorage.reviewList);
-                    if(creviewlist==null) {creviewlist = []};
-                    let tmp ='{\"id\":\"'+data.id+'\",\"date\":\"'+ formatDate(new Date(),"yyyy-MM-dd")+'\"}';
-                    //                    console.log("tmp",tmp);
-                    creviewlist.push(tmp);
-                    localStorage.setItem("reviewList",JSON.stringify(creviewlist));
-                    let creviewdata =[];
-                    creviewdata = JSON.parse(localStorage.getItem(data.id));
-                    if(creviewdata==null) {
-                        creviewdata=[];
-                    }
-                    creviewdata.push(JSON.stringify(data));
-                    localStorage.setItem(data.id,JSON.stringify(creviewdata));
-                    console.log("saved");
+    }
+    // 提取通用函数：处理评审数据的存储逻辑
+    function saveReviewData(storageKey, reviewData) {
+        // 初始化数据数组
+        let reviewList = [];
+        const storedData = localStorage.getItem(storageKey);
+
+        if(storageKey === "reviewLista") {
+            //console.log("storageKey",storageKey);
+            //console.log("reviewData",reviewData);
+        }
+        if (storedData) {
+            try {
+                reviewList = JSON.parse(storedData);
+                // 确保解析后的数据是数组
+                if (!Array.isArray(reviewList)) {
+                    reviewList = [];
+                    console.warn(`本地${storageKey}格式错误，重置空数组`);
                 }
-            } catch(e){
-                console.log(e);
+            } catch (error) {
+                console.error(`解析${storageKey}数据失败，已重置为空数组：`, error);
+                reviewList = [];
+            }
+
+            // 添加新数据
+            //console.log("storedData",JSON.parse(storedData));
+            //console.log("reviewList",reviewList);
+            //console.log("reviewData",reviewData);
+            reviewList.push(reviewData);
+
+            // 保存回本地存储
+            try {
+                if(storageKey === "reviewLista") {
+                    //console.log("reviewLista",reviewList);
+                }
+                localStorage.setItem(storageKey, JSON.stringify(reviewList));
+                console.log(`成功保存本地${storageKey}`);
+            } catch (error) {
+                console.error(`保存${storageKey}数据失败：`, error);
             }
         } else {
-            console.log("不需上传,审核结束:",data.id);
-            //let iup = document.getElementById("iduplabel");
-            //if(iup) iup.style="font-weight:bold;color:#f6f5ec";
+            // 保存回本地存储
+            try {
+                reviewList.push(reviewData);
+                if(storageKey === "reviewLista") {
+                    //console.log("reviewLista",reviewList);
+                }
+                localStorage.setItem(storageKey, JSON.stringify(reviewList));
+                console.log(`成功保存本地${storageKey}`);
+            } catch (error) {
+                console.error(`保存${storageKey}数据失败：`, error);
+            }
         }
     }
 
-    function scrollToBottom (){
-        console.log('scrollToBottom');
-        (function smoothscroll() {
-            const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
-            const clientHeight = document.documentElement.clientHeight; // 浏览器高度
-            const scrollHeight = document.documentElement.scrollHeight; // 总高度
-            if (scrollHeight - 10 > currentScroll + clientHeight) {
-                window.requestAnimationFrame(smoothscroll);
-                window.scrollTo(0, currentScroll + (scrollHeight - currentScroll - clientHeight) / 2);
-            }
-        })();
-    };
-    //EDIT位置编辑用的函数
-    function findArrayTwo(arr,title){
-        for(let i=0;i<arr.length;i++){
-            //            console.log("arr["+i+"]",arr[i]);
-            if(arr[i].indexOf(title)>=0){
-                return i;
-            }
+    //注入标签：任务列表、最近审的po、池中/本地/外地、中文地址
+    //新po打分
+    function commitScoreNew(portalData1,loc)
+    {
+        let iscore = "";
+        const optpmap = document.querySelector("nia-map");
+        if (optpmap) {
+            optpmap.scrollIntoView(true);
         }
-        return -1;
-    }
-    //返回排好序的挪po点集合
-    function getclickedbtn(ptstruct,iplan){
-        let ilen=ptstruct.length;
-        if (ilen<=0) return null;
-        if (ilen==1) return ptstruct[0].aria-describedby;
-        return resort(ptstruct,iplan);
-    }
-    //按挪的计划，对挪po点集合进行排序
-    function resort(ptstruct,iplan){
-        //    console.log(ptstruct[0].left);
-        if(iplan<=10){
-            for(let i=0;i<ptstruct.length;i++){
-                for(let j=0;j<ptstruct.length - 1;j++){
-                    let tmp = ptstruct[j];
-                    if(parseInt(ptstruct[j].left) > parseInt(ptstruct[j+1].left)){
-                        tmp = ptstruct[j];
-                        ptstruct[j]=ptstruct[j+1];
-                        ptstruct[j+1]=tmp;
+        const ratingElementParts = document.getElementsByClassName("wf-review-card");
+        var iram1,iram2,iram3;
+        if (loc=="池中"){iram1=0;iram2=0;}
+        if (loc=="本地"){iram2=Math.floor(Math.random()*100);iram1=0;}     //本地，随机数1-100 90% 5/6/7必选一个，选中10%no/90%dont know
+        //外地 随机1-100 90% 5/6/7必选一个，选中10%no/90%dont know; 30%选中第二个，选中10%no/90%dont know
+        if (loc=="外地"){iram3=Math.floor(Math.random()*100);iram2=Math.floor(Math.random()*100);iram1=Math.floor(Math.random()*100);}
+        //console.log("loc : "+loc+" iram1 : "+iram1 + " iram2 : "+iram2 + " iram3 : "+iram3);
+        //适当1
+        if (iram1>0 & iram1<4){
+            if(document.querySelector('#appropriate-card')) {
+                let appcard = document.querySelector('#appropriate-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[3];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
                     }
                 }
             }
-        }
-        if(iplan>10){
-            for(let i=0;i<ptstruct.length;i++){
-                for(let j=0;j<ptstruct.length - 1;j++){
-                    let tmp = ptstruct[j];
-                    if(parseInt(ptstruct[j].top) > parseInt(ptstruct[j+1].top)){
-                        tmp = ptstruct[j];
-                        ptstruct[j]=ptstruct[j+1];
-                        ptstruct[j+1]=tmp;
+            iscore+="D";
+        } else
+        {
+            if(document.querySelector('#appropriate-card')) {
+                let appcard = document.querySelector('#appropriate-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[1];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
                     }
                 }
             }
-        }
-        return ptstruct;
-    }
-    //得到挪po的点坐标集合，屏幕坐标
-    function getbtnStruct(ptbutton){
-        let ptall = [];
-        ptbutton.forEach((ptbtn) => {
-            let ptbtaria = ptbtn.getAttribute("aria-describedby");
-            let ptbtnatt = ptbtn.getAttribute('style');
-            while(ptbtnatt.indexOf(" ")>0) {
-                ptbtnatt = ptbtnatt.replace(" ","");
+            iscore+="Y";
+        } //适当
+        //安全2
+        if(iram1>3 & iram1<7){
+            if(document.querySelector('#safe-card')) {
+                let appcard = document.querySelector('#safe-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[3];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
             }
-            ptbtnatt = ptbtnatt.replaceAll(":",'":"');
-            ptbtnatt = ptbtnatt.replaceAll(";",'","');
-            ptbtnatt = ptbtnatt.replaceAll("px","");
-            ptbtnatt = '{"aria-describedby":"'+ptbtaria+'","'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
-            //                    ptbtnatt='{"'+ptbtnatt.substr(0,ptbtnatt.length-2)+"}";
-            //      console.log(ptbtnatt);
-            ptbtnatt=JSON.parse(ptbtnatt);
-            //      console.log(ptbtnatt);
-            ptall.push(ptbtnatt);
+            iscore+="D";
+        } else
+        {
+            if(document.querySelector('#safe-card')) {
+                let appcard = document.querySelector('#safe-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[1];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="Y";
+        }//安全
+        //准确3
+        if(iram1>6 & iram1<10){
+            if(document.querySelector('#accurate-and-high-quality-card')) {
+                let appcard = document.querySelector('#accurate-and-high-quality-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[3];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="D";
+        } else
+        {
+            if(document.querySelector('#accurate-and-high-quality-card')) {
+                let appcard = document.querySelector('#accurate-and-high-quality-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[1];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="Y";
+        }//准确
+        //永久4
+        if(iram1>9 & iram1<13){
+            if(document.querySelector('#permanent-location-card')) {
+                let appcard = document.querySelector('#permanent-location-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[3];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="D";
+        } else
+        {
+            if(document.querySelector('#permanent-location-card')) {
+                let appcard = document.querySelector('#permanent-location-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[1];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="Y";
+        }//永久
+        //社交5  5-no    1-3 34-37  5-不知道  4-33 38-67
+        if((iram2>0 & iram2<7) || (iram3>0 & iram3<3)){
+            if(document.querySelector('#socialize-card')) {
+                let appcard = document.querySelector('#socialize-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[2];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="N";
+        } else if ((iram2>18 & iram2<43) || (iram3>3 & iram3<14))
+        {
+            if(document.querySelector('#socialize-card')) {
+                let appcard = document.querySelector('#socialize-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[3];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="D";
+        } else
+        {
+            if(document.querySelector('#socialize-card')) {
+                let appcard = document.querySelector('#socialize-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[1];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="Y";
+        }//社交
+        //运动6 6-no  34-36 68-70  6-不知道 37-67 71-99
+        if( (iram2>6 & iram2<13)  || (iram3>33 & iram3<36)) {
+            if(document.querySelector('#exercise-card')) {
+                let appcard = document.querySelector('#exercise-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[2];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="N";
+        } else if ( (iram2>45 & iram2<69) || (iram3>36 & iram3<48))
+        {
+            if(document.querySelector('#exercise-card')) {
+                let appcard = document.querySelector('#exercise-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[3];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="D";
+        } else
+        {
+            if(document.querySelector('#exercise-card')) {
+                let appcard = document.querySelector('#exercise-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[1];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="Y";
+        }
+        //探索7 7-no  68-70 1-3    7-不知道 71-99 4-33
+        if( (iram2>12 & iram2<19)  || (iram3>67 & iram3<70) ) {
+            if(document.querySelector('#explore-card')) {
+                let appcard = document.querySelector('#explore-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[2];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="N";
+        } else if ( (iram2>72 & iram2<97) || (iram3>70 & iram3<82) )
+        {
+            if(document.querySelector('#explore-card')) {
+                let appcard = document.querySelector('#explore-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[3];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="D";
+        } else
+        {
+            if(document.querySelector('#explore-card')) {
+                let appcard = document.querySelector('#explore-card');
+                if(appcard.querySelectorAll("button")){
+                    let tmpbtn=appcard.querySelectorAll("button")[1];
+                    if(tmpbtn.className.indexOf("is-selected")<0){
+                        tmpbtn.click();
+                    }
+                }
+            }
+            iscore+="Y";
+        }
+        //            } catch(err) { console.log(err);};
+
+        //分类,全部选否
+        const opts = document.querySelectorAll('mat-button-toggle');
+        for (let i = 0; i < opts.length; i++) {
+            //                console.log(opts[i]);
+            if (!opts[i].classList.contains('mat-button-toggle-checked')) {
+                opts[i].querySelector('button').click();
+                //                break;
+            }
+        }
+        //滚回顶部
+        var conpan = document.querySelector('mat-sidenav-content[class="mat-drawer-content mat-sidenav-content p-4 pb-12 bg-gray-100"]');
+        if(conpan)
+        {
+            conpan.scrollTo({top:0,left:0,behavior:'smooth'});
+        }
+        return iscore;
+    }
+    //打分，调用图片、编辑、新po
+    function commitScore(portalData1,loc)
+    {
+        if(portalData1.type === "NEW"){
+            return commitScoreNew(portalData1,loc);
+        }
+    }
+
+    //池中、本地、外地判断 返回1：池中；2：本地；3：外地；0：无
+    function getLocation(portal){
+        let ibaserate=null;
+        //池中池外地址判断
+        if (privatePortal.indexOf(portal.title)>0 || gpausePortal.indexOf(portal.title)>=0){
+            return "池中"; //池中
+        } else if(portal.type=="NEW")
+        {
+            if( portal.streetAddress.indexOf("Shen Yang")>0 || portal.streetAddress.indexOf("Liao Ning")>0
+               || portal.streetAddress.indexOf("Ji Lin")>0 || portal.streetAddress.indexOf("Shenyang")>0
+               || portal.streetAddress.indexOf("通化市")>0 || portal.streetAddress.indexOf("吉林省")>0
+               || portal.streetAddress.indexOf("Tonghua")>0 || portal.streetAddress.indexOf("Tong Hua")>0
+               || portal.streetAddress.indexOf("Liaoning")>0 || portal.streetAddress.indexOf("辽宁省")>0
+              ){
+                ibaserate="本地"; //本地
+            }
+            else
+            {
+                ibaserate="外地"; //外地
+            }
+        } else {
+            //console.log(portal);
+        }
+        //池中池外经纬度判断
+        for (let i=0;i<private.length;i++){
+            if(portal.lat>private[i][0]-private[i][2]/100000 & portal.lat<private[i][0]+private[i][2]/100000 & portal.lng>private[i][1]-private[i][3]/100000 & portal.lng<private[i][1]+private[i][3]/100000)
+            {return "池中";
+            }
+        }
+        //任务列表判断
+        //console.log(`判断池中`,portal);
+        missionGDoc.forEach(item => {
+            //console.log(`判断池中$item`,item);
+            if((item.title === portal.title || item.id === portal.id) & (Math.abs(portal.lat-item.lat)<=0.001) & (Math.abs(portal.lng-item.lng)<=0.001)){
+                console.log("位置判断missionGDoc：池中");
+                ibaserate = "池中";
+            }
         })
-        //    console.log(ptall);
-        return ptall;
+        /*
+        for (let i=0;i<missionlist.length;i++){
+            if(missionlist[i][0]===portal.title & (Math.abs(portal.lat-missionlist[i][7])<=0.001) & (Math.abs(portal.lng-missionlist[i][8])<=0.001)){
+                console.log("位置判断：池中");
+                return "池中";
+            }
+        }*/
+        return ibaserate;
     }
 
-    //智能匹配：长度差在一个字符以内;1-2个字符时完全匹配;3-6个字符时允许错1个;7个以上时允许错2个
-    function approximateMatch(strData1, strData2) {
-        // 检查输入有效性
-        if (!strData1 || !strData2) return false;
-
-        const len1 = strData1.length;
-        const len2 = strData2.length;
-
-        // 统计字符出现次数
-        const countChars = (str) => {
-            const counts = {};
-            for (const char of str) {
-                counts[char] = (counts[char] || 0) + 1;
-            }
-            return counts;
-        };
-
-        const counts1 = countChars(strData1);
-        const counts2 = countChars(strData2);
-
-        // 计算共同字符总数
-        let commonChars = 0;
-        for (const char in counts1) {
-            if (counts2[char]) {
-                commonChars += Math.min(counts1[char], counts2[char]);
-            }
+    //在审核页review显示审过的po
+    function showReviewedReview()
+    {
+        if(missionGDoc.length === 0)
+        {
+            missionGDoc = JSON.parse(localStorage.missionGDoc);
         }
+        try{
+            const retitle = document.getElementById("latestpo");
+            //console.log("retitle",retitle);
+            if( !retitle){
 
-        // 情况1：第一个字符串长度在2及以下
-        if (len1 <= 2) {
-            // 要求长度相同且完全匹配
-            return len1 === len2 && commonChars === len1;
-        }
-        // 情况2：第一个字符串长度在3-6之间
-        else if (len1 >= 3 && len1 <= 6) {
-            // 第二个字符串长度需在3-7之间，且相同字符数为len1-1
-            return len2 >= 3 && len2 <= 7 && commonChars === len1 - 1;
-        }
-        // 情况3：第一个字符串长度在7以上
-        else {
-            // 第二个字符串与第一个长度差1，且相同字符数为len1-2
-            return Math.abs(len1 - len2) === 1 && commonChars === len1 - 2;
+                missionGDoc.forEach(item => {
+                    item.ownerstatus = false;
+                })
+                //let prpo = JSON.parse(localStorage.getItem('Reviewed1'));
+                let prpo = localStorage.reviewLista ;
+                if(prpo){
+                    let prpojson = JSON.parse(prpo);
+                    let reviewData = [...prpojson].reverse();
+                    //console.log('reviewData',reviewData);
+                    for (const item of reviewData) {
+                        if(item.user === userEmail){
+                            const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
+                            if(matchingMission){
+                                matchingMission.ownerstatus = true ;
+                            }
+                        }
+                    }
+                }
+                prpo = localStorage.reviewLista ;
+                if(prpo){
+                    let prpojson = JSON.parse(prpo);
+                    let reviewData = [...prpojson].reverse();
+                    //console.log('reviewData',reviewData);
+                    for (const item of reviewData) {
+                        if(item.user === userEmail){
+                            const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
+                            if(matchingMission){
+                                matchingMission.ownerstatus = true ;
+                            }
+                        }
+                    }
+                }
+
+                //console.log(stmp);
+                //生成 ：三种任务po归类 ：待完成2|已完成1|未进池3|已终止4
+                //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
+                let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
+                missionGDoc.forEach(item => {
+                    //待完成
+                    console.log(item.title+':ownerstatus',item.ownerstatus);
+                    if (item.status === "提交" ||item.status === "审核" ){
+                        if(item.ownerstatus){
+                            tmmiss1+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                        } else {
+                            if(item.status === "审核"){
+                                tmmiss2+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                            } else {
+                                tmmiss3+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                            }
+                        }
+                    }
+                    else {
+                        if(item.submitter != userEmail)
+                            tmmiss2+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
+                        //tmmiss2+="["+tmpmissionlist[j][0]+"]";
+                    }
+                })
+                let appreview = document.querySelector("app-review");
+              if(appreview){
+                  const dva1=document.createElement("div");
+                  dva1.className="userclass missionpo";
+                  dva1.id="missionpo";
+                  dva1.textContent="";
+                  const dva2=document.createElement("div");
+                  dva2.className="userclass latestpo";
+                  dva2.id="latestpo";
+                  dva2.textContent="";
+                  appreview.insertBefore(dva2,appreview.firstChild);
+                  appreview.insertBefore(dva1,appreview.firstChild);
+                  if(missiondisplay == "true"){
+                      $(".userclass.missionpo").replaceWith(
+                          "<font size=3><div class='userclass missionpo' id='missionpo'>" +
+                          "【待完成】" + tmmiss2 +
+                          "<p>【未进池】" + tmmiss3 +
+                          "<p>【已完成】" + tmmiss1
+                          +"</div></font>");
+                  }
+              }
+            } ;
+        } catch (e) {
+            console.log("reviewShowErr",e);
         }
     }
 
-    // 测试案例
-    /*
-    console.log(approximateMatch("万达", "万达")); // true（长度2，完全相同）
-    console.log(approximateMatch("万达", "万"));   // false（长度不同）
-    console.log(approximateMatch("苹果汁", "苹果水")); // true（长度3，相同字符2=3-1）
-    console.log(approximateMatch("计算机", "计算几")); // true（长度3，相同字符2=3-1）
-    console.log(approximateMatch("abcdef", "abcdeg")); // true（长度6，相同字符5=6-1）
-    console.log(approximateMatch("abcdefg", "abcdefxy")); // true（长度7，差1，相同5=7-2）
-    console.log(approximateMatch("万达木馬", "万达木马")); // true（长度4，相同3=4-1）
-    */
+    //首页home显示用户审过的po
+    async function showReviewedHome() {
+        try {
+            if(userEmail === null) {
+                // 先获取用户信息并等待完成
+                const restext = await getUser();
+                // 处理用户信息
+                userEmail = restext.result.socialProfile.email;
+                performance = restext.result.performance;
 
-    //比较两个对象是否相同(json的顺序可以不同)
-    function areObjectsEqual(obj1, obj2) {
-        // 如果是同一引用，直接返回true
-        if (obj1 === obj2) return true;
+                if (userEmail != null) {
+                    localStorage.setItem("currentUser", userEmail);
+                    document.title = userEmail;
+                } else return;
+                console.log("最终获取到的用户邮箱：", userEmail);
+            }
+            // 更新页面DOM
+            $(".wf-page-header__title.ng-star-inserted").replaceWith(
+                `<div class='placestr'><font size=5>${userEmail}</font></div>`
+            );
 
-        // 检查是否都是对象且不为null
-        if (typeof obj1 !== 'object' || obj1 === null ||
-            typeof obj2 !== 'object' || obj2 === null) {
+            $(".showcase-gallery").replaceWith(`
+            <div><font size=5>-任务-</font></div>
+            <div id='missionPortal1'></div>
+            <div id='missionuser'></div>
+            <div id='idlbfollow'></div>
+            <br>
+            <div><font size=5>跟审记录</font></div>
+            <div id='idfollow'></div>
+            <div id='idlbupload'></div>
+            <br>
+            <div><font size=5>超时记录</font></div>
+            <div id='idexpire'></div>
+            <div id='idlbexpire'></div>
+            <br>
+            <div><font size=5>上传记录</font></div>
+            <div id='idupload'></div>
+            <br>
+            <div><font size=5>池中已审</font></div>
+            <div id='privatePortal1'></div>
+            <br>
+            <div><font size=5>池外已审</font></div>
+            <div id='privatePortal2'></div>
+        `);
+
+            // 等待获取任务数据（现在处于async函数中，可安全使用await）
+            await getMissionFromGoogleDoc();
+
+            //console.log("missionGDoc.length1", missionGDoc.length);
+
+            // 处理任务数据
+            if (missionGDoc.length > 0) {
+                //console.log("业务逻辑执行：", missionGDoc);
+                showReviewedHome1();
+            } else {
+                console.log("无符合条件的任务数据");
+                // 可添加无数据提示
+            }
+
+        } catch (error) {
+            // 集中捕获所有可能的错误
+            console.log("执行失败：", error);
+            // 刷新窗口（根据实际需求决定是否保留）
+            // mywin.location.reload();
+        }
+    }
+
+    function showReviewedHome1()
+    {
+        try{
+            if(!userEmail)
+            {
+                //      userEmail=getUser();  //会引起promise错误
+            }
+
+
+            //以下，生成 跟审列表
+            {
+                let sftitle="<table style='width:100%'><thead><tr><th style='width:20%'>ID</th><th style='width:15%'>名称</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th><th style='width:15%'>时间</th><th style='width:29%'>跟审情况</th></thead>";
+                let sfdetail = "";
+                let slocalfollow = [];
+                if(localStorage.getItem(userEmail+"follow")) slocalfollow = JSON.parse(localStorage.getItem(userEmail+"follow"));
+                //console.log(slocalfollow);
+                if(slocalfollow.length>0){
+                    sfdetail+="<tbody>";
+                    //console.log(slocalfollow[0]);
+                    let icnt = 0;if (slocalfollow.length>followPortalDisplay) icnt = slocalfollow.length - followPortalDisplay;
+                    for (let i=slocalfollow.length - 1;i>=icnt;i--){
+                        //let tmpDateTime = slocalfollow[i].dateTime ? (slocalfollow[i].dateTime.substring(0,10)+" "+slocalfollow[i].dateTime.substring(11,19)) : "";
+                        const tmpDateTime = slocalfollow[i].dateTime ? (new Date(slocalfollow[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
+                        //console.log(tmpDateTime); // 输出示例：2025-10-09 12:36:06（GMT+8 时间）
+                        sfdetail+="<tr><td>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>" + tmpDateTime + "</td><td>"+slocalfollow[i].review+"</td></tr>";
+                    }
+                    sfdetail+="</tbody></table>";
+                }
+                $("#idfollow").replaceWith(sftitle+sfdetail);
+            }
+
+            //以下，生成 超时列表
+            {
+                let sftitle="<table style='width:100%'><thead><tr><th style='width:20%'>ID</th><th style='width:15%'>名称</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th><th style='width:15%'>时间</th><th style='width:29%'>跟审情况</th></thead>";
+                let sfdetail = "";
+                let slocalexpire = [];
+                if(localStorage.getItem("reviewExpList")) slocalexpire = JSON.parse(localStorage.getItem("reviewExpList"));
+                //console.log(slocalexpire);
+                if(slocalexpire.length>0){
+                    sfdetail+="<tbody>";
+                    //console.log(slocalexpire[0]);
+                    let icnt = 0;if (slocalexpire.length>expirePortalDisplay) icnt = slocalexpire.length - expirePortalDisplay;
+                    for (let i=slocalexpire.length - 1;i>=icnt;i--){
+                        const tmpDateTime = slocalexpire[i].dateTime ? (new Date(slocalexpire[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
+                        sfdetail+="<tr><td>"+slocalexpire[i].id+"</td><td>"+slocalexpire[i].title+"</td><td>"+slocalexpire[i].lat+"</td><td>"+slocalexpire[i].lng+"</td><td>" + tmpDateTime + "</td><td>"+slocalexpire[i].review+"</td></tr>";
+                    }
+                    sfdetail+="</tbody></table>";
+                }
+                $("#idexpire").replaceWith(sftitle+sfdetail);
+            }
+
+            //以下，生成 上传列表
+            {
+                let sutitle="<table style='width:100%'><thead><tr><th style='width:20%'>ID</th><th style='width:15%'>名称</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th><th style='width:15%'>时间</th><th style='width:29%'>审核情况</th></thead>";
+                let sudetail = "";
+                let slocalupload = [];
+                if(localStorage.getItem(userEmail+"upload")) slocalupload = JSON.parse(localStorage.getItem(userEmail+"upload"));
+                //console.log(slocalupload);
+                if(slocalupload.length>0){
+                    sudetail+="<tbody>";
+                    let icnt = 0;if (slocalupload.length>uploadPortalDisplay) icnt = slocalupload.length - uploadPortalDisplay;
+                    for (let i=slocalupload.length - 1;i>=icnt;i--){
+                        const tmpDateTime = slocalupload[i].dateTime ? (new Date(slocalupload[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
+                        sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+tmpDateTime+"</td><td>"+slocalupload[i].review+"</td></tr>";
+                    }
+                    sudetail+="</tbody></table>";
+                }
+                $("#idupload").replaceWith(sutitle+sudetail);
+            }
+
+            // 处理池中评审列表（reviewLista → #privatePortal1）
+            const tableHtmlA = generateReviewTable('reviewLista', privatePortalDisplay1);
+            replaceElement("#privatePortal1", tableHtmlA);
+            // 处理池外评审列表（reviewListb → #privatePortal2）
+            const tableHtmlB = generateReviewTable('reviewListb', privatePortalDisplay2);
+            replaceElement("#privatePortal2", tableHtmlB);
+
+            //以下，生成任务列表显示：smis：表头；smistmp：最终表格；sultmp：用户邮箱排列块
+            //放在最后，因为需要generateReviewTable里读取本地来判断是否审过=>更新missionGDoc中的ownerstatus
+            //下一步，是否加入读取网络文件来判断是否审过？
+            {
+                //smistmp(字符串)/missionPortal(DOM元素)  ; sultmp(字符串，用户邮箱)/missionuser(显示用户邮箱排列块)
+                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
+                let smis="<table style='width:100%'><thead><tr>"
+                +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
+                +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
+                +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
+                +"<th style='width:14%'>挪po</th>"
+                +"</tr></thead>";
+                let smistmp="";let sstmp="";let ssok="";
+                smistmp=smis+"<tbody>";
+                missionGDoc.forEach(item => {
+                    smistmp+="<tr><td>"+item.title+"</a></td>"
+                        +"<td>"+(item.status === "通过" ? "✓" : "" )+"</td>"
+                        +'<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.lat+','+item.lng+"</a></td>"
+                        +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.types+"</a></td>"
+                        +"<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td><td>"+ (item.ownerstatus === true ? '✓' : '') +"</td>"+
+                        "<td><a href='"+durl+"/portal/portaluseremail/portal."+item.portalID+".useremail.json'  target='_blank'>"+item.timestamp.slice(0,19)+"</a></td>"
+                        +"<td>"+item.lat+"</td>"+"<td>"+item.lng+"</td>"+"<td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
+                        +"</tr>";
+                });
+                //console.log('homepage',missionGDoc);
+                let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
+                //console.log("missionPortal1",$("#missionPortal1"));
+                smistmp+="</tbody></table>";
+                //console.log(`smistmp`,smistmp);
+                // 使用const声明变量，避免意外修改
+                const parser = new DOMParser();
+                // 确保smistmp是有效的字符串，避免解析错误
+                if (typeof smistmp === 'string' && smistmp.trim() !== '') {
+                    try {
+                        // 解析HTML字符串
+                        const doc = parser.parseFromString(smistmp, "text/html");
+                        // 获取目标元素
+                        const missionPortal = document.querySelector("#missionPortal1");
+                        //console.log(`missionPortal`,missionPortal);
+
+                        if (missionPortal) {
+                            // 插入解析后的内容
+                            missionPortal.innerHTML = doc.body.innerHTML;
+                            //console.log("HTML内容已成功插入到missionPortal1");
+                        } else {
+                            console.error("未找到id为missionPortal1的元素");
+                        }
+                    } catch (error) {
+                        console.error("解析HTML时发生错误:", error);
+                    }
+                } else {
+                    console.warn("smistmp不是有效的HTML字符串，无法解析");
+                }
+                //console.log(smisssss.body.innerHTML);
+                //console.log("smistmp",smistmp);
+                replaceElement("#missionuser", sultmp);
+                //$("#missionuser").replaceWith(sultmp);
+                //console.log(smisssss);
+            }
+
+        } catch(e){console.log(e);}
+
+    }
+    // 通用函数：生成评审数据表格
+    function generateReviewTable(storageKey, displayLimit) {
+        // 1. 安全读取并解析本地存储数据
+        let reviewData = [];
+        try {
+            const storedData = localStorage.getItem(storageKey);
+            if (storedData) {
+                reviewData = JSON.parse(storedData);
+                if (!Array.isArray(reviewData)) {
+                    console.warn(`${storageKey} 数据格式错误，已重置为空数组`);
+                    reviewData = [];
+                }
+            }
+        } catch (error) {
+            console.error(`解析${storageKey}数据失败：`, error);
+            reviewData = [];
+        }
+
+        // 2. 构建表格HTML
+        let tableHtml = `
+          <table style='width:100%'>
+            <thead>
+                <tr>
+                    <th style='width:18%'>用户</th>
+                    <th style='width:12%'>名称</th>
+                    <th style='width:6%'>类型</th>
+                    <th style='width:8%'>纬度</th>
+                    <th style='width:8%'>经度</th>
+                    <th style='width:12%'>打分</th>
+                    <th style='width:16%'>时间</th>
+                    <th style='width:20%'>ID</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+
+        let itemCount = 0;
+
+        // 创建数组的反转副本，不影响原数组
+        reviewData = [...reviewData].reverse();
+        // 3. 遍历数据生成表格行
+        for (const item of reviewData) {
+
+            // 处理分数格式化
+            let formattedScore = item.score;
+            if (typeof item.score === 'string' && item.score.length === 7) {
+                formattedScore = item.score
+                    .replace(/5/g, "Y")
+                    .replace(/3/g, "D")
+                    .replace(/1/g, "N");
+            }
+
+            // 安全获取字段值
+            const user = item.user || '';
+            const title = item.title || '';
+            const type = item.type || '';
+            const lat = item.lat || '';
+            const lng = item.lng || '';
+            const dateTime = item.dt || item.datetime || '';
+            const id = item.id || '';
+
+            if (itemCount < displayLimit) {
+                // 添加表格行
+                tableHtml += `
+            <tr>
+                <td>${user}</td>
+                <td>${title}</td>
+                <td>${type}</td>
+                <td>${lat}</td>
+                <td>${lng}</td>
+                <td>${formattedScore}</td>
+                <td>${dateTime}</td>
+                <td>${id}</td>
+            </tr>
+            `;
+            }
+            itemCount++;
+
+            // 4. 更新任务状态
+            let usernamelist=localStorage[userEmail+"user"];
+            if (!usernamelist) usernamelist="";
+            if (usernamelist?.indexOf(user) >= 0 || user === userEmail) {
+
+                //通过id判断当前用户是否审过-20251007改
+                const matchingMission = missionGDoc.find(mission => mission.portalID === id);
+                //console.log(`matchingMission:${id}`,matchingMission);
+                if (matchingMission) {
+                    //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
+                    matchingMission.ownerstatus = true;
+                }
+                //通过名称匹配来判断当前用户是否审过
+                /*
+                const matchingMission = missionGDoc.find(mission => mission.title === title);
+                if (matchingMission) {
+                    try {
+                        const responseDate = new Date(matchingMission.responsedate);
+                        const reviewDate = new Date(dateTime.slice(0, 10));
+
+                        if (!isNaN(responseDate.getTime()) && !isNaN(reviewDate.getTime())) {
+                            const fiveDaysLater = new Date(reviewDate);
+                            fiveDaysLater.setDate(reviewDate.getDate() + 5);
+
+                            if (responseDate <= fiveDaysLater) {
+                                matchingMission.ownerstatus = true;
+                            }
+                        } else {
+                            console.warn(`无效日期 - ${storageKey}：${matchingMission.responsedate} vs ${dateTime}`);
+                        }
+                    } catch (dateError) {
+                        console.error(`${storageKey}日期处理错误：`, dateError);
+                    }
+                }
+                */
+
+            }
+        }
+
+        // 完成表格HTML
+        tableHtml += `
+            </tbody>
+        </table>
+    `;
+
+        //console.log(storageKey,tableHtml);
+        return tableHtml;
+    }
+
+    // 通用元素替换函数replaceElement
+    // selector: 目标元素的选择器（如 "#missionuser", ".content" 等）
+    // replacement: 用于替换的内容（HTML字符串或DOM元素）
+    // 使用示例
+    {
+    // 替换 #missionuser 元素
+    // replaceElement("#missionuser", '<div class="new-mission">新的任务内容</div>');
+
+    // 替换 .old-content 元素
+    // replaceElement(".old-content", '<p>这是新内容</p>');
+
+    // 也可以替换为DOM元素
+    // const newDiv = $('<div>动态创建的元素</div>');
+    // replaceElement("#container", newDiv);
+    }
+    function replaceElement(selector, replacement) {
+        // 缓存目标元素
+        const $target = $(selector);
+
+        // 检查目标元素是否存在
+        if ($target.length === 0) {
+            console.error(`未找到符合选择器 "${selector}" 的元素，无法替换`);
             return false;
         }
 
-        // 获取两个对象的属性键数组
-        const keys1 = Object.keys(obj1);
-        const keys2 = Object.keys(obj2);
-
-        // 如果属性数量不同，返回false
-        if (keys1.length !== keys2.length) return false;
-
-        // 逐个比较属性
-        for (const key of keys1) {
-            // 检查obj2是否有相同的属性
-            if (!keys2.includes(key)) return false;
-
-            // 递归比较属性值
-            if (!areObjectsEqual(obj1[key], obj2[key])) return false;
+        // 检查替换内容是否有效
+        if (replacement === undefined || replacement === null) {
+            console.warn(`替换内容为${replacement}，将清空元素`);
+            $target.empty();
+            return true;
         }
 
-        return true;
+        try {
+            // 执行替换操作
+            $target.replaceWith(replacement);
+            //console.log(`符合选择器 "${selector}" 的元素已成功替换`);
+            return true;
+        } catch (error) {
+            console.error(`替换符合选择器 "${selector}" 的元素时发生错误:`, error);
+            return false;
+        }
     }
 
-
-    // 自定义日志函数：替代console.log，将内容显示在面板 不是太好用，没使用，但函数接口在，不要删
-    function showLog(message, isError = false) {
-        // 创建单条日志元素
-        const logItem = document.createElement('div');
-        // 错误信息标红，普通信息白色
-        logItem.style.color = isError ? '#ff4444' : '#ffffff';
-        // 添加时间戳（可选，便于追溯）
-        const time = new Date().toLocaleTimeString();
-        logItem.textContent = `[${time}] ${message}`;
-
-        // 添加到面板（最新日志在最下面）
-        //statusContent.appendChild(logItem);
-
-        // 滚动到底部，确保能看到最新日志
-        //statusContent.scrollTop = statusContent.scrollHeight;
-
-        // 可选：保留最近20条日志，避免面板过长
-        //if (statusContent.children.length > 20) {
-        //statusContent.removeChild(statusContent.firstChild);
-        //}
+    function findUserEmail(userreview,UEmailList){
+        try{
+            //console.log(userreview);
+            if(UEmailList.indexOf(",")>=0){
+                let sss=UEmailList+",";
+                while(sss.indexOf(",")>=0){
+                    let sss1 = sss.substring(0,sss.indexOf(","));
+                    if(userreview.indexOf(sss1)>=0) {
+                        if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss1",sss1);console.log("sss",sss);}
+                        return 1;
+                    }
+                    sss=sss.substring(sss.indexOf(",")+1,sss.length-1);
+                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss12",sss1);console.log("sss2",sss);}
+                }
+                if(userreview.indexOf(sss)>=0) {
+                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss3",sss);}
+                    return 1;
+                }
+                return -1;
+            } else {
+                return userreview.indexOf(UEmailList);
+            }
+        }
+        catch(e){
+            console.log(e);
+            return -1;
+        }
     }
+
+    switchUserReviewDiv = function() {
+        //console.log("switchUserReviewDiv",id);
+        try{
+            let id = event.srcElement.attributes['tagname'].textContent;
+            let us = event.srcElement.attributes['us'].textContent;
+            let owner = event.srcElement.attributes['owner'].textContent;
+            let powner = event.srcElement.attributes['powner'].textContent;
+            let userEmailList = [];
+            let idUserEmail = document.getElementById("idUserEmail");
+            let stmp="";
+            let sss = event.srcElement;
+            //console.log(idUserEmail.textContent);
+            if(sss.textContent.indexOf("↓")>0){
+                sss.textContent = sss.textContent.replace(/↓/g,"");
+                stmp+="<div id='idUserEmail' style='display: none;'></div>";
+                $("#idUserEmail").replaceWith(stmp);
+            } else {
+                let eus1 = document.querySelectorAll('[us="us1"');
+                eus1.forEach(item=>{
+                    if(item.textContent.indexOf("↓")>0) item.textContent = item.textContent.replace("↓","");
+                });
+                let eus2 = document.querySelectorAll('[us="us2"');
+                eus2.forEach(item=>{
+                    if(item.textContent.indexOf("↓")>0) item.textContent = item.textContent.replace("↓","");
+                });
+                sss.textContent = sss.textContent + "↓";
+                idUserEmail.style.display = "block";
+                if(us=="us1") {
+                    userEmailList = JSON.parse(JSON.stringify(userEmailList1));
+                } else if(us=="us2") {
+                    userEmailList = JSON.parse(JSON.stringify(userEmailList2));
+                }
+                //let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+id+".useremail.json")
+                let resp = readR2File("portal/portaluseremail/portal."+id+".useremail.json")
+                .then(res=>{
+                    let userreview = [];
+                    let userReviewJson = null;
+                    if(!res) {
+                        setTimeout(function(){
+                            console.log("switchUserReviewDiv:未找到审核文件",res);
+                        },1000);
+                        //return;
+                    } else {
+                        //userreview = res;
+                        userReviewJson = res.content;
+                        userreview = JSON.stringify(res.content);
+                    }
+                    //console.log('res',res);
+                    //console.log(idUserEmail.style.display);
+                    stmp+="<div id='idUserEmail' style='display:block;'><div style='display: flex;'>";
+                    //console.log("userEmailList",userEmailList);
+                    //console.log("userreview",userreview);
+                    if(userreview.length>0) console.log('userReviewJson',userReviewJson);
+
+                    //如果用户打卡里userreview没有当前用户，但是missionGDoc里的ownerstatus是ture，则补一个打卡
+                    //补打卡的过程，从本地reviewLista及reviewListb里读取用户审核的情况(通过id匹配)
+                    //在userreview里增加一个当前用户的审核，并上传到cloudflare
+                    //通过id判断当前用户是否审过-20251007改
+                    const matchingMission = missionGDoc.find(mission => mission.portalID === id);
+                    //console.log(`matchingMission:${id}`,matchingMission);
+                    if (matchingMission) {
+                        let iHaveReview = false;
+                        //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
+                        if(matchingMission.ownerstatus){
+                             const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
+                            if(!userReviewed){
+                                //无用户打卡，但是本地审核中有 => 上传补打卡
+                                //业务逻辑 - 补打卡
+                                iHaveReview = true;
+                                console.log("无用户打卡，但是本地审核中有");
+                            } else {
+                                console.log("有用户打卡，本地审核也有");
+                            }
+                        } else {
+                            //任务列表中显示未审，是否再读取一次reviewLista和reviewListb
+                        }
+                        if(iHaveReview) {
+                            let susermark={useremail : userEmail,
+                                           datetime : formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),
+                                           performance:performance};
+                            userReviewJson.push(susermark);
+                            console.log("userReviewJson","userReviewJson");
+                            userreview = JSON.stringify(userReviewJson);
+                            setTimeout(function(){
+                                console.log("补用户打卡：portal/portaluseremail/","portal."+id+".useremail.json",susermark);
+                                //保存任务id :
+                                //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
+                                uploadDataToR2("portal/portaluseremail/","portal."+id+".useremail.json",userReviewJson);
+                            },500);
+                        }
+                    }
+
+                    for(let i=0;i<userEmailList.length;i++){
+                        let sname=null;let semail=null;let slink=null; let po = "";
+                        sname=userEmailList[i].substring(0,userEmailList[i].indexOf(';'));
+                        semail=userEmailList[i].substring(userEmailList[i].indexOf(';')+1,userEmailList[i].indexOf(';',userEmailList[i].indexOf(';')+1));
+                        slink=userEmailList[i].substring(userEmailList[i].lastIndexOf(';')+1);
+                        if(sname == "pkpkqq02") {
+                            //console.log(sname);console.log(semail);console.log(slink);console.log(userEmail);console.log(powner);
+                            //console.log(userreview);console.log(semail);
+                        }
+                        if(powner){
+                            if(semail.indexOf(powner)>=0){
+                                po = "<span style='color:red'>O:</span>";
+                            }
+                        } else {
+                            po = "<span></span>";
+                        }
+                        //审核过的用户
+                        if(findUserEmail(userreview,semail)>0){
+                            //console.log('userreview',userreview);
+                            //console.log('semail yes',semail);
+                            //if(sname === "pkpkqq02" || sname === "O:pkpkqq02") { console.log("find OK");}
+                        //if(userreview.indexOf(userEmailList[i])>=0) {
+                            //console.log('userEmail',userEmail);
+                            //console.log('userEmailList[i]',userEmailList[i]);
+                            //console.log('userEmailList[i].indexOf(userEmail)>=0',userEmailList[i].indexOf(userEmail)>=0);
+                            if(userEmailList[i].indexOf(userEmail)>=0){
+                                stmp+="<div class='sqselfok'>" + po + sname + "</div>";
+                            } else {
+                                stmp+="<div class='sqok'>" + po +sname+"</div>";
+                            }
+                        } else { //未审到的用户
+                            //if(sname == "pkpkqq02") { console.log("find NO");}
+                            //console.log('semail no',semail);
+                            if(semail.indexOf(userEmail)>=0){
+                                if(owner=="true"){
+                                    stmp+="<div class='sqselfowner'>" + po + sname+"</div>";
+                                } else {
+                                    stmp+="<div class='sqselfno'>" + po + sname+"</div>";
+                                }
+                            } else {
+                                //console.log('semail',semail);
+                                stmp+="<div class='sqno'>" + po + sname+"</div>";
+                            }
+                        }
+
+                        if((i+1)%5==0) {
+                            stmp+="</div><p><div style='padding-top:1em;display: flex;'>";
+                        }
+                    }
+                    stmp+="</div></div>";
+                    //console.log("stmp",stmp);
+                    $("#idUserEmail").replaceWith(stmp);
+                },err=>{
+                    console.log("err, not found", err);
+                });
+            }
+            setTimeout(function(){
+                //console.log("stmp",stmp);
+                //$("#idUserEmail").replaceWith(stmp);
+            },500);
+            //console.log(id);
+
+        } catch(e) {
+            console.log("switchUserReviewDiv",e);
+        }
+    };
+
+    // 滚动到页面顶部
+    function scrollToTop() {
+        window.scrollBy({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
+    // 滚动到页面底部
+    function scrollToBottom() {
+        window.scrollBy({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth'
+        });
+    };
+
+    //用户消息
+    function createNotify(title, options) {
+        var PERMISSON_GRANTED = "granted";
+        var PERMISSON_DENIED = "denied";
+        var PERMISSON_DEFAULT = "default";
+
+        // 如果用户已经允许，直接显示消息，如果不允许则提示用户授权
+        if (Notification.permission === PERMISSON_GRANTED) {
+            notify(title, options);
+        } else {
+            Notification.requestPermission(function (res) {
+                if (res === PERMISSON_GRANTED) {
+                    notify(title, options);
+                }
+            });
+        }
+
+        //显示消息
+        function notify($title, $options) {
+            var notification = new Notification($title, $options);
+            notification.onshow = function (event) {
+            };
+            notification.onclose = function (event) {
+            };
+            notification.onclick = function (event) {
+                notification.close();
+                mywin.focus();
+            };
+        }
+    }
+
+    function userNotice($title, $options) {
+        console.log($title);
+        console.log($options);
+        let notification = new Notification($title, $options);
+        console.log(notification);
+        notification.onshow = function (event) {
+        };
+        notification.onclose = function (event) {
+        };
+        notification.onclick = function (event) {
+            notification.close();
+            mywin.focus();
+        };
+        console.log(notification);
+        return notification;
+    }
+
+    //标题闪烁，并记录是否已经有消息
+    class MessageNotice {
+        timer = undefined;
+        title = document.title;
+        timelist = [];
+        count = 0;
+        alertwindow=undefined;
+
+        alertShow(){
+            this.alertwindow="Displayed";
+            this.show();
+        }
+        show() {
+            if(!this.timer){
+                this.timer = setInterval(() => {
+                    if (this.count % 2 ==0 ) {
+                        document.title="【提示】" + this.title;
+                    } else {
+                        document.title="【.......】" + this.title;
+                    }
+                    this.count++;
+                },400)
+                this.timelist.push(this.timer);
+            }
+        }
+
+        stop() {
+            this.alertwindow=undefined;
+            if ( this.timer) {
+                /*       this.timelist.forEach((item,index)=>{
+        clearInterval(this.timer);
+      }) */
+                //       this.timer = undefined;
+                this.count = 0;
+                this.timelist = [];
+                document.title = this.title;
+            }
+        }
+    }
+    const messageNotice = new MessageNotice();
 
     //格式化日期函数
     function formatDate(date, fmt)
@@ -1752,35 +2576,174 @@
         return fmt;
     }
 
-    //用户消息
-    function createNotify(title, options) {
-        var PERMISSON_GRANTED = "granted";
-        var PERMISSON_DENIED = "denied";
-        var PERMISSON_DEFAULT = "default";
+    initUserEmailList();
+    function initUserEmailList(){
+        userEmailList1=["snpsl;snp66666@gmail.com;open chrome 1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;","tydtyd;tydtyd@gmail.com;",
+                        "kingsnan;zhangnan107107@gmail.com;","18kpt;sunkpty@gmail.com;","zhangnan007;zhangnan_007@outlook.com;","znan008Uni163-11.35;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;open chrome 23",
+                       "pkpkqq01;pkpkqq01@gmail.com;","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;","poketydf02;poketydf02@gmail.com;","poketydf03;poketydf03@gmail.com;",
+                       "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;","pokepokem01;pokepokem01@outlook.com;",
+                       "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
+                       ];
+        userEmailList2=["小尔;w4b4uh134@gmail.com;","木木;1806424832mjn@gmail.com;","FishDragonKing;269999205@qq.com;","15998804246dyh;15998804246dyh@gmail.com;","hch463734529;hch463734529@gmail.com;",
+                        "masterxiaoli666;masterxiaoli666@gmail.com;","shizx1twk;shizx1twk@gmail.com;","470274941;470274941@qq.com;","wczmw;wczmw@sina.com;",";;"
+                       ];
 
-        // 如果用户已经允许，直接显示消息，如果不允许则提示用户授权
-        if (Notification.permission === PERMISSON_GRANTED) {
-            notify(title, options);
-        } else {
-            Notification.requestPermission(function (res) {
-                if (res === PERMISSON_GRANTED) {
-                    notify(title, options);
-                }
-            });
-        }
-
-        //显示消息
-        function notify($title, $options) {
-            var notification = new Notification($title, $options);
-            notification.onshow = function (event) {
-            };
-            notification.onclose = function (event) {
-            };
-            notification.onclick = function (event) {
-                notification.close();
-                mywin.focus();
-            };
-        }
     }
+
+    // -------------------------- 核心：创建左下角状态面板 --------------------------
+    function createStatusPanel() {
+        // 状态面板容器
+        const panel = document.createElement('div');
+        panel.id = 'cf-upload-status-panel';
+        // 样式：固定在左下角，半透明背景，不遮挡操作
+        panel.style.cssText = `
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      max-width: 400px;
+      max-height: 150px;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      font-size: 12px;
+      font-family: Arial, sans-serif;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      overflow-y: auto;
+      z-index: 99999; /* 确保在最上层，不被其他元素遮挡 */
+      opacity: 0.9;
+    `;
+
+        // 面板标题（可选，用于区分状态类型）
+        const title = document.createElement('div');
+        title.style.cssText = `
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      font-weight: bold;
+      color: #4CAF50;
+    `;
+        title.textContent = 'R2上传状态';
+        panel.appendChild(title);
+
+        // 状态内容容器（用于动态添加日志）
+        const content = document.createElement('div');
+        content.id = 'cf-status-content';
+        content.style.lineHeight = '1.4';
+        panel.appendChild(content);
+
+        // 添加到页面
+        document.body.appendChild(panel);
+
+        // 返回内容容器，方便后续添加日志
+        return content;
+    }
+
+    // -------------------------- 工具：向面板添加日志 --------------------------
+    // 先创建面板，获取内容容器
+    //const statusContent = createStatusPanel();
+
+    // 自定义日志函数：替代console.log，将内容显示在面板
+    function showLog(message, isError = false) {
+        // 创建单条日志元素
+        const logItem = document.createElement('div');
+        // 错误信息标红，普通信息白色
+        logItem.style.color = isError ? '#ff4444' : '#ffffff';
+        // 添加时间戳（可选，便于追溯）
+        const time = new Date().toLocaleTimeString();
+        logItem.textContent = `[${time}] ${message}`;
+
+        // 添加到面板（最新日志在最下面）
+        //statusContent.appendChild(logItem);
+
+        // 滚动到底部，确保能看到最新日志
+        //statusContent.scrollTop = statusContent.scrollHeight;
+
+        // 可选：保留最近20条日志，避免面板过长
+        //if (statusContent.children.length > 20) {
+        //statusContent.removeChild(statusContent.firstChild);
+        //}
+    }
+
+    //css
+    (function() {
+        const css = `
+          .clusertop {
+              margin-left: 2em;
+              padding-top: 0.3em;
+              text-align: left;
+              display: flex;
+              justify-content: flex-start;
+              float: left;
+          }
+          .txtcenter {
+            margin-left: 0em;
+            text-align : center;
+          }
+          .container {
+              display: flex;
+              justify-content: space-around;
+              align-items: center;
+              height: 100vh;
+          }
+          .sqno {
+              margin-left: 2em;
+              padding-top: 1em;
+              width: 250px;
+              height: 50px;
+              font-size:18px;
+              background-color: #cccccc;
+          }
+          .sqok {
+              margin-left: 2em;
+              padding-top: 1em;
+              width: 250px;
+              height: 50px;
+              font-size:18px;
+              color: #ffe600;
+              background-color: #007947;
+          }
+          .sqselfowner {
+              margin-left: 2em;
+              padding-top: 1em;
+              width: 250px;
+              height: 50px;
+              borderStyle:solid;
+              borderWidth:2px;
+              bordercolor:#f58220;
+              font-size:18px;
+              color:#fcf16e;
+              background-color: #7bbfea;
+          }
+          .sqselfno {
+              margin-left: 2em;
+              padding-top: 1em;
+              width: 250px;
+              height: 50px;
+              borderStyle:solid;
+              borderWidth:2px;
+              bordercolor:#f58220;
+              font-size:18px;
+              color:#f58220;
+              background-color: #cccccc;
+          }
+          .sqselfok {
+              margin-left: 2em;
+              padding-top: 1em;
+              width: 250px;
+              height: 50px;
+              borderStyle:solid;
+              borderWidth:2px;
+              bordercolor:#f58220;
+              font-size:18px;
+              color: #faa755;
+              background-color: #007947;
+          }
+        `;
+        const style = document.createElement('style');
+        style.type = 'text/css';
+        style.innerHTML = css;
+        document.querySelector('head').appendChild(style);
+    })()
 
 })();
