@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      3.0.5
+// @version      3.0.8-a
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -238,23 +238,24 @@
                     });
                 },
                 onload: function(response) {
+                    /*
                     console.log('收到响应:', {
                         status: response.status,
                         responseText: response.responseText.substring(0, 200) // 只显示前200字符
-                    });
+                    });*/
                     try {
                         const result = JSON.parse(response.responseText);
                         if (result.success) {
-                            showLog(`成功读取文件: ${result.fileName.split('/').pop()}`,false);
+                            //showLog(`成功读取文件: ${result.fileName.split('/').pop()}`,false);
                             res(result);
                         } else {
-                            console.log('result',result);
-                            showLog(`读取失败: ${result.error}`, true);
+                            console.log('返回结果',result.details);
+                            //showLog(`读取失败: ${result.error}`, true);
                             err(result);
                         }
                     } catch (e) {
                         console.log('e',e);
-                        showLog(`解析文件内容失败: ${e.message}`, true);
+                        //showLog(`解析文件内容失败: ${e.message}`, true);
                         err(e);
                     }
                 },
@@ -265,8 +266,9 @@
                 }
             });
         }).catch(e => {
-            showLog(`解析文件内容失败: ${e.message}`, true);
-            console.log('Promise', e)});
+            //showLog(`解析文件内容失败: ${e.message}`, true);
+            //console.log('Promise', e)
+        });
     }
 
     function U_XMLHttpRequest(method, url) {
@@ -459,6 +461,31 @@
             }
         });
     }
+    // 简化getUser，只负责获取和解析原始数据
+    function getUserPromise() {
+        return U_XMLHttpRequest("GET", "https://wayfarer.nianticlabs.com/api/v1/vault/properties")
+            .then(res => {
+            //console.log("getUser 响应内容：", res);
+            if (!res) {
+                throw new Error("响应内容为空");
+            }
+
+            const restext = JSON.parse(res);
+            console.log("getUser 解析结果：", restext);
+
+            // 仅验证响应结构，不处理数据
+            if (!restext.result?.socialProfile) {
+                throw new Error("响应结构不包含socialProfile");
+            }
+
+            // 返回完整解析结果，让外部处理
+            return restext;
+        })
+            .catch(e => {
+            console.log("getUser 处理失败：", e.message);
+            throw e;
+        });
+    }
 
     function injectLoadData() {
         awaitElement(() => document.querySelector('wf-logo'))
@@ -498,7 +525,7 @@
                     return;
                 }
                 let pData = json.result;
-                console.log("pData",pData);
+                //console.log("pData",pData);
                 let missionGDocstr = localStorage.missionGDoc;
                 if(missionGDocstr) {missionGDoc = JSON.parse(missionGDocstr);} else {return;}
 
@@ -593,7 +620,7 @@
                                 }
                             }
                         }
-                        console.log(`injectManage-iphoto:${iphoto}`);
+                        //console.log(`injectManage-iphoto:${iphoto}`);
                         if(item.types === "图片"){
                             // 使用switch处理item.status的多状态判断
                             switch (item.status) {
@@ -639,9 +666,10 @@
                                     break;
                             }
                         }
-                        console.log(item.title +':isave',isave);
+                        //console.log(item.title +':isave',isave);
                         //更新云中任务
                         if(isave === 1){
+                            console.log("更新任务至GDoc",item.title);
                             setTimeout(function(){
                                 localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
                                 saveToGDoc(item);
@@ -898,10 +926,10 @@
             let idown = document.getElementById("idcountdownlabel");
             let ilabel = document.getElementById("iduserlabel");
             //getLocalMissionList();
-            console.log("follow-loadReviewData-res",res);
+            //console.log("follow-loadReviewData-res",res);
             if(!res) {
                 //修改首页下载显示
-                console.log("getjsonerr");
+                //console.log("getjsonerr");
                 cloudReviewData = null;
                 setTimeout(function(){
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
@@ -1268,7 +1296,7 @@
                 if(ilabel) ilabel.textContent = tmptext;
                 console.log("iduserlabel",tmptext);
             },500);
-            console.log("return true");
+            //console.log("return true");
             return true;
         },
               err=>{
@@ -1281,7 +1309,7 @@
 
 
     //保存审核数据到本地，并判断是否需要上传
-    function savePostData(tmpfollow,data){
+    async function savePostData(tmpfollow,data){
         let rd1=cloudReviewData;
         let rd2=JSON.parse(data);
         //云端非空：跟审
@@ -1330,22 +1358,38 @@
 
                 let localpd1 = [];
                 tmpfollow.dateTime = new Date();
-                if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
-                console.log("保存跟审",tmpfollow);
-                if(localpd1.length === 0){
-                    //console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
-                    localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
+                if(useremail === null){
+                    const restext = await getUserPromise();
+                    // 处理用户信息
+                    useremail = restext.result.socialProfile.email;
+                    if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
+                    console.log("得到用户并保存跟审-"+useremail,tmpfollow);
+                    if(localpd1.length === 0){
+                        //console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
+                        localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
+                    } else {
+                        //console.log(useremail+"follow n",JSON.stringify(tmpfollow));
+                        localpd1.push(tmpfollow);
+                        localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
+                    }
                 } else {
-                    //console.log(useremail+"follow n",JSON.stringify(tmpfollow));
-                    localpd1.push(tmpfollow);
-                    localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
-                }
+                        if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
+                        console.log("保存跟审-"+useremail,tmpfollow);
+                        if(localpd1.length === 0){
+                            //console.log(useremail+"follow 1",JSON.stringify(tmpfollow));
+                            localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
+                        } else {
+                            //console.log(useremail+"follow n",JSON.stringify(tmpfollow));
+                            localpd1.push(tmpfollow);
+                            localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
+                        }
+                    }
             } catch(e){
                 console.log("错误",e);
             }
         }
         else {
-            console.log("无云审核数据");
+            //console.log("无云审核数据");
         }
 
         let iautolabel = document.querySelector("p[id='idautolabel']");
@@ -1360,17 +1404,19 @@
             if(!rd2.skip) rd2.skip=false;
         }
         let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
-        console.log("是否和网络一致",rs1 === rs2);
+        let rsstr = "";
+        if(areObjectsEqual(rd1,rd2)) rsstr = "一致"; else rsstr = "不一致";
+        console.log("本地与云对比",rsstr);
         setTimeout(function(){
-            if(isUserClick & rs1!=rs2) {
-                console.log("调用上传接口",isUserClick);
+            if(isUserClick & rsstr === "不一致") {
+                //console.log("调用上传接口",isUserClick);
                 uploadPostData(portalData,JSON.parse(data),0,false);
             } else {
-                console.log("不上传",isUserClick);
-                console.log("审核结束:",rd2.id);
+                console.log("不上传",rd2.id+":"+portalData.title);
+                console.log("审核结束:",rd2.id+":"+portalData.title);
             }
         },200);
-        if (iautolabel.textContent == "手动" & rs1!=rs2){
+        if (iautolabel.textContent == "手动" & rsstr === "不一致"){
             //console.log("data",JSON.parse(data));
             //uploadPostData(portalData,JSON.parse(data),0,false);
         }
@@ -1379,7 +1425,7 @@
     //判断是否需要上传审核至云端，及保存至本地：用户+upload
     function uploadPostData(pdata,rdata,icloud,iskip){
         let data = rdata ;
-        console.log("检查是否需要上传审核数据...");
+        //console.log("检查是否需要上传审核数据...");
         //console.log(data);
         //console.log(iskip);
         let localpd = [];
@@ -1440,7 +1486,7 @@
         console.log("isave",isave);
         if(isave==1){
             try{
-                console.log("saving...");
+                console.log("上传审核结果...");
                 if(icloud==0 || icloud==2){
                     //保存至本地
                     if(localpd.length==0){
@@ -1618,6 +1664,36 @@
     console.log(approximateMatch("abcdefg", "abcdefxy")); // true（长度7，差1，相同5=7-2）
     console.log(approximateMatch("万达木馬", "万达木马")); // true（长度4，相同3=4-1）
     */
+
+    //比较两个对象是否相同(json的顺序可以不同)
+    function areObjectsEqual(obj1, obj2) {
+        // 如果是同一引用，直接返回true
+        if (obj1 === obj2) return true;
+
+        // 检查是否都是对象且不为null
+        if (typeof obj1 !== 'object' || obj1 === null ||
+            typeof obj2 !== 'object' || obj2 === null) {
+            return false;
+        }
+
+        // 获取两个对象的属性键数组
+        const keys1 = Object.keys(obj1);
+        const keys2 = Object.keys(obj2);
+
+        // 如果属性数量不同，返回false
+        if (keys1.length !== keys2.length) return false;
+
+        // 逐个比较属性
+        for (const key of keys1) {
+            // 检查obj2是否有相同的属性
+            if (!keys2.includes(key)) return false;
+
+            // 递归比较属性值
+            if (!areObjectsEqual(obj1[key], obj2[key])) return false;
+        }
+
+        return true;
+    }
 
 
     // 自定义日志函数：替代console.log，将内容显示在面板 不是太好用，没使用，但函数接口在，不要删
