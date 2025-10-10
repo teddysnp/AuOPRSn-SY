@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.8
+// @version      6.0.9
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1779,25 +1779,29 @@
                     item.ownerstatus = false;
                 })
                 //let prpo = JSON.parse(localStorage.getItem('Reviewed1'));
-                let prpo = JSON.parse(localStorage.reviewLista);
-                let reviewData = [...prpo].reverse();
-                console.log('reviewData',reviewData);
-                for (const item of reviewData) {
-                    if(item.user === userEmail){
-                        const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
-                        if(matchingMission){
-                            matchingMission.ownerstatus = true ;
+                let prpo = localStorage.reviewLista ;
+                if(prpo){
+                    let reviewData = [...prpo].reverse();
+                    console.log('reviewData',reviewData);
+                    for (const item of reviewData) {
+                        if(item.user === userEmail){
+                            const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
+                            if(matchingMission){
+                                matchingMission.ownerstatus = true ;
+                            }
                         }
                     }
                 }
-                prpo = JSON.parse(localStorage.reviewListb);
-                reviewData = [...prpo].reverse();
-                console.log('reviewData',reviewData);
-                for (const item of reviewData) {
-                    if(item.user === userEmail){
-                        const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
-                        if(matchingMission){
-                            matchingMission.ownerstatus = true ;
+                prpo = localStorage.reviewLista ;
+                if(prpo){
+                    let reviewData = [...prpo].reverse();
+                    console.log('reviewData',reviewData);
+                    for (const item of reviewData) {
+                        if(item.user === userEmail){
+                            const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
+                            if(matchingMission){
+                                matchingMission.ownerstatus = true ;
+                            }
                         }
                     }
                 }
