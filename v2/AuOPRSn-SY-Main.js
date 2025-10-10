@@ -555,7 +555,7 @@
                     console.log("injectTimer:portalData为空",portalData);
                     return;
                 }
-                console.log('portalData',portalData);
+                //console.log('portalData',portalData);
                 uploadReviewMark(portalData);  //上传数据至用户打卡
                 expireTime = portalData.expires;
                 initTimer(ref.parentNode.parentNode, portalData.expires ,portalData);
@@ -1263,8 +1263,8 @@
     //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
     function uploadReviewMark(portaldata){
         try{
-            console.log("uploadReviewMark:portaldata",portaldata);
-            console.log("uploadReviewMark:missionGDoc",missionGDoc);
+            //console.log("uploadReviewMark:portaldata",portaldata);
+            //console.log("uploadReviewMark:missionGDoc",missionGDoc);
             if(!missionGDoc){ return;}
             let pname = null; let preview=null;
             missionGDoc.forEach(item => {
@@ -1423,7 +1423,7 @@
                 // 确保解析后的数据是数组
                 if (!Array.isArray(reviewList)) {
                     reviewList = [];
-                    console.warn(`本地存储的${storageKey}数据格式错误，已重置为空数组`);
+                    console.warn(`本地${storageKey}格式错误，重置空数组`);
                 }
             } catch (error) {
                 console.error(`解析${storageKey}数据失败，已重置为空数组：`, error);
@@ -1439,10 +1439,10 @@
             // 保存回本地存储
             try {
                 if(storageKey === "reviewLista") {
-                    console.log("reviewLista",reviewList);
+                    //console.log("reviewLista",reviewList);
                 }
                 localStorage.setItem(storageKey, JSON.stringify(reviewList));
-                console.log(`${storageKey}数据已成功保存到本地存储`);
+                console.log(`成功保存本地${storageKey}`);
             } catch (error) {
                 console.error(`保存${storageKey}数据失败：`, error);
             }
@@ -1454,7 +1454,7 @@
                     //console.log("reviewLista",reviewList);
                 }
                 localStorage.setItem(storageKey, JSON.stringify(reviewList));
-                console.log(`${storageKey}数据已成功保存到本地存储`);
+                console.log(`成功保存本地${storageKey}`);
             } catch (error) {
                 console.error(`保存${storageKey}数据失败：`, error);
             }
@@ -1783,7 +1783,7 @@
                 if(prpo){
                     let prpojson = JSON.parse(prpo);
                     let reviewData = [...prpojson].reverse();
-                    console.log('reviewData',reviewData);
+                    //console.log('reviewData',reviewData);
                     for (const item of reviewData) {
                         if(item.user === userEmail){
                             const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
@@ -1797,7 +1797,7 @@
                 if(prpo){
                     let prpojson = JSON.parse(prpo);
                     let reviewData = [...prpojson].reverse();
-                    console.log('reviewData',reviewData);
+                    //console.log('reviewData',reviewData);
                     for (const item of reviewData) {
                         if(item.user === userEmail){
                             const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
