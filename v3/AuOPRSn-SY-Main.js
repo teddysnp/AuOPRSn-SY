@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.0.9
+// @version      6.1.0-a
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1781,7 +1781,8 @@
                 //let prpo = JSON.parse(localStorage.getItem('Reviewed1'));
                 let prpo = localStorage.reviewLista ;
                 if(prpo){
-                    let reviewData = [...prpo].reverse();
+                    let prpojson = JSON.parse(prpo);
+                    let reviewData = [...prpojson].reverse();
                     console.log('reviewData',reviewData);
                     for (const item of reviewData) {
                         if(item.user === userEmail){
@@ -1794,7 +1795,8 @@
                 }
                 prpo = localStorage.reviewLista ;
                 if(prpo){
-                    let reviewData = [...prpo].reverse();
+                    let prpojson = JSON.parse(prpo);
+                    let reviewData = [...prpojson].reverse();
                     console.log('reviewData',reviewData);
                     for (const item of reviewData) {
                         if(item.user === userEmail){
