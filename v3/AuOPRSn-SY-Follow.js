@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      3.0.7
+// @version      3.0.8
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1358,7 +1358,7 @@
 
                 let localpd1 = [];
                 tmpfollow.dateTime = new Date();
-                if(useremail === null){
+                if(useremail === null || useremail === "" ){
                     const restext = await getUserPromise();
                     // 处理用户信息
                     useremail = restext.result.socialProfile.email;
@@ -1373,6 +1373,7 @@
                         localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
                     }
                 } else {
+                    console.log("跟审useremail",useremail);
                         if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
                         console.log("保存跟审-"+useremail,tmpfollow);
                         if(localpd1.length === 0){
