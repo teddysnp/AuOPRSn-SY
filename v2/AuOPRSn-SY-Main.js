@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.1.0
+// @version      6.1.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1268,6 +1268,21 @@
             if(!missionGDoc){ return;}
             let pname = null; let preview=null;
             missionGDoc.forEach(item => {
+                let isMissPortal = false ;
+                if(item.portalID != null) {
+                    if(item.portalID === portaldata.id) {
+                        isMissPortal = true;
+                        console.log("任务po有人审过",portaldata.id+","+portaldata.title);
+                    }
+                } else{
+                    if (item.title === portaldata.title) {
+                        if(Math.abs(item.lat-portaldata.lat)<=0.001 & Math.abs(item.lng-portaldata.lng)<=0.01) {
+                            isMissPortal = true;
+                            console.log("任务po没人审过",portaldata.id+","+portaldata.title);
+                            pname = portaldata.title;preview=item.status;
+                        }
+                    }
+                }
                 if (item.title === portaldata.title) {
                     if(Math.abs(item.lat-portaldata.lat)<=0.001 & Math.abs(item.lng-portaldata.lng)<=0.01) {
                         pname = portaldata.title;preview=item.status;
@@ -1814,7 +1829,7 @@
                 let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
                 missionGDoc.forEach(item => {
                     //待完成
-                    console.log(item.title+':ownerstatus',item.ownerstatus);
+                    //console.log(item.title+':ownerstatus',item.ownerstatus);
                     if (item.status === "提交" ||item.status === "审核" ){
                         if(item.ownerstatus){
                             tmmiss1+="[<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+item.title+".png' target='_blank'>"+item.title+"</a>]";
@@ -1950,7 +1965,7 @@
                         //let tmpDateTime = slocalfollow[i].dateTime ? (slocalfollow[i].dateTime.substring(0,10)+" "+slocalfollow[i].dateTime.substring(11,19)) : "";
                         const tmpDateTime = slocalfollow[i].dateTime ? (new Date(slocalfollow[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
                         //console.log(tmpDateTime); // 输出示例：2025-10-09 12:36:06（GMT+8 时间）
-                        sfdetail+="<tr><td>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>" + tmpDateTime + "</td><td>"+slocalfollow[i].review+"</td></tr>";
+                        sfdetail+="<tr><td><a href='"+durl+"/portal/portaluseremail/portal."+slocalfollow[i].id+".useremail.json'  target='_blank'>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>" + tmpDateTime + "</td><td>"+slocalfollow[i].review+"</td></tr>";
                     }
                     sfdetail+="</tbody></table>";
                 }
@@ -1989,7 +2004,7 @@
                     let icnt = 0;if (slocalupload.length>uploadPortalDisplay) icnt = slocalupload.length - uploadPortalDisplay;
                     for (let i=slocalupload.length - 1;i>=icnt;i--){
                         const tmpDateTime = slocalupload[i].dateTime ? (new Date(slocalupload[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
-                        sudetail+="<tr><td>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+tmpDateTime+"</td><td>"+slocalupload[i].review+"</td></tr>";
+                        sudetail+="<tr><td><a href='"+durl+"/portal/portaluseremail/portal."+slocalupload[i].id+".useremail.json'  target='_blank'>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+tmpDateTime+"</td><td>"+slocalupload[i].review+"</td></tr>";
                     }
                     sudetail+="</tbody></table>";
                 }
@@ -2138,7 +2153,7 @@
                 <td>${lng}</td>
                 <td>${formattedScore}</td>
                 <td>${dateTime}</td>
-                <td>${id}</td>
+                <td><a href='${durl}/portal/portaluseremail/portal.${id}.useremail.json'  target='_blank'>${id}</td>
             </tr>
             `;
             }
@@ -2320,16 +2335,18 @@
                     if(userreview.length>0) console.log('userReviewJson',userReviewJson);
 
                     //如果用户打卡里userreview没有当前用户，但是missionGDoc里的ownerstatus是ture，则补一个打卡
-                    //补打卡的过程，从本地reviewLista及reviewListb里读取用户审核的情况(通过id匹配)
-                    //在userreview里增加一个当前用户的审核，并上传到cloudflare
-                    //通过id判断当前用户是否审过-20251007改
+                    //////补打卡的过程，从本地reviewLista及reviewListb里读取用户审核的情况(通过id匹配)
+                    //////在userreview里增加一个当前用户的审核，并上传到cloudflare
+                    //////通过id判断当前用户是否审过-20251007改
+                    //如果云有，本地没有(有时程序问题/或者换浏览器登录)，则在本地补一个记录
                     const matchingMission = missionGDoc.find(mission => mission.portalID === id);
                     //console.log(`matchingMission:${id}`,matchingMission);
                     if (matchingMission) {
+                        //补网络打卡
                         let iHaveReview = false;
                         //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
                         if(matchingMission.ownerstatus){
-                             const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
+                            const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
                             if(!userReviewed){
                                 //无用户打卡，但是本地审核中有 => 上传补打卡
                                 //业务逻辑 - 补打卡
@@ -2339,7 +2356,45 @@
                                 console.log("有用户打卡，本地审核也有");
                             }
                         } else {
-                            //任务列表中显示未审，是否再读取一次reviewLista和reviewListb
+                            // 1. 先从 userReviewJson 数组中，找到当前用户（userEmail）的审核记录
+                            const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
+                            console.log("云有，本地没有",userReviewed);
+                            // 2. 只有当用户确实有审核记录时，才继续处理本地存储
+                            if (userReviewed) {
+                                try {
+                                    // 3. 从本地存储获取 reviewLista：
+                                    // - 若本地没有这个key，默认用 "[]"（空数组的JSON字符串），避免后续解析报错
+                                    let reviewListStr = localStorage.getItem('reviewLista') || '[]';
+                                    // 4. 把获取到的字符串解析成 JS 数组
+                                    let reviewList = JSON.parse(reviewListStr);
+                                    // 5. 防错处理：若解析后不是数组（比如存储的数据格式损坏），强制设为空数组
+                                    if (!Array.isArray(reviewList)) { reviewList = []; }
+                                    // 6. 检查本地存储的数组中，是否已有当前用户的记录
+                                    // - 用 some() 遍历数组：只要有一个 item 的 user 等于 userEmail，就返回 true
+                                    const iHaveLocal = reviewList.some(item => item?.id === matchingMission.portalID && item?.user === userEmail);
+                                    // 7. 若本地没有该用户的记录，就新增一条
+                                    if (!iHaveLocal) {
+                                        console.log("没找到，本地补一条",iHaveLocal);
+                                        // 组装要新增的记录（注意字段名和原数据保持一致）
+                                        const reviewStr = {
+                                            user: userReviewed.useremail,
+                                            datetime: userReviewed.datetime,
+                                            id: matchingMission.portalID, // 从匹配的任务中取ID
+                                            title: matchingMission.title,
+                                            lat: matchingMission.lat, // 任务的纬度
+                                            lng: matchingMission.lng, // 任务的经度
+                                            score: "云补，未知",
+                                            type: matchingMission.types // 任务的类型
+                                        };
+                                        // 把新记录加入数组，再存回本地存储
+                                        reviewList.push(reviewStr);
+                                        localStorage.setItem("reviewLista", JSON.stringify(reviewList));
+                                    }
+                                } catch (error) {
+                                    console.error('处理 reviewLista 时出错:', error);
+                                    localStorage.setItem("reviewLista", '[]');
+                                }
+                            }
                         }
                         if(iHaveReview) {
                             let susermark={useremail : userEmail,
