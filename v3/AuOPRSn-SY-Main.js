@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.0.0
+// @version      7.0.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1441,18 +1441,20 @@
                         .then(res=>{
                             //如果任务未开审，则更新任务为开审并加id
                             //console.log("preview",preview);
-                            item.status = "审核";
-                            item.portalID = portaldata.id;item.responsedate = formatDate(new Date(),"yyyy-MM-dd");
-                            //saveToGDoc(item);
-                            let updateField={portalID:portaldata.id,status:item.status,responsedate:formatDate(new Date(),"yyyy-MM-dd")};
-                            cfClass.updateData(
-                                item.id, updateField,
-                                (res) => {
-                                    console.log("更新任务状态为开审成功"+portaldata.id,res);
-                                },
-                                (err) => {
-                                    console.log("更新任务状态为开审错误"+portaldata.id,err);
-                                });
+                            if(item.portalID === null || item.portalID === "" || item.status !== "审核"){
+                                item.status = "审核";
+                                item.portalID = portaldata.id;item.responsedate = formatDate(new Date(),"yyyy-MM-dd");
+                                //saveToGDoc(item);
+                                let updateField={portalID:portaldata.id,status:item.status,responsedate:formatDate(new Date(),"yyyy-MM-dd")};
+                                cfClass.updateData(
+                                    item.id, updateField,
+                                    (res) => {
+                                        console.log("更新任务状态为开审成功"+portaldata.id,res);
+                                    },
+                                    (err) => {
+                                        console.log("更新任务状态为开审错误"+portaldata.id,err);
+                                    });
+                            }
 
                             console.log("读取用户打卡");
                             //console.log("res",res);
