@@ -1,14 +1,13 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      6.1.1
+// @version      7.0.0
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
-// @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      work-wayfarer.tydtyd.workers.dev
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=nianticlabs.com
+// @connect      kvworker-warfarer-mission.tydtyd.workers.dev
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
 (function() {
@@ -117,7 +116,7 @@
         //如果是在展示页，那么获取用户的动作在XMLHttpRequest-showReviewedHome中完成
         if(mywin.location.href != "https://wayfarer.nianticlabs.com/new/showcase")
         {
-            await getMissionFromGoogleDoc();
+            await getMissionFromCloudFlare();
         }
     }
 
@@ -127,6 +126,116 @@
         SECRET_KEY: 'warfarer-review', // 与Worker中相同的密钥
         DEFAULT_FOLDER: 'defaultpath/' // 本地指定的存储路径，可随时修改
     };
+    const BASE_URL = "https://kvworker-warfarer-mission.tydtyd.workers.dev";
+    const cfClass = {
+        // 1. 按id查询单条数据
+        getDataById:function(id, success, error) {
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: `${BASE_URL}/data/${id}`,
+                headers: { "Content-Type": "application/json" },
+                onload: (res) => {
+                    if (res.status === 200) {
+                        success(JSON.parse(res.responseText));
+                    } else {
+                        error(`查询失败：${JSON.parse(res.responseText).error}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message}`)
+            });
+        },
+        // 2. 按status批量查询
+        getDatasByStatus:function(statusList, success, error) {
+            const params = new URLSearchParams();
+            statusList.forEach(s => params.append("status", s));
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: `${BASE_URL}/data?${params.toString()}`,
+                headers: { "Content-Type": "application/json" },
+                onload: (res) => {
+                    if (res.status === 200) {
+                        success(JSON.parse(res.responseText));
+                    } else {
+                        error(`查询失败：${JSON.parse(res.responseText).error}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message}`)
+            });
+        },
+        // 3. 新增数据（自动生成id）
+        addData: function(data, success, error) {
+            // 判断数据类型是否为FormData
+            const isFormData = data instanceof FormData;
+            let url = `${BASE_URL}/data`;
+            // 动态决定请求方法：有id则用PUT，无id则用POST
+            let method = "POST";
+
+            // 检查是否有id
+            const hasId = isFormData ? data.has('id') : (data && data.id !== undefined && data.id !== null && data.id!== "");
+
+            if (hasId) {
+                const id = isFormData ? data.get('id') : data.id;
+                url = `${BASE_URL}/data/${id}`;
+                method = "PUT"; // 有id时使用PUT方法（对应服务器的更新接口）
+            }
+
+            GM_xmlhttpRequest({
+                method: method, // 使用动态确定的方法
+                url: url,
+                // FormData不需要设置Content-Type，普通对象用JSON
+                headers: !isFormData ? { "Content-Type": "application/json" } : undefined,
+                // FormData直接传递，普通对象序列化
+                data: isFormData ? data : JSON.stringify(data),
+                onload: (res) => {
+                    try {
+                        const responseData = JSON.parse(res.responseText);
+                        if (res.status === 200) {
+                            success(responseData);
+                        } else {
+                            error(`操作失败：${responseData.error || '未知错误'}`);
+                        }
+                    } catch (e) {
+                        error(`解析响应失败：${e.message}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message || '未知错误'}`)
+            });
+        },
+        // 4. 更新数据（按id）
+        updateData:function(id, updateFields, success, error) {
+            GM_xmlhttpRequest({
+                method: "PUT",
+                url: `${BASE_URL}/data/${id}`,
+                headers: { "Content-Type": "application/json" },
+                data: JSON.stringify(updateFields), // 只需传要更新的字段
+                onload: (res) => {
+                    if (res.status === 200) {
+                        success(JSON.parse(res.responseText));
+                    } else {
+                        error(`更新失败：${JSON.parse(res.responseText).error}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message}`)
+            });
+        },
+        // 5. 删除数据（按id）
+        deleteData:function(id, success, error) {
+            GM_xmlhttpRequest({
+                method: "DELETE",
+                url: `${BASE_URL}/data/${id}`,
+                headers: { "Content-Type": "application/json" },
+                onload: (res) => {
+                    if (res.status === 200) {
+                        success(JSON.parse(res.responseText).message);
+                    } else {
+                        error(`删除失败：${JSON.parse(res.responseText).error}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message}`)
+            });
+        }
+    }
+
     // 上传数据到R2   uploadDataToR2(folderPath:路径 , fileName:文件名 , data:json数据)
     function uploadDataToR2(folderPath,fileName,data) {
         try {
@@ -316,6 +425,47 @@
         });
     };
     //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
+    function getMissionFromCloudFlare() {
+        // 返回 Promise 对象，包裹异步请求逻辑
+        return new Promise((resolve, reject) => {
+            // 调用getDatasByStatus方法
+            const statusList = ["提交", "审核"]; // 状态列表数组（与方法定义匹配）
+            cfClass.getDatasByStatus(
+                statusList, // 第一个参数：状态数组（与方法定义一致）
+                (res) => { // 成功回调：使用res参数（不是success变量）
+                    try {
+                        // 直接使用res，因为res已经是解析后的JSON对象
+                        let markercollection = res;
+                        // 筛选状态为'提交'或'审核'的元素
+                        let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
+                        console.log('Main-getCloudFlare', filteredMarkers);
+                        missionGDoc = filteredMarkers;
+                        localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
+
+                        // 初始化 ownerstatus 字段
+                        missionGDoc.forEach(item => {
+                            item.ownerstatus = "";
+                        });
+                        //console.log("missionGDoc", missionGDoc);
+                        // 数据处理完成，触发 Promise 成功，返回处理后的数据
+                        resolve(missionGDoc);
+                    } catch (e) {
+                        console.log('读取任务错误', e);
+                        return;
+                    }
+                },
+                (err) => { // 错误回调：使用err参数
+                    console.log("读取错误", err); // 这里应该用err而不是error变量
+                    createNotify("错误", {
+                        body: "读取任务列表错误，请刷新页面，否则将无法按计划审核！",
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                        requireInteraction: true
+                    });
+                }
+            );
+        });
+    }
+    //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
     function getMissionFromGoogleDoc() {
         // 返回 Promise 对象，包裹异步请求逻辑
         return new Promise((resolve, reject) => {
@@ -371,11 +521,6 @@
                 }
             });
         });
-    }
-
-    //测试保存数据至GAC,data为JSON数据格式
-    function testSaveToDoc(data){
-        saveToGDoc(data);
     }
 
     // 修复XMLHttpRequest封装，仅在请求完成（readyState=4）时处理响应
@@ -1298,7 +1443,16 @@
                             //console.log("preview",preview);
                             item.status = "审核";
                             item.portalID = portaldata.id;item.responsedate = formatDate(new Date(),"yyyy-MM-dd");
-                            saveToGDoc(item);
+                            //saveToGDoc(item);
+                            let updateField={portalID:portaldata.id,status:item.status,responsedate:formatDate(new Date(),"yyyy-MM-dd")};
+                            cfClass.updateData(
+                                item.id, updateField,
+                                (res) => {
+                                    console.log("更新任务状态为开审成功"+portaldata.id,res);
+                                },
+                                (err) => {
+                                    console.log("更新任务状态为开审错误"+portaldata.id,err);
+                                });
 
                             console.log("读取用户打卡");
                             //console.log("res",res);
@@ -1920,7 +2074,7 @@
         `);
 
             // 等待获取任务数据（现在处于async函数中，可安全使用await）
-            await getMissionFromGoogleDoc();
+            await getMissionFromCloudFlare();
 
             //console.log("missionGDoc.length1", missionGDoc.length);
 
@@ -2038,7 +2192,7 @@
                         +'<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.lat+','+item.lng+"</a></td>"
                         +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.types+"</a></td>"
                         +"<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td><td>"+ (item.ownerstatus === true ? '✓' : '') +"</td>"+
-                        "<td><a href='"+durl+"/portal/portaluseremail/portal."+item.portalID+".useremail.json'  target='_blank'>"+item.timestamp.slice(0,19)+"</a></td>"
+                        "<td><a href='"+durl+"/portal/portaluseremail/portal."+item.portalID+".useremail.json'  target='_blank'>"+item.submitteddate+"</a></td>"
                         +"<td>"+item.lat+"</td>"+"<td>"+item.lng+"</td>"+"<td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
                         +"</tr>";
                 });
