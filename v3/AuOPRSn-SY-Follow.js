@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      3.0.9
+// @version      4.0.0
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -37,10 +37,120 @@
         //console.log("onload","getMission");
         missionGDoc = JSON.parse(localStorage.missionGDoc);
         getLocalMissionList();
-        getLocalGDocMissionList();
+        getLocalMissionList();
     }
 
-    function getLocalGDocMissionList(){
+    const BASE_URL = "https://kvworker-warfarer-mission.tydtyd.workers.dev";
+    const cfClass = {
+        // 1. 按id查询单条数据
+        getDataById:function(id, success, error) {
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: `${BASE_URL}/data/${id}`,
+                headers: { "Content-Type": "application/json" },
+                onload: (res) => {
+                    if (res.status === 200) {
+                        success(JSON.parse(res.responseText));
+                    } else {
+                        error(`查询失败：${JSON.parse(res.responseText).error}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message}`)
+            });
+        },
+        // 2. 按status批量查询
+        getDatasByStatus:function(statusList, success, error) {
+            const params = new URLSearchParams();
+            statusList.forEach(s => params.append("status", s));
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: `${BASE_URL}/data?${params.toString()}`,
+                headers: { "Content-Type": "application/json" },
+                onload: (res) => {
+                    if (res.status === 200) {
+                        success(JSON.parse(res.responseText));
+                    } else {
+                        error(`查询失败：${JSON.parse(res.responseText).error}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message}`)
+            });
+        },
+        // 3. 新增数据（自动生成id）
+        addData: function(data, success, error) {
+            // 判断数据类型是否为FormData
+            const isFormData = data instanceof FormData;
+            let url = `${BASE_URL}/data`;
+            // 动态决定请求方法：有id则用PUT，无id则用POST
+            let method = "POST";
+
+            // 检查是否有id
+            const hasId = isFormData ? data.has('id') : (data && data.id !== undefined && data.id !== null && data.id!== "");
+
+            if (hasId) {
+                const id = isFormData ? data.get('id') : data.id;
+                url = `${BASE_URL}/data/${id}`;
+                method = "PUT"; // 有id时使用PUT方法（对应服务器的更新接口）
+            }
+
+            GM_xmlhttpRequest({
+                method: method, // 使用动态确定的方法
+                url: url,
+                // FormData不需要设置Content-Type，普通对象用JSON
+                headers: !isFormData ? { "Content-Type": "application/json" } : undefined,
+                // FormData直接传递，普通对象序列化
+                data: isFormData ? data : JSON.stringify(data),
+                onload: (res) => {
+                    try {
+                        const responseData = JSON.parse(res.responseText);
+                        if (res.status === 200) {
+                            success(responseData);
+                        } else {
+                            error(`操作失败：${responseData.error || '未知错误'}`);
+                        }
+                    } catch (e) {
+                        error(`解析响应失败：${e.message}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message || '未知错误'}`)
+            });
+        },
+        // 4. 更新数据（按id）
+        updateData:function(id, updateFields, success, error) {
+            GM_xmlhttpRequest({
+                method: "PUT",
+                url: `${BASE_URL}/data/${id}`,
+                headers: { "Content-Type": "application/json" },
+                data: JSON.stringify(updateFields), // 只需传要更新的字段
+                onload: (res) => {
+                    if (res.status === 200) {
+                        success(JSON.parse(res.responseText));
+                    } else {
+                        error(`更新失败：${JSON.parse(res.responseText).error}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message}`)
+            });
+        },
+        // 5. 删除数据（按id）
+        deleteData:function(id, success, error) {
+            GM_xmlhttpRequest({
+                method: "DELETE",
+                url: `${BASE_URL}/data/${id}`,
+                headers: { "Content-Type": "application/json" },
+                onload: (res) => {
+                    if (res.status === 200) {
+                        success(JSON.parse(res.responseText).message);
+                    } else {
+                        error(`删除失败：${JSON.parse(res.responseText).error}`);
+                    }
+                },
+                onerror: (err) => error(`网络错误：${err.message}`)
+            });
+        }
+    }
+
+    function getLocalMissionList(){
         let miss = localStorage.missionGDoc;
         if (miss) {
             missionGDoc = JSON.parse(miss);
@@ -48,7 +158,7 @@
             console.log("follow-missionGDoc",missionGDoc);
         }
     }
-    function getLocalMissionList(){
+    function getLocalMissionListBak(){
         /*
         let miss = localStorage.currentmission;
         if (miss) {
@@ -57,64 +167,7 @@
             console.log("follow-missionGDoc",missionGDoc);
         }*/
     }
-    //从google doc 读取任务
-    function getMissionFromGoogleDoc() {
-        // 返回 Promise 对象，包裹异步请求逻辑
-        return new Promise((resolve, reject) => {
-            const url = dURL + '?status=mission';
-            if (!url) {
-                reject(new Error("请求地址为空")); // 地址无效时触发失败
-                return;
-            }
 
-            $.ajax({
-                url, type: 'GET', dataType: 'text',
-                success: function (data, status, header) {
-                    try {
-                        let markercollection = JSON.parse(data);
-                        // 筛选状态为'提交'或'审核'的元素
-                        let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
-                        console.log('filteredMarkers', filteredMarkers);
-                        missionGDoc = filteredMarkers;
-                        localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
-
-                        // 初始化 ownerstatus 字段
-                        missionGDoc.forEach(item => {
-                            item.ownerstatus = "";
-                        });
-
-                        console.log("missionGDoc", missionGDoc);
-
-                        // 测试数据修改（保留原逻辑）
-                        let testdata = filteredMarkers.filter(item => item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b" );
-                        if (testdata.length === 1) {
-                            testdata[0].status = "通过";
-                            // testSaveToDoc(testdata[0]); // 如需执行，可在这里调用
-                        }
-
-                        // 数据处理完成，触发 Promise 成功，返回处理后的数据
-                        resolve(missionGDoc);
-
-                    } catch (e) {
-                        console.log(e);
-                        alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
-                        reject(e); // 解析/处理失败时触发 Promise 失败
-                    }
-                },
-                error: function (x, y, z) {
-                    const errorMsg = `请求失败: ${x.status} - ${y}`;
-                    console.log('Err:', errorMsg, x, z);
-                    createNotify("读取任务错误", {
-                        body: "读取任务文档失败！" +errorMsg,
-                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
-                        requireInteraction: false
-                    });
-                    //alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
-                    reject(new Error(errorMsg)); // AJAX 请求失败时触发 Promise 失败
-                }
-            });
-        });
-    }
     //更新任务数据至Google Doc , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
     function saveToGDoc(sdata){
 
@@ -585,7 +638,8 @@
                                         }
                                     }
                                     //审核人写错
-                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") & item.submitter != useremail) {
+                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") & item.submitter != useremail)
+                                    {
                                         item.submitter = useremail ;
                                         isave=1;
                                         console.log("isave3：更新邮箱");
@@ -672,7 +726,16 @@
                             console.log("更新任务至GDoc",item.title);
                             setTimeout(function(){
                                 localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
-                                saveToGDoc(item);
+                                //saveToGDoc(item);
+                                let updateField={status:item.status,title:item.title,lat:item.lat,lng:item.lng,submitter:item.submitter};
+                                cfClass.updateData(
+                                    item.id, updateField,
+                                    (res) => {
+                                        console.log("更新任务成功"+item.id+","+item.title,res);
+                                    },
+                                    (err) => {
+                                        console.log("更新任务错误"+item.id+","+item.title,err);
+                                    });
                             },500);
                         }
                     })
