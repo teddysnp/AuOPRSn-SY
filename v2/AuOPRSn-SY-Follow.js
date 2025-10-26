@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.0.0
+// @version      4.0.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
-// @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
+// @require      https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.1.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      work-wayfarer.tydtyd.workers.dev
 // @grant        GM_xmlhttpRequest
@@ -27,6 +27,7 @@
     let useremail = "";
     let tmpfollow={id:null,title:null,lat:null,lng:null,review:null,dateTime:null};
     let isUserClick = false ;
+    let ilatdis = 0.002; let ilngdis = 0.002; //判断池中和任务po是否一致时，两者经纬度相差的度数
     let iautoman = null;
     let mywin = window;
     //let missionlist = [];
@@ -256,19 +257,29 @@
                     try {
                         const result = JSON.parse(response.responseText);
                         if (result.success) {
+                            let iup = document.getElementById("iduplabel");
+                            if(iup) iup.style="font-weight:bold;color:#1d953f";
                             console.log(`数据上传成功: ${result.fullPath}`);
                         } else {
+                            let iup = document.getElementById("iduplabel");
+                            if(iup) iup.style="font-weight:bold;color:red";
                             console.log(`上传失败: ${result.error || result.details}`);
                         }
                     } catch (e) {
+                        let iup = document.getElementById("iduplabel");
+                        if(iup) iup.style="font-weight:bold;color:red";
                         console.log(`解析响应失败: ${e.message}`);
                     }
                 },
                 onerror: function(error) {
+                    let iup = document.getElementById("iduplabel");
+                    if(iup) iup.style="font-weight:bold;color:red";
                     console.log(`解析响应失败: ${error.message}`);
                 }
             });
         } catch (e) {
+            let iup = document.getElementById("iduplabel");
+            if(iup) iup.style="font-weight:bold;color:red";
             console.log(`解析响应失败: ${e.message}`);
         }
     }
@@ -300,6 +311,8 @@
                         const result = JSON.parse(response.responseText);
                         if (result.success) {
                             //showLog(`成功读取文件: ${result.fileName.split('/').pop()}`,false);
+                            let idown = document.getElementById("idcountdownlabel");
+                            if(idown) idown.style="font-weight:bold;color:green";
                             res(result);
                         } else {
                             console.log('返回结果',result.details);
@@ -314,13 +327,28 @@
                 },
                 onerror: function(error) {
                     err(error);
+                    let idown = document.getElementById("idcountdownlabel");
+                    if(idown) idown.style="font-weight:bold;color:gold";
                     console.log('请求错误：',error);
-                    showLog(`连接失败: ${error.message}`, true);
                 }
             });
         }).catch(e => {
-            //showLog(`解析文件内容失败: ${e.message}`, true);
-            //console.log('Promise', e)
+            try {
+                const err = e.details;
+                if(err.indexOf('不存在') >= 0){
+                    let idown = document.getElementById("idcountdownlabel");
+                    if(idown) idown.style="font-weight:bold;color:gold";
+                }else {
+                    let idown = document.getElementById("idcountdownlabel");
+                    if(idown) idown.style="font-weight:bold;color:red";
+                }
+            }
+            catch(error){
+                let idown = document.getElementById("idcountdownlabel");
+                if(idown) idown.style="font-weight:bold;color:red";
+                //showLog(`解析文件内容失败: ${e.message}`, true);
+                console.log('Promise', e)
+            }
         });
     }
 
@@ -842,8 +870,8 @@
         let iplan = null;let tmptext = "";
         //任务里有：其它瞎选，经纬度按任务挪
         missionGDoc.forEach( item => {
-            if(item.id === pdata.id){
-            } else if(item.title === pdata.title){
+            if(item.portalID === pdata.id ||
+               (item.title === pdata.title && Math.abs(item.lat-pdata.lat)<=ilatdis & Math.abs(item.lng-pdata.lng)<=ilngdis) ) {
                 if(item.moveoptions === "右") iplan =10;
                 if(item.moveoptions === "下") iplan =20;
                 if(item.moveoptions === "左") iplan =(parseInt(item.moveplace || 1, 10));
@@ -996,7 +1024,7 @@
                 cloudReviewData = null;
                 setTimeout(function(){
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
-                    if(idown) idown.style="font-weight:bold;color:yellow";
+                    if(idown) idown.style="font-weight:bold;color:gold";
                 },1000);
                 //未找到网络审核时，去判断是否有重复可能
                 if(pdata.type === "EDIT") editReview(pdata);
@@ -1008,7 +1036,7 @@
             if(restext.indexOf("Error 404")>=0) {
                 //修改首页下载显示
                 //中黄：ffe600
-                if(idown) idown.style="font-weight:bold;color:#ffe600";
+                if(idown) idown.style="font-weight:bold;color:gold";
                 console.log("未找到json");
                 cloudReviewData = null;
                 setTimeout(function(){
