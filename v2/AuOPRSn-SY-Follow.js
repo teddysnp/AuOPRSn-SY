@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.0.2
+// @version      4.0.3
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.1.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      work-wayfarer.tydtyd.workers.dev
+// @connect      kvworker-warfarer-mission.tydtyd.workers.dev
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
@@ -28,7 +29,7 @@
     let tmpfollow={id:null,title:null,lat:null,lng:null,review:null,dateTime:null};
     let isUserClick = false ;
     let ilatdis = 0.002; let ilngdis = 0.002; //判断池中和任务po是否一致时，两者经纬度相差的度数
-    let iIsNominationDays = 60000*60*24*3;//判断提交申请，检查经纬度，提交者邮箱，是否审核通过等等时，检查的日期范围
+    let iIsNominationDays = 60000*60*24*5;//判断提交申请，检查经纬度，提交者邮箱，是否审核通过等等时，检查的日期范围
     let iIsTitleRightDays = 60000*60*24*3 ;//判断提交申请，智能匹配名称是否正确时，检查的日期范围
     let iautoman = null;
     let mywin = window;
@@ -259,29 +260,24 @@
                     try {
                         const result = JSON.parse(response.responseText);
                         if (result.success) {
-                            let iup = document.getElementById("iduplabel");
-                            if(iup) iup.style="font-weight:bold;color:#1d953f";
+                            setUpLabel('uploadDataToR2','Green');
                             console.log(`数据上传成功: ${result.fullPath}`);
                         } else {
-                            let iup = document.getElementById("iduplabel");
-                            if(iup) iup.style="font-weight:bold;color:red";
+                            setUpLabel('uploadDataToR2','red');
                             console.log(`上传失败: ${result.error || result.details}`);
                         }
                     } catch (e) {
-                        let iup = document.getElementById("iduplabel");
-                        if(iup) iup.style="font-weight:bold;color:red";
+                        setUpLabel('uploadDataToR2','red');
                         console.log(`解析响应失败: ${e.message}`);
                     }
                 },
                 onerror: function(error) {
-                    let iup = document.getElementById("iduplabel");
-                    if(iup) iup.style="font-weight:bold;color:red";
+                    setUpLabel('uploadDataToR2','red');
                     console.log(`解析响应失败: ${error.message}`);
                 }
             });
         } catch (e) {
-            let iup = document.getElementById("iduplabel");
-            if(iup) iup.style="font-weight:bold;color:red";
+            setUpLabel('uploadDataToR2','red');
             console.log(`解析响应失败: ${e.message}`);
         }
     }
@@ -313,8 +309,7 @@
                         const result = JSON.parse(response.responseText);
                         if (result.success) {
                             //showLog(`成功读取文件: ${result.fileName.split('/').pop()}`,false);
-                            let idown = document.getElementById("idcountdownlabel");
-                            if(idown) idown.style="font-weight:bold;color:green";
+                            setDownLabel(this,'green');
                             res(result);
                         } else {
                             console.log('返回结果',result.details);
@@ -329,8 +324,7 @@
                 },
                 onerror: function(error) {
                     err(error);
-                    let idown = document.getElementById("idcountdownlabel");
-                    if(idown) idown.style="font-weight:bold;color:gold";
+                    setDownLabel('gold')
                     console.log('请求错误：',error);
                 }
             });
@@ -338,20 +332,31 @@
             try {
                 const err = e.details;
                 if(err.indexOf('不存在') >= 0){
-                    let idown = document.getElementById("idcountdownlabel");
-                    if(idown) idown.style="font-weight:bold;color:gold";
+                    setDownLabel(this,'gold');
                 }else {
-                    let idown = document.getElementById("idcountdownlabel");
-                    if(idown) idown.style="font-weight:bold;color:red";
+                    setDownLabel(this,'red');
                 }
             }
             catch(error){
-                let idown = document.getElementById("idcountdownlabel");
-                if(idown) idown.style="font-weight:bold;color:red";
+                setDownLabel(this,'red');
                 //showLog(`解析文件内容失败: ${e.message}`, true);
                 console.log('Promise', e)
             }
         });
+    }
+
+    function setUpLabel(obj,color){
+        console.log('setUpLabel',obj);console.log('setUpLabel',color);
+        setTimeout(function(){
+            let iup = document.getElementById("iduplabel");
+            if(iup) iup.style=`font-weight:bold;color:${color}`;
+        },2000);
+    }
+
+    function setDownLabel(obj,color){
+        console.log('setDownLabel',obj);console.log('setDownLabel',color);
+        const idown = document.getElementById("idcountdownlabel");
+        if(idown) idown.style=`font-weight:bold;color:${color}`;
     }
 
     function U_XMLHttpRequest(method, url) {
@@ -608,14 +613,14 @@
                     return;
                 }
                 let pData = json.result;
-                //console.log("pData",pData);
+                console.log("pData",pData);
                 let missionGDocstr = localStorage.missionGDoc;
                 if(missionGDocstr) {missionGDoc = JSON.parse(missionGDocstr);} else {return;}
 
                 missionGDoc.forEach(item => {
                 });
 
-                //console.log("missionGDoc",missionGDoc);
+                console.log("missionGDoc",missionGDoc);
                 if(pData.submissions){
                     missionGDoc.forEach(item => {
                         //console.log('item',item);
@@ -628,17 +633,21 @@
                             //console.log("申请:",pData.submissions[i]);
                             //1分钟的时间戳值:60000 20分钟是1200000
                             //只有经纬度小于ilatdis,ilngdis的，才判断
-                            if(Math.abs(item.lat-pData.lat)<=ilatdis & Math.abs(item.lng-pData.lng)<=ilngdis){
+                            if(Math.abs(item.lat-pData.submissions[i].lat)<=ilatdis & Math.abs(item.lng-pData.submissions[i].lng)<=ilngdis){
                                 if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
                                 {
-                                    if(item.title === "1905文化创意园" || pData.submissions[i].title === "1905文化创意园"){
+                                    if(item.title === "七七" || pData.submissions[i].title === "七七")
+                                    {
                                         console.log("injectManage-item",item);
                                         console.log(`injectManage-pData.submissions[${i}]`,pData.submissions[i]);
                                         console.log("injectManage-NotPHOTO-item",item);console.log("injectManage-NotPHOTO-pData.submissions[i]",pData.submissions[i]);
                                     }
+                                    console.log("pData.submissions[i].day",new Date(pData.submissions[i].day + " 00:00:00").getTime());
+                                    console.log("item.submitteddate",new Date (item.submitteddate + " 00:00:00").getTime());
                                     //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
                                     if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - iIsNominationDays ) )
                                     {
+                                        console.log("injectManage-NotPHOTO-","日期在："+iIsNominationDays+"之间");
                                         //pData.submissions.status === "NIANTIC_REVIEW" 系统审 !!!!!!!!!!!!!!!!!!!!!!!!!
                                         let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
                                         if(pData.submissions[i].type === "PHOTO"){
@@ -656,7 +665,9 @@
                                                 console.log("iphoto1+1");
                                                 iphoto1+=1;
                                             }
-                                        } else {
+                                        }
+                                        else
+                                        {
                                             if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED") & item.status != "通过") {
                                                 item.status = "通过";
                                                 isave=1;
@@ -1026,7 +1037,6 @@
         //console.log("loadReviewData",pdata);console.log("id",id);
         .then(res=>{
             //console.log("getjson",res);
-            let idown = document.getElementById("idcountdownlabel");
             let ilabel = document.getElementById("iduserlabel");
             //getLocalMissionList();
             //console.log("follow-loadReviewData-res",res);
@@ -1037,7 +1047,7 @@
                 cloudReviewData = null;
                 setTimeout(function(){
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
-                    if(idown) idown.style="font-weight:bold;color:gold";
+                    setDownLabel(this,'gold');
                 },1000);
                 //未找到网络审核时，去判断是否有重复可能
                 if(pdata.type === "EDIT") editReview(pdata);
@@ -1055,7 +1065,7 @@
             if(restext.indexOf("Error 404")>=0) {
                 //修改首页下载显示
                 //中黄：ffe600
-                if(idown) idown.style="font-weight:bold;color:gold";
+                setDownLabel(this,'gold');
                 console.log("未找到网络审核-"+pdata.id);
                 cloudReviewData = null;
                 setTimeout(function(){
@@ -1098,7 +1108,7 @@
                 //console.log("searching review record：",JSON.parse(res));
                 creviewdata = JSON.parse(res1);   //网络审核记录
             }
-            if(idown) idown.style="font-weight:bold;color:#1d953f";
+            setDownLabel(this,'green');
             cloudReviewData = creviewdata ;
             if(creviewdata==null) { return null; }
             console.log("cloudReviewData",cloudReviewData);
