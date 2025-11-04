@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.0.2
+// @version      7.0.3
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -973,6 +973,7 @@
                             setTimeout(function(){
                                 expButton.click();
                             },500);
+                            return;
                         }
                     }
 
@@ -2089,10 +2090,8 @@
             //console.log("missionGDoc.length1", missionGDoc.length);
 
             // 处理任务数据
-            if (missionGDoc.length > 0) {
-                //console.log("业务逻辑执行：", missionGDoc);
-                showReviewedHome1();
-            } else {
+            showReviewedHome1();
+            if (missionGDoc.length <= 0) {
                 console.log("无符合条件的任务数据");
                 // 可添加无数据提示
             }
@@ -2510,7 +2509,7 @@
                         let iHaveReview = false;
                         //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
                         if(matchingMission.ownerstatus){
-                            const userReviewed = userReviewJson.find(item => item.user === userEmail);
+                            const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
                             if(!userReviewed){
                                 //无用户打卡，但是本地审核中有 => 上传补打卡
                                 //业务逻辑 - 补打卡
