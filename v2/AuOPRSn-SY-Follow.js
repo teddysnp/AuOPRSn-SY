@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.0.3
+// @version      4.0.4
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -613,14 +613,14 @@
                     return;
                 }
                 let pData = json.result;
-                console.log("pData",pData);
+                //console.log("pData",pData);
                 let missionGDocstr = localStorage.missionGDoc;
                 if(missionGDocstr) {missionGDoc = JSON.parse(missionGDocstr);} else {return;}
 
                 missionGDoc.forEach(item => {
                 });
 
-                console.log("missionGDoc",missionGDoc);
+                //console.log("missionGDoc",missionGDoc);
                 if(pData.submissions){
                     missionGDoc.forEach(item => {
                         //console.log('item',item);
@@ -642,12 +642,12 @@
                                         console.log(`injectManage-pData.submissions[${i}]`,pData.submissions[i]);
                                         console.log("injectManage-NotPHOTO-item",item);console.log("injectManage-NotPHOTO-pData.submissions[i]",pData.submissions[i]);
                                     }
-                                    console.log("pData.submissions[i].day",new Date(pData.submissions[i].day + " 00:00:00").getTime());
-                                    console.log("item.submitteddate",new Date (item.submitteddate + " 00:00:00").getTime());
+                                    //console.log("pData.submissions[i].day",new Date(pData.submissions[i].day + " 00:00:00").getTime());
+                                    //console.log("item.submitteddate",new Date (item.submitteddate + " 00:00:00").getTime());
                                     //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
                                     if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - iIsNominationDays ) )
                                     {
-                                        console.log("injectManage-NotPHOTO-","日期在："+iIsNominationDays+"之间");
+                                        //console.log("injectManage-NotPHOTO-","日期在："+iIsNominationDays+"之间");
                                         //pData.submissions.status === "NIANTIC_REVIEW" 系统审 !!!!!!!!!!!!!!!!!!!!!!!!!
                                         let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
                                         if(pData.submissions[i].type === "PHOTO"){
@@ -666,9 +666,15 @@
                                                 iphoto1+=1;
                                             }
                                         }
-                                        else
+                                        //更新审核标识为：通过/拒绝/审核
+                                        if (pData.submissions[i].type === "NEW" || pData.submissions[i].type === "EDIT")
                                         {
-                                            if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED") & item.status != "通过") {
+                                            if( (pData.submissions[i].status === "REJECTED") & item.status != "拒绝") {
+                                                item.status = "拒绝";
+                                                isave=1;
+                                                console.log("injectManage-NotPHOTO-","isave1:拒绝");
+                                            }
+                                            else if(pData.submissions[i].status === "ACCEPTED" & item.status != "通过") {
                                                 item.status = "通过";
                                                 isave=1;
                                                 console.log("injectManage-NotPHOTO-","isave1:通过");
