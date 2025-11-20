@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.0.4
+// @version      4.0.5
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -636,11 +636,14 @@
                             if(Math.abs(item.lat-pData.submissions[i].lat)<=ilatdis & Math.abs(item.lng-pData.submissions[i].lng)<=ilngdis){
                                 if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
                                 {
-                                    if(item.title === "七七" || pData.submissions[i].title === "七七")
+                                    if(item.title === "格力高小乌纸" || pData.submissions[i].title === "格力高小乌纸")
                                     {
                                         console.log("injectManage-item",item);
                                         console.log(`injectManage-pData.submissions[${i}]`,pData.submissions[i]);
                                         console.log("injectManage-NotPHOTO-item",item);console.log("injectManage-NotPHOTO-pData.submissions[i]",pData.submissions[i]);
+                                        console.log(new Date(pData.submissions[i].day + " 00:00:00").getTime());
+                                        console.log(new Date (item.submitteddate + " 00:00:00").getTime() );
+                                        console.log(new Date (item.submitteddate + " 00:00:00").getTime() - iIsNominationDays );
                                     }
                                     //console.log("pData.submissions[i].day",new Date(pData.submissions[i].day + " 00:00:00").getTime());
                                     //console.log("item.submitteddate",new Date (item.submitteddate + " 00:00:00").getTime());
@@ -667,14 +670,14 @@
                                             }
                                         }
                                         //更新审核标识为：通过/拒绝/审核
-                                        if (pData.submissions[i].type === "NEW" || pData.submissions[i].type === "EDIT")
+                                        if (pData.submissions[i].type === "NOMINATION" || pData.submissions[i].type === "EDIT_DESCRIPTION" || pData.submissions[i].type === "EDIT_LOCATION")
                                         {
-                                            if( (pData.submissions[i].status === "REJECTED") & item.status != "拒绝") {
+                                            if( (pData.submissions[i].status === "REJECTED") & item.status !== "拒绝") {
                                                 item.status = "拒绝";
                                                 isave=1;
                                                 console.log("injectManage-NotPHOTO-","isave1:拒绝");
                                             }
-                                            else if(pData.submissions[i].status === "ACCEPTED" & item.status != "通过") {
+                                            else if(pData.submissions[i].status === "ACCEPTED" & item.status !== "通过") {
                                                 item.status = "通过";
                                                 isave=1;
                                                 console.log("injectManage-NotPHOTO-","isave1:通过");
