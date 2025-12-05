@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.0.4
+// @version      7.0.5
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -730,6 +730,7 @@
                 dd.parentNode.insertBefore(dd2,dd);
                 let lbtitle = document.querySelector('.review-new.ng-star-inserted').childNodes[0].childNodes[0];
                 if(lbtitle) lbtitle.textContent = portalData1.title;
+                moveReviewCardBeforePhoto();
             }
             document.querySelector("h2[class='wf-page-header__title ng-star-inserted']").replaceWith("");
             let liddvall = document.getElementById("iddvall");
@@ -948,6 +949,7 @@
                //}
                 let iexp = false ;
                 if(timer==null) { timer = mywin.setInterval(() => {
+                    //moveReviewCardBeforePhoto();
 
                     //超时了
                     {
@@ -1163,6 +1165,86 @@
         if (minutes < 10) minutes = `0${minutes}`;
         if (seconds < 10) seconds = `0${seconds}`;
         counter.textContent = `${minutes}:${seconds}`;
+    }
+
+    // 核心逻辑：移动节点
+    function moveReviewCardBeforePhoto() {
+        // 获取目标节点
+        const photoNode = document.querySelector('app-photo-b');
+        const reviewCardNode = document.querySelector('app-title-and-description-b');
+        const photoNodeDesc = photoNode.querySelector('div[class="ng-star-inserted"]')
+        if(photoNodeDesc){
+            photoNodeDesc.remove();
+        }
+        const photoNodeDesc1 = reviewCardNode.querySelector('div[class="ng-star-inserted"]')
+        if(photoNodeDesc1){
+            photoNodeDesc1.remove();
+        }
+        const photoNodeDesc2 = document.querySelector('app-supporting-info-b').querySelector('div[class="ng-star-inserted"]')
+        if(photoNodeDesc2){
+            photoNodeDesc2.remove();
+        }
+
+        const targetParent = reviewCardNode.parentNode;
+        if (!targetParent) {
+            console.warn('未找到节点');
+        } else{
+            if(targetParent.childNodes.length >1){
+                console.log(targetParent.childNodes[1].tagName);
+                if( targetParent.childNodes[1].tagName === 'P') {
+                    targetParent.childNodes[1].remove();
+                }
+                if( targetParent.childNodes[0].tagName === 'H4') {
+                    targetParent.childNodes[0].remove();
+                }
+            }
+        }
+        const reviewCardNode1 = document.querySelector('app-question-card');
+        const targetParent1 = reviewCardNode1.parentNode;
+        if (!targetParent1) {
+            console.warn('未找到节点');
+        } else{
+            if(targetParent1.childNodes.length >1){
+                console.log(targetParent1.childNodes[1].tagName);
+                if( targetParent1.childNodes[1].tagName === 'P') {
+                    targetParent1.childNodes[1].remove();
+                }
+                if( targetParent1.childNodes[0].tagName === 'H4') {
+                    targetParent1.childNodes[0].remove();
+                }
+            }
+        }
+    // 检查节点是否存在
+        if (!photoNode) {
+            console.warn('未找到 app-photo-b 节点');
+            return;
+        }
+        if (!reviewCardNode) {
+            console.warn('未找到 wf-review-card-b 节点');
+            return;
+        }
+
+        // 检查节点是否已经在正确位置（避免重复移动）
+        const isBefore = reviewCardNode.nextElementSibling === photoNode;
+        if (isBefore) {
+            console.log('节点已在正确位置，无需移动');
+            return;
+        }
+
+        // 移动节点：将wf-review-card-b插入到app-photo-b前面
+        photoNode.parentNode.insertBefore(reviewCardNode, photoNode);
+
+        // 强制触发重渲染（刷新布局）
+        reviewCardNode.style.display = 'none';
+        setTimeout(() => {
+            reviewCardNode.style.display = '';
+        }, 0);
+
+        // 验证DOM顺序
+        console.log('DOM顺序验证：',
+                    reviewCardNode.nextElementSibling === photoNode ? '正确' : '错误'
+                   );
+        //console.log('节点移动成功：wf-review-card-b 已移到 app-photo-b 前面');
     }
 
     // 地址更新函数
@@ -2251,7 +2333,7 @@
                         +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.types+"</a></td>"
                         +"<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td><td>"+ (item.ownerstatus === true ? '✓' : '') +"</td>"+
                         "<td><a href='"+durl+"/portal/portaluseremail/portal."+item.portalID+".useremail.json'  target='_blank'>"+item.submitteddate+"</a></td>"
-                        +"<td>"+item.lat+"</td>"+"<td>"+item.lng+"</td>"+"<td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
+                        +"<td><a href='https://www.google.com/maps/search/?api=1&query="+item.lat+','+item.lng+"&zoom=16' target='_blank'>"+item.lat+"</a></td><td>"+item.lng+"</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
                         +"</tr>";
                 });
                 //console.log('homepage',missionGDoc);
