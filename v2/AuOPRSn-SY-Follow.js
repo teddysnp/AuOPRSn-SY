@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.0.5
+// @version      4.0.6-b
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -636,7 +636,7 @@
                             if(Math.abs(item.lat-pData.submissions[i].lat)<=ilatdis & Math.abs(item.lng-pData.submissions[i].lng)<=ilngdis){
                                 if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
                                 {
-                                    if(item.title === "格力高小乌纸" || pData.submissions[i].title === "格力高小乌纸")
+                                    if(item.title === "茫然" || pData.submissions[i].title === "茫然")
                                     {
                                         console.log("injectManage-item",item);
                                         console.log(`injectManage-pData.submissions[${i}]`,pData.submissions[i]);
@@ -690,14 +690,16 @@
                                             }
                                         }
                                         //审核人写错
-                                        if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") & item.submitter != useremail)
+                                        if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATED" ||
+                                            pData.submissions[i].type === "NOMINATION" || pData.submissions[i].type === "EDIT_LOCATION") & item.submitter != useremail)
                                         {
                                             item.submitter = useremail ;
                                             isave=1;
                                             console.log("isave3：更新邮箱");
                                         }
-                                        //更新经纬度、id
-                                        if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") &
+                                        //更新经纬度
+                                        if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATED" ||
+                                            pData.submissions[i].type === "NOMINATION" || pData.submissions[i].type === "EDIT_LOCATION") &
                                            (pData.submissions[i].lat != item.lat || pData.submissions[i].lng != item.lng )){
                                             console.log("ptitle",pData.submissions[i].title);
                                             console.log("mtitle",JSON.stringify(item.title));
@@ -707,7 +709,7 @@
                                             console.log("mlng",JSON.stringify(item.lng));
                                             item.lat = pData.submissions[i].lat;item.lng = pData.submissions[i].lng;
                                             isave=1;
-                                            console.log("isave1：更新经纬度及id");
+                                            console.log("isave1：更新经纬度");
                                         }
                                     }
                                 } else {
