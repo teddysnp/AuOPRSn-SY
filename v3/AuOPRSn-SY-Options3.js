@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         AuOPRSn-SY-Options3.js
+// @name         AuOPRSn-SY-Options3
 // @namespace    AuOPR
 // @version      1.0
 // @description  刷新/首次进入/new/自动跳help，点击mapview不拦截
