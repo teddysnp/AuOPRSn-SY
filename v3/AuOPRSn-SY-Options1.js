@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.2
+// @version      1.3
 // @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -24,6 +24,8 @@
     let missionGDoc = [];
     let userEmailList1 = [];//审核员列表，用于显示
     let userEmailList2 = [];//审核员列表，用于显示
+    let privatePortalDisplay1 = 50;  //首页列表中显示池中已审po数量
+    let privatePortalDisplay2 = 50;  //首页列表中显示非池已审po数量
     // 配置 - CloudFlare
     //在cloudflare中上传的链接
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
@@ -330,31 +332,168 @@
         });
     }
 
+    // 通用函数：生成评审数据表格
+    function generateReviewTable(storageKey, displayLimit) {
+        // 1. 安全读取并解析本地存储数据
+        let reviewData = [];
+        try {
+            const storedData = localStorage.getItem(storageKey);
+            if (storedData) {
+                reviewData = JSON.parse(storedData);
+                if (!Array.isArray(reviewData)) {
+                    console.warn(`${storageKey} 数据格式错误，已重置为空数组`);
+                    reviewData = [];
+                }
+            }
+        } catch (error) {
+            console.error(`解析${storageKey}数据失败：`, error);
+            reviewData = [];
+        }
+
+        // 2. 构建表格HTML
+        let tableHtml = `
+          <table style='width:100%'>
+            <thead>
+                <tr>
+                    <th style='width:18%'>用户</th>
+                    <th style='width:12%'>名称</th>
+                    <th style='width:6%'>类型</th>
+                    <th style='width:8%'>纬度</th>
+                    <th style='width:8%'>经度</th>
+                    <th style='width:12%'>打分</th>
+                    <th style='width:16%'>时间</th>
+                    <th style='width:20%'>ID</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+
+        let itemCount = 0;
+
+        // 创建数组的反转副本，不影响原数组
+        reviewData = [...reviewData].reverse();
+        // 3. 遍历数据生成表格行
+        for (const item of reviewData) {
+
+            // 处理分数格式化
+            let formattedScore = item.score;
+            if (typeof item.score === 'string' && item.score.length === 7) {
+                formattedScore = item.score
+                    .replace(/5/g, "Y")
+                    .replace(/3/g, "D")
+                    .replace(/1/g, "N");
+            }
+
+            // 安全获取字段值
+            const user = item.user || '';
+            const title = item.title || '';
+            const type = item.type || '';
+            const lat = item.lat || '';
+            const lng = item.lng || '';
+            const dateTime = item.dt || item.datetime || '';
+            const id = item.id || '';
+
+            if (itemCount < displayLimit) {
+                // 添加表格行
+                tableHtml += `
+            <tr>
+                <td>${user}</td>
+                <td><a href='${durl}/portal/portalreview/portal.${id}.json'  target='_blank'>${title}</td>
+                <td>${type}</td>
+                <td><a href='${durl}/portal/portaldata/portal.${id}.json'  target='_blank'>${lat}</td>
+                <td>${lng}</td>
+                <td>${formattedScore}</td>
+                <td>${dateTime}</td>
+                <td><a href='${durl}/portal/portaluseremail/portal.${id}.useremail.json'  target='_blank'>${id}</td>
+            </tr>
+            `;
+            }
+            itemCount++;
+
+            // 4. 更新任务状态
+            let usernamelist=localStorage[userEmail+"user"];
+            if (!usernamelist) usernamelist="";
+          if (usernamelist?.indexOf(user) >= 0 || user === userEmail) {
+
+                //通过id判断当前用户是否审过-20251007改
+                const matchingMission = missionGDoc.find(mission => mission.portalID === id);
+            /*
+            if(id === "a968d406ff815b373ffd05a297ec681c")
+            {
+            console.log(`matchingMission:${id}`,matchingMission);
+              console.log('find:',item);
+              console.log(missionGDoc.find(mission => mission.portalID === id));
+              console.log(missionGDoc);
+            } */
+                if (matchingMission) {
+                    //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
+                    matchingMission.ownerstatus = true;
+                }
+                //通过名称匹配来判断当前用户是否审过
+                /*
+                const matchingMission = missionGDoc.find(mission => mission.title === title);
+                if (matchingMission) {
+                    try {
+                        const responseDate = new Date(matchingMission.responsedate);
+                        const reviewDate = new Date(dateTime.slice(0, 10));
+
+                        if (!isNaN(responseDate.getTime()) && !isNaN(reviewDate.getTime())) {
+                            const fiveDaysLater = new Date(reviewDate);
+                            fiveDaysLater.setDate(reviewDate.getDate() + 5);
+
+                            if (responseDate <= fiveDaysLater) {
+                                matchingMission.ownerstatus = true;
+                            }
+                        } else {
+                            console.warn(`无效日期 - ${storageKey}：${matchingMission.responsedate} vs ${dateTime}`);
+                        }
+                    } catch (dateError) {
+                        console.error(`${storageKey}日期处理错误：`, dateError);
+                    }
+                }
+                */
+
+            }
+        }
+
+        // 完成表格HTML
+        tableHtml += `
+            </tbody>
+        </table>
+    `;
+
+        //console.log(storageKey,tableHtml);
+        return tableHtml;
+    }
+
     //首页home显示用户审过的po
     async function getMissionHTML() {
-        try {
-            if(userEmail === null) {
-                // 先获取用户信息并等待完成
-                const restext = await getUser();
-                // 处理用户信息
-                userEmail = restext.result.socialProfile.email;
-                performance = restext.result.performance;
+      // 等待获取任务数据（现在处于async函数中，可安全使用await）
+      //console.log("getmissionhome");
+      await getMissionFromCloudFlare();
+      if(userEmail === null) {
+        // 先获取用户信息并等待完成
+        const restext = await getUser();
+        // 处理用户信息
+        userEmail = restext.result.socialProfile.email;
+        performance = restext.result.performance;
 
-                if (userEmail != null) {
-                    localStorage.setItem("currentUser", userEmail);
-                } else return;
-                console.log("最终获取到的用户邮箱：", userEmail);
-            }
-            // 更新页面DOM
-            let sHtml = `<div class='placestr'><font size=5>${userEmail}</font></div>` ;
+        if (userEmail != null) {
+          localStorage.setItem("currentUser", userEmail);
+        } else return;
+        console.log("最终获取到的用户邮箱：", userEmail);
+      }
+      // 处理池中评审列表（reviewLista → #privatePortal1）
+      const tableHtmlA = await generateReviewTable('reviewLista', privatePortalDisplay1);
+      ////replaceElement("#privatePortal1", tableHtmlA);
+      // 处理池外评审列表（reviewListb → #privatePortal2）
+      const tableHtmlB = await generateReviewTable('reviewListb', privatePortalDisplay2);
+      ////replaceElement("#privatePortal2", tableHtmlB);
 
-            // 等待获取任务数据（现在处于async函数中，可安全使用await）
-            console.log("getmissionhome");
-            await getMissionFromCloudFlare();
-
-            //console.log("missionGDoc.length1", missionGDoc.length);
-
-            // 处理任务数据
+      try {
+          // 更新页面DOM
+          let sHtml = `<div class='placestr'><font size=5>${userEmail}</font></div>` ;
+          // 处理任务数据
           try{
 
             //以下，生成任务列表显示：smis：表头；smistmp：最终表格；sultmp：用户邮箱排列块
@@ -807,6 +946,7 @@
 
     // 核心初始化逻辑
     function initNodes() {
+        console.log('isInited',isInited);
         if (isInited) return;
         const originalNode = findOriginalProfileNode();
         if (!originalNode) return;
@@ -926,7 +1066,77 @@
     // 页面加载后执行（延时确保DOM渲染完成）
     window.addEventListener('load', () => setTimeout(initNodes, 300));
 
-    // 监听DOM变化，防止节点被覆盖
+    let clickEventBinded = false; // 防重复绑定点击事件
+    let isFirstEnter = true; // 标记是否是首次进入/new/（刷新/直接访问）
+    const TARGET_ROUTE = '/new/'; // 目标入口路由
+    const HELP_ROUTE = '/new/help'; // 自动跳转的目标路由
+    const MAPVIEW_ROUTE = '/new/mapview'; // 用户可主动点击的路由
+    const REVIEW_ROUTE = '/new/review'; // 提交按钮跳转的路由
+    // 初始路由处理：适配review路由
+    const handleInitRoute = () => {
+        if (window.location.pathname === REVIEW_ROUTE) {
+            console.log(`用户访问${window.location.pathname}，标记首次进入完成`);
+            isFirstEnter = false;
+            return;
+        }
+    };
+
+    // 路由监听：拦截自动跳转+监听review路由
+    const interceptRoute = () => {
+        // 重写pushState/replaceState
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+
+        const rewriteHistory = (originalFn) => {
+            return function(state, title, url) {
+        // 新增：所有路由修改都触发侧边栏修复（覆盖侧边栏点击）
+                if (url && url.startsWith('/new/')) {
+                    console.log(`检测到侧边栏路由跳转：${url}，执行修复`);
+                    isInited = false;
+                    setTimeout(initNodes, 200); // 缩短延迟，适配DOM渲染
+                }
+              /*
+                // 监听跳转到review路由，执行侧边栏修复
+                if (url && url.includes(REVIEW_ROUTE)) {
+                    console.log(`检测到跳转到review路由，准备修复右上角`);
+                    isInited = false;
+                    setTimeout(initNodes, 2000); // 延迟修复，等DOM渲染完成
+                }*/
+                originalFn.call(history, state, title, url);
+            };
+        };
+
+        history.pushState = rewriteHistory(originalPushState);
+        history.replaceState = rewriteHistory(originalReplaceState);
+
+        // 处理初始路由
+        handleInitRoute();
+    };
+    // 监听AJAX请求（review接口触发修复）
+    const listenReviewAjax = () => {
+        ah.hook({
+            onRequest: (config, handler) => {
+                // 拦截包含review的接口请求
+                if (config.url.includes('review')) {
+                    console.log('检测到review接口请求，准备修复右上角');
+                    setTimeout(initNodes, 1000);
+                }
+                handler.next(config);
+            },
+            onResponse: (res, handler) => {
+                if (res.config.url.includes('review')) {
+                    console.log('review接口响应完成，修复右上角');
+                    setTimeout(initNodes, 500);
+                }
+                handler.next(res);
+            }
+        });
+        console.log('Review接口AJAX监听已启动');
+    };
+    interceptRoute();
+    listenReviewAjax();
+
+  // 监听DOM变化，防止节点被覆盖
     const observer = new MutationObserver((mutations) => {
         const originalNode = findOriginalProfileNode();
         const parentBox = originalNode?.parentNode;
