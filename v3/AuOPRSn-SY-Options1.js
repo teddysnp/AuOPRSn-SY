@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.1
-// @description  在首个app-sidebar-link后添加标题为「任务」的相同样式链接
+// @version      1.2
+// @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.1.min.js
@@ -223,7 +223,23 @@
             console.log('Promise', e)});
     }
 
-    // 修复XMLHttpRequest封装，仅在请求完成（readyState=4）时处理响应
+    // 节点等待轮询函数（保留原版逻辑）
+    const awaitElement = get => new Promise((resolve, reject) => {
+        let triesLeft = 15; // 增加轮询次数（适配路由跳转延迟）
+        const queryLoop = () => {
+            const ref = get();
+            if (ref) resolve(ref);
+            else if (!triesLeft) reject(new Error('节点查询超时'));
+            else setTimeout(queryLoop, 250);
+            triesLeft--;
+        }
+        queryLoop();
+    }).catch(e => {
+        console.log('awaitElement 错误：', e.message);
+        return null;
+    });
+
+  // 修复XMLHttpRequest封装，仅在请求完成（readyState=4）时处理响应
     function U_XMLHttpRequest(method, url) {
         return new Promise((res, err) => {
             const xhr = new XMLHttpRequest();
@@ -1033,5 +1049,51 @@
         style.innerHTML = css;
         document.querySelector('head').appendChild(style);
     })()
+
+
+    // 配置项：可根据需求修改
+    const TARGET_NODE_ID = 'idmission'; // 目标节点ID
+    const CHECK_INTERVAL = 200; // 可见性检测间隔（毫秒，200-500合适）
+    let isReplacedForCurrentShow = false; // 核心标记：当前显示周期是否已替换（关键！）
+
+    // 🌟 精准判断节点是否「真实显示」（排除隐藏/不可见状态）
+    function isElementVisible(el) {
+        if (!el) return false;
+        const rect = el.getBoundingClientRect(); // 获取节点布局位置
+        // 可见性核心条件：宽高>0（未被隐藏）+ 与视口有重叠（在页面可视范围内）
+        return rect.width > 0 && rect.height > 0 &&
+               rect.top < window.innerHeight && rect.bottom > 0 &&
+               rect.left < window.innerWidth && rect.right > 0;
+    }
+
+    // 📌 自定义替换逻辑（修改此函数即可实现你的需求）
+    async function replaceChildNodes(targetEl) {
+        if (!targetEl) return;
+        // 示例1：清空所有原有子节点，添加新子节点（最常用）
+        const missionHtmlStr = await getMissionHTML();
+        targetEl.innerHTML = missionHtmlStr;
+    }
+
+    // 核心检测逻辑：监听可见性变化，显示时单次替换
+    function checkAndReplace() {
+        const targetEl = document.getElementById(TARGET_NODE_ID);
+        if (!targetEl) return; // 节点不存在则直接返回
+
+        const isVisible = isElementVisible(targetEl);
+        // 关键逻辑：节点显示 + 当前显示周期未替换 → 执行替换
+        if (isVisible && !isReplacedForCurrentShow) {
+            replaceChildNodes(targetEl);
+            isReplacedForCurrentShow = true; // 标记：本次显示已替换，防止重复
+            console.log(`✅ ${TARGET_NODE_ID} 已显示，子节点替换完成（本次显示仅一次）`);
+        }
+        // 关键逻辑：节点隐藏 → 重置标记，为下次显示做准备
+        else if (!isVisible && isReplacedForCurrentShow) {
+            isReplacedForCurrentShow = false;
+            console.log(`ℹ️ ${TARGET_NODE_ID} 已隐藏，重置替换标记，等待下次显示`);
+        }
+    }
+
+    // 启动轮询检测：持续监听节点可见性状态变化
+    setInterval(checkAndReplace, CHECK_INTERVAL);
 
 })();
