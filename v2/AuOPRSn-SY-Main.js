@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.0.6
+// @version      7.0.8
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1005,8 +1005,9 @@
                         //console.log('scoreAlready',scoreAlready);
                         if (!scoreAlready){
                             setTimeout(function(){
+                                //console.log('showReviewedReview-run');
                                 showReviewedReview();
-                            },1000);
+                            },2000);
                             let score = commitScore(portalData1,loc);
                             divscore.textContent = "打分："+score;
                             scoreAlready = true;
@@ -2074,12 +2075,24 @@
     }
 
     //在审核页review显示审过的po
-    function showReviewedReview()
+    async function showReviewedReview()
     {
         if(missionGDoc.length === 0)
         {
             missionGDoc = JSON.parse(localStorage.missionGDoc);
         }
+      if(userEmail === null) {
+        // 先获取用户信息并等待完成
+        const restext = await getUser();
+        // 处理用户信息
+        userEmail = restext.result.socialProfile.email;
+        performance = restext.result.performance;
+
+        if (userEmail != null) {
+          localStorage.setItem("showReviewedReview-userEmail", userEmail);
+        } else return;
+        //console.log("最终获取到的用户邮箱：", userEmail);
+      }
         try{
             const retitle = document.getElementById("latestpo");
             //console.log("retitle",retitle);
@@ -2097,6 +2110,7 @@
                     for (const item of reviewData) {
                         if(item.user === userEmail){
                             const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
+                            //console.log('matchingMission',matchingMission);
                             if(matchingMission){
                                 matchingMission.ownerstatus = true ;
                             }
