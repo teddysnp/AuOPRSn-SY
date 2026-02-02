@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.0.5
+// @version      7.0.6
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1002,7 +1002,7 @@
                     let ss1=document.getElementById('appropriate-card');
                     if (document.getElementById('appropriate-card') || document.querySelector('app-review-edit') || document.querySelector('app-review-photo'))
                     {
-                        //console.log(scoreAlready);
+                        //console.log('scoreAlready',scoreAlready);
                         if (!scoreAlready){
                             setTimeout(function(){
                                 showReviewedReview();
@@ -2118,7 +2118,7 @@
                     }
                 }
 
-                //console.log(stmp);
+                //console.log('showReviewedReview',missionGDoc);
                 //生成 ：三种任务po归类 ：待完成2|已完成1|未进池3|已终止4
                 //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
                 let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
@@ -2259,7 +2259,10 @@
                         //let tmpDateTime = slocalfollow[i].dateTime ? (slocalfollow[i].dateTime.substring(0,10)+" "+slocalfollow[i].dateTime.substring(11,19)) : "";
                         const tmpDateTime = slocalfollow[i].dateTime ? (new Date(slocalfollow[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
                         //console.log(tmpDateTime); // 输出示例：2025-10-09 12:36:06（GMT+8 时间）
-                        sfdetail+="<tr><td><a href='"+durl+"/portal/portaluseremail/portal."+slocalfollow[i].id+".useremail.json'  target='_blank'>"+slocalfollow[i].id+"</td><td>"+slocalfollow[i].title+"</td><td>"+slocalfollow[i].lat+"</td><td>"+slocalfollow[i].lng+"</td><td>" + tmpDateTime + "</td><td>"+slocalfollow[i].review+"</td></tr>";
+                        sfdetail+="<tr><td><a href='" + durl + "/portal/portaluseremail/portal." + slocalfollow[i].id + ".useremail.json'  target='_blank'>" + slocalfollow[i].id + "</a></td>"+
+                            "<td><a href='" + durl + "/portal/portalreview/portal." + slocalfollow[i].id + ".json'  target='_blank'>" + slocalfollow[i].title + "</a></td>"+
+                            "<td><a href='" + durl + "/portal/portaldata/portal." + slocalfollow[i].id+".json'  target='_blank'>" + slocalfollow[i].lat + "</a></td>"+
+                            "<td>"+slocalfollow[i].lng+"</td><td>" + tmpDateTime + "</td><td>"+slocalfollow[i].review+"</td></tr>";
                     }
                     sfdetail+="</tbody></table>";
                 }
@@ -2298,7 +2301,10 @@
                     let icnt = 0;if (slocalupload.length>uploadPortalDisplay) icnt = slocalupload.length - uploadPortalDisplay;
                     for (let i=slocalupload.length - 1;i>=icnt;i--){
                         const tmpDateTime = slocalupload[i].dateTime ? (new Date(slocalupload[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
-                        sudetail+="<tr><td><a href='"+durl+"/portal/portaluseremail/portal."+slocalupload[i].id+".useremail.json'  target='_blank'>"+slocalupload[i].id+"</td><td>"+slocalupload[i].title+"</td><td>"+slocalupload[i].lat+"</td><td>"+slocalupload[i].lng+"</td><td>"+tmpDateTime+"</td><td>"+slocalupload[i].review+"</td></tr>";
+                        sudetail+="<tr><td><a href='"+durl+"/portal/portaluseremail/portal."+[i].id+".useremail.json'  target='_blank'>"+slocalupload[i].id+"</td>"+
+                            "<td><a href='" + durl + "/portal/portalreview/portal." + slocalupload[i].id + ".json'  target='_blank'>" + slocalupload[i].title + "</a></td>"+
+                            "<td><a href='" + durl + "/portal/portaldata/portal." + slocalupload[i].id+".json'  target='_blank'>" + slocalupload[i].lat + "</a></td>"+
+                            "<td>"+slocalupload[i].lng+"</td><td>"+tmpDateTime+"</td><td>"+slocalupload[i].review+"</td></tr>";
                     }
                     sudetail+="</tbody></table>";
                 }
@@ -2441,9 +2447,9 @@
                 tableHtml += `
             <tr>
                 <td>${user}</td>
-                <td>${title}</td>
+                <td><a href='${durl}/portal/portalreview/portal.${id}.json'  target='_blank'>${title}</td>
                 <td>${type}</td>
-                <td>${lat}</td>
+                <td><a href='${durl}/portal/portaldata/portal.${id}.json'  target='_blank'>${lat}</td>
                 <td>${lng}</td>
                 <td>${formattedScore}</td>
                 <td>${dateTime}</td>
