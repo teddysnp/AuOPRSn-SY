@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.0.0
+// @version      4.0.7
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
-// @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
+// @require      https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.1.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      work-wayfarer.tydtyd.workers.dev
+// @connect      kvworker-warfarer-mission.tydtyd.workers.dev
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
@@ -27,6 +28,9 @@
     let useremail = "";
     let tmpfollow={id:null,title:null,lat:null,lng:null,review:null,dateTime:null};
     let isUserClick = false ;
+    let ilatdis = 0.002; let ilngdis = 0.002; //判断池中和任务po是否一致时，两者经纬度相差的度数
+    let iIsNominationDays = 60000*60*24*5;//判断提交申请，检查经纬度，提交者邮箱，是否审核通过等等时，检查的日期范围
+    let iIsTitleRightDays = 60000*60*24*3 ;//判断提交申请，智能匹配名称是否正确时，检查的日期范围
     let iautoman = null;
     let mywin = window;
     //let missionlist = [];
@@ -256,19 +260,24 @@
                     try {
                         const result = JSON.parse(response.responseText);
                         if (result.success) {
+                            setUpLabel('uploadDataToR2','Green');
                             console.log(`数据上传成功: ${result.fullPath}`);
                         } else {
+                            setUpLabel('uploadDataToR2','red');
                             console.log(`上传失败: ${result.error || result.details}`);
                         }
                     } catch (e) {
+                        setUpLabel('uploadDataToR2','red');
                         console.log(`解析响应失败: ${e.message}`);
                     }
                 },
                 onerror: function(error) {
+                    setUpLabel('uploadDataToR2','red');
                     console.log(`解析响应失败: ${error.message}`);
                 }
             });
         } catch (e) {
+            setUpLabel('uploadDataToR2','red');
             console.log(`解析响应失败: ${e.message}`);
         }
     }
@@ -300,6 +309,7 @@
                         const result = JSON.parse(response.responseText);
                         if (result.success) {
                             //showLog(`成功读取文件: ${result.fileName.split('/').pop()}`,false);
+                            setDownLabel(this,'green');
                             res(result);
                         } else {
                             console.log('返回结果',result.details);
@@ -314,14 +324,39 @@
                 },
                 onerror: function(error) {
                     err(error);
+                    setDownLabel('gold')
                     console.log('请求错误：',error);
-                    showLog(`连接失败: ${error.message}`, true);
                 }
             });
         }).catch(e => {
-            //showLog(`解析文件内容失败: ${e.message}`, true);
-            //console.log('Promise', e)
+            try {
+                const err = e.details;
+                if(err.indexOf('不存在') >= 0){
+                    setDownLabel(this,'gold');
+                }else {
+                    setDownLabel(this,'red');
+                }
+            }
+            catch(error){
+                setDownLabel(this,'red');
+                //showLog(`解析文件内容失败: ${e.message}`, true);
+                console.log('Promise', e)
+            }
         });
+    }
+
+    function setUpLabel(obj,color){
+        console.log('setUpLabel',obj);console.log('setUpLabel',color);
+        setTimeout(function(){
+            let iup = document.getElementById("iduplabel");
+            if(iup) iup.style=`font-weight:bold;color:${color}`;
+        },2000);
+    }
+
+    function setDownLabel(obj,color){
+        console.log('setDownLabel',obj);console.log('setDownLabel',color);
+        const idown = document.getElementById("idcountdownlabel");
+        if(idown) idown.style=`font-weight:bold;color:${color}`;
     }
 
     function U_XMLHttpRequest(method, url) {
@@ -560,7 +595,7 @@
 //                let testid = "74908645df72e5da08ebd13be138275c";
 //                loadReviewData(testid);
             } catch (e) {
-                console.log(e);
+                console.log('e.message',e.message);
             }
         });
     }
@@ -597,80 +632,105 @@
                         for(let i=0;i<pData.submissions.length;i++){
                             //console.log("申请:",pData.submissions[i]);
                             //1分钟的时间戳值:60000 20分钟是1200000
-                            if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
-                            {
-                                if(item.title === "1905文化创意园" || pData.submissions[i].title === "1905文化创意园"){
-                                console.log("injectManage-item",item);
-                                console.log(`injectManage-pData.submissions[${i}]`,pData.submissions[i]);
-                                    console.log("injectManage-NotPHOTO-item",item);console.log("injectManage-NotPHOTO-pData.submissions[i]",pData.submissions[i]);
-                                }
-                                //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
-                                if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - 60000*60*24*3 ) )
+                            //只有经纬度小于ilatdis,ilngdis的，才判断
+                            if(Math.abs(item.lat-pData.submissions[i].lat)<=ilatdis & Math.abs(item.lng-pData.submissions[i].lng)<=ilngdis){
+                                if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
                                 {
-                                    //pData.submissions.status === "NIANTIC_REVIEW" 系统审 !!!!!!!!!!!!!!!!!!!!!!!!!
-                                    let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
-                                    if(pData.submissions[i].type === "PHOTO"){
-                                        if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED"))
-                                        {
-                                            iphoto+=0;
-                                            console.log("iphoto+0");
-                                        }
-                                        //开审 : 否则也算开审，否则任务里可能不再显示，将来无法再更新成通过
-                                        if(pData.submissions[i].status === "VOTING") {
-                                            console.log("iphoto+1");
-                                            iphoto+=1;
-                                        }
-                                        if(pData.submissions[i].status === "NIANTIC_REVIEW") {
-                                            console.log("iphoto1+1");
-                                            iphoto1+=1;
-                                        }
-                                    } else {
-                                        if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED") & item.status != "通过") {
-                                            item.status = "通过";
-                                            isave=1;
-                                            console.log("injectManage-NotPHOTO-","isave1:通过");
-                                        }
-                                        //开审
-                                        if(pData.submissions[i].status == "VOTING" & item.status != "审核") {
-                                            item.status = "审核";
-                                            isave=1;
-                                            console.log("isave2：审核");
-                                        }
-                                    }
-                                    //审核人写错
-                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") & item.submitter != useremail)
+                                    if(item.title === "茫然" || pData.submissions[i].title === "茫然")
                                     {
-                                        item.submitter = useremail ;
-                                        isave=1;
-                                        console.log("isave3：更新邮箱");
+                                        console.log("injectManage-item",item);
+                                        console.log(`injectManage-pData.submissions[${i}]`,pData.submissions[i]);
+                                        console.log("injectManage-NotPHOTO-item",item);console.log("injectManage-NotPHOTO-pData.submissions[i]",pData.submissions[i]);
+                                        console.log(new Date(pData.submissions[i].day + " 00:00:00").getTime());
+                                        console.log(new Date (item.submitteddate + " 00:00:00").getTime() );
+                                        console.log(new Date (item.submitteddate + " 00:00:00").getTime() - iIsNominationDays );
                                     }
-                                    //更新经纬度、id
-                                    if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION") &
-                                       (pData.submissions[i].lat != item.lat || pData.submissions[i].lng != item.lng )){
-                                        console.log("ptitle",pData.submissions[i].title);
-                                        console.log("mtitle",JSON.stringify(item.title));
-                                        console.log("plat",JSON.stringify(pData.submissions[i].lat));
-                                        console.log("mlat",JSON.stringify(item.lat));
-                                        console.log("plng",JSON.stringify(pData.submissions[i].lng));
-                                        console.log("mlng",JSON.stringify(item.lng));
-                                        item.lat = pData.submissions[i].lat;item.lng = pData.submissions[i].lng;
-                                        isave=1;
-                                        console.log("isave1：更新经纬度及id");
+                                    //console.log("pData.submissions[i].day",new Date(pData.submissions[i].day + " 00:00:00").getTime());
+                                    //console.log("item.submitteddate",new Date (item.submitteddate + " 00:00:00").getTime());
+                                    //1分钟的时间戳值:60000 查任务时间前3天的(防误输入)
+                                    if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - iIsNominationDays ) )
+                                    {
+                                        //console.log("injectManage-NotPHOTO-","日期在："+iIsNominationDays+"之间");
+                                        //pData.submissions.status === "NIANTIC_REVIEW" 系统审 !!!!!!!!!!!!!!!!!!!!!!!!!
+                                        let itmp = pData.submissions[i].status; //有时候不执行，似乎被优化掉了，加个防优化
+                                        if(pData.submissions[i].type === "PHOTO"){
+                                            if((pData.submissions[i].status === "ACCEPTED" || pData.submissions[i].status === "REJECTED"))
+                                            {
+                                                iphoto+=0;
+                                                console.log("iphoto+0");
+                                            }
+                                            //开审 : 否则也算开审，否则任务里可能不再显示，将来无法再更新成通过
+                                            if(pData.submissions[i].status === "VOTING") {
+                                                console.log("iphoto+1");
+                                                iphoto+=1;
+                                            }
+                                            if(pData.submissions[i].status === "NIANTIC_REVIEW") {
+                                                console.log("iphoto1+1");
+                                                iphoto1+=1;
+                                            }
+                                        }
+                                        //更新审核标识为：通过/拒绝/审核
+                                        if (pData.submissions[i].type === "NOMINATION" || pData.submissions[i].type === "EDIT_DESCRIPTION" || pData.submissions[i].type === "EDIT_LOCATION")
+                                        {
+                                            if( (pData.submissions[i].status === "REJECTED") & item.status !== "拒绝") {
+                                                item.status = "拒绝";
+                                                isave=1;
+                                                console.log("injectManage-NotPHOTO-","isave1:拒绝");
+                                            }
+                                            else if(pData.submissions[i].status === "ACCEPTED" & item.status !== "通过") {
+                                                item.status = "通过";
+                                                isave=1;
+                                                console.log("injectManage-NotPHOTO-","isave1:通过");
+                                            }
+                                            //开审
+                                            if(pData.submissions[i].status == "VOTING" & item.status != "审核") {
+                                                item.status = "审核";
+                                                isave=1;
+                                                console.log("isave2：审核");
+                                            }
+                                        }
+                                        //审核人写错
+                                        if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATED" ||
+                                            pData.submissions[i].type === "NOMINATION" || pData.submissions[i].type === "EDIT_LOCATION") & item.submitter != useremail)
+                                        {
+                                            item.submitter = useremail ;
+                                            isave=1;
+                                            console.log("isave3：更新邮箱");
+                                        }
+                                        //更新经纬度
+                                        if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATED" ||
+                                            pData.submissions[i].type === "NOMINATION" || pData.submissions[i].type === "EDIT_LOCATION") &
+                                           (pData.submissions[i].lat != item.lat || pData.submissions[i].lng != item.lng )){
+                                            console.log("ptitle",pData.submissions[i].title);
+                                            console.log("mtitle",JSON.stringify(item.title));
+                                            console.log("plat",JSON.stringify(pData.submissions[i].lat));
+                                            console.log("mlat",JSON.stringify(item.lat));
+                                            console.log("plng",JSON.stringify(pData.submissions[i].lng));
+                                            console.log("mlng",JSON.stringify(item.lng));
+                                            item.lat = pData.submissions[i].lat;item.lng = pData.submissions[i].lng;
+                                            isave=1;
+                                            console.log("isave1：更新经纬度");
+                                        }
                                     }
-                                }
-                            } else {
-                                //名字如果写错，将进行智能匹配
-                                let iTitle1 = approximateMatch(item.title,pData.submissions[i].title);
-                                let iTitle2 = approximateMatch(item.title,pData.submissions[i].poiData.title);
-                                /*if(item.title === "万达木馬"){
-                                console.log(item.title+","+pData.submissions[i].title,iTitle1);
-                                console.log(item.title+","+pData.submissions[i].poiData.title,iTitle2);
-                            }*/
-                                if(iTitle1 || iTitle2){
-                                    console.log(pData.submissions[i].title || pData.submissions[i].poiData?.title || item.title);
-                                    item.title = pData.submissions[i].title || pData.submissions[i].poiData?.title ;
-                                    isave = 1;
-                                    console.log("名字写错");
+                                } else {
+                                    //名字如果写错，将进行智能匹配，智能匹配仅判断如下条件：审核/提交/官审；日期在10天内；邮箱一致
+                                    let iTitle1 = approximateMatch(item.title,pData.submissions[i].title);
+                                    let iTitle2 = approximateMatch(item.title,pData.submissions[i].poiData.title);
+                                    /*if(item.title === "万达木馬"){
+                                        console.log(item.title+","+pData.submissions[i].title,iTitle1);
+                                        console.log(item.title+","+pData.submissions[i].poiData.title,iTitle2);
+                                    }*/
+                                    if(iTitle1 || iTitle2){
+                                        if(new Date(pData.submissions[i].day + " 00:00:00").getTime() >= ( new Date (item.submitteddate + " 00:00:00").getTime() - iIsTitleRightDays ) ){
+                                            if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATION" || pData.submissions.status === "NIANTIC_REVIEW")
+                                               & item.submitter === useremail) {
+                                               console.log(pData.submissions[i].title || pData.submissions[i].poiData?.title || item.title);
+                                            item.title = pData.submissions[i].title || pData.submissions[i].poiData?.title ;
+                                            isave = 1;
+                                            console.log("名字写错");
+                                        }
+                                    }
+                                    }
                                 }
                             }
                         }
@@ -842,8 +902,8 @@
         let iplan = null;let tmptext = "";
         //任务里有：其它瞎选，经纬度按任务挪
         missionGDoc.forEach( item => {
-            if(item.id === pdata.id){
-            } else if(item.title === pdata.title){
+            if(item.portalID === pdata.id ||
+               (item.title === pdata.title && Math.abs(item.lat-pdata.lat)<=ilatdis & Math.abs(item.lng-pdata.lng)<=ilngdis) ) {
                 if(item.moveoptions === "右") iplan =10;
                 if(item.moveoptions === "下") iplan =20;
                 if(item.moveoptions === "左") iplan =(parseInt(item.moveplace || 1, 10));
@@ -981,22 +1041,24 @@
         let id=pdata.id;
         tmpfollow.id = null; tmpfollow.title = null; tmpfollow.lat = null; tmpfollow.lng = null; tmpfollow.review = null;
         //console.log(durl+"/portal/portalreview/portal." +id +".json");
-        //let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
+        //因为单用户可能有访问接口限制，故查找审核文件是否存在还用公用接口
+        //let resp = readR2File("portal/portalreview/portal." +id +".json")
+        let iresp = true; //使用pub接口
+        let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
         //console.log("loadReviewData",pdata);console.log("id",id);
-        let resp = readR2File("portal/portalreview/portal." +id +".json")
         .then(res=>{
             //console.log("getjson",res);
-            let idown = document.getElementById("idcountdownlabel");
             let ilabel = document.getElementById("iduserlabel");
             //getLocalMissionList();
             //console.log("follow-loadReviewData-res",res);
+            //console.log('res',res);
             if(!res) {
                 //修改首页下载显示
                 //console.log("getjsonerr");
                 cloudReviewData = null;
                 setTimeout(function(){
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
-                    if(idown) idown.style="font-weight:bold;color:yellow";
+                    setDownLabel(this,'gold');
                 },1000);
                 //未找到网络审核时，去判断是否有重复可能
                 if(pdata.type === "EDIT") editReview(pdata);
@@ -1004,12 +1066,18 @@
                 if(pdata.type === "NEW") isDuplicate(pdata);
                 return null;
             }
-            let restext = JSON.stringify(res.content);
+            let restext = null;
+            if(iresp) {
+                restext = res;
+            } else {
+                restext = JSON.stringify(res.content);
+            }
+            //console.log('restext',restext);
             if(restext.indexOf("Error 404")>=0) {
                 //修改首页下载显示
                 //中黄：ffe600
-                if(idown) idown.style="font-weight:bold;color:#ffe600";
-                console.log("未找到json");
+                setDownLabel(this,'gold');
+                console.log("未找到网络审核-"+pdata.id);
                 cloudReviewData = null;
                 setTimeout(function(){
                     if(ilabel) ilabel.textContent = "未找到网络审核记录";
@@ -1051,7 +1119,7 @@
                 //console.log("searching review record：",JSON.parse(res));
                 creviewdata = JSON.parse(res1);   //网络审核记录
             }
-            if(idown) idown.style="font-weight:bold;color:#1d953f";
+            setDownLabel(this,'green');
             cloudReviewData = creviewdata ;
             if(creviewdata==null) { return null; }
             console.log("cloudReviewData",cloudReviewData);
@@ -1072,6 +1140,7 @@
                             },5000);
                         }
                     }
+                    return true;
                 } else {
                     console.log("错误","此号不能再略过");
                     createNotify("错误po", {
@@ -1080,6 +1149,7 @@
                         requireInteraction: true
                     });
                 }
+                return null;
             }
             //pdata.type=="PHOTO"
             if(pdata.type=="PHOTO"){
