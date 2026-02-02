@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.0.8-b
+// @version      7.0.8
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1005,7 +1005,7 @@
                         //console.log('scoreAlready',scoreAlready);
                         if (!scoreAlready){
                             setTimeout(function(){
-                                console.log('showReviewedReview-run');
+                                //console.log('showReviewedReview-run');
                                 showReviewedReview();
                             },2000);
                             let score = commitScore(portalData1,loc);
@@ -2091,7 +2091,7 @@
         if (userEmail != null) {
           localStorage.setItem("showReviewedReview-userEmail", userEmail);
         } else return;
-        console.log("最终获取到的用户邮箱：", userEmail);
+        //console.log("最终获取到的用户邮箱：", userEmail);
       }
         try{
             const retitle = document.getElementById("latestpo");
@@ -2110,7 +2110,7 @@
                     for (const item of reviewData) {
                         if(item.user === userEmail){
                             const matchingMission = missionGDoc.find(mission => mission.portalID === item.id);
-                            console.log('matchingMission',matchingMission);
+                            //console.log('matchingMission',matchingMission);
                             if(matchingMission){
                                 matchingMission.ownerstatus = true ;
                             }
@@ -2132,7 +2132,7 @@
                     }
                 }
 
-                console.log('showReviewedReview',missionGDoc);
+                //console.log('showReviewedReview',missionGDoc);
                 //生成 ：三种任务po归类 ：待完成2|已完成1|未进池3|已终止4
                 //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
                 let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
