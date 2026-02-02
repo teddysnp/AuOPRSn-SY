@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.3
+// @version      1.5-a
 // @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -467,7 +467,7 @@
     }
 
     //首页home显示用户审过的po
-    async function getMissionHTML() {
+    async function getMissionHTML(iowner) {
       // 等待获取任务数据（现在处于async函数中，可安全使用await）
       //console.log("getmissionhome");
       await getMissionFromCloudFlare();
@@ -513,15 +513,15 @@
               missionGDoc.forEach(item => {
                 smistmp+="<tr><td><a href='"+item.imageUrl+"' target='_blank'>"+item.title+"</a></td>"
                   +"<td>"+(item.status === "通过" ? "✓" : "" )+"</td>"
-                  +'<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.lat+','+item.lng+"</a></td>"
-                  +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.types+"</a></td>"
+                  +'<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>"
+                  +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.types+"</a></td>"
                   +"<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td><td>"+ (item.ownerstatus === true ? '✓' : '') +"</td>"+
                   "<td><a href='"+durl+"/portal/portaluseremail/portal."+item.portalID+".useremail.json'  target='_blank'>"+item.submitteddate+"</a></td>"
                   +"<td><a href='https://www.google.com/maps/search/?api=1&query="+item.lat+','+item.lng+"&zoom=16' target='_blank'>"+item.lat+"</a></td><td>"+item.lng+"</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
                   +"</tr>";
               });
               //console.log('homepage',missionGDoc);
-              let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
+              let sultmp = `<div id='idUserEmail${iowner}' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>`;
               //console.log("missionPortal1",$("#missionPortal1"));
               smistmp+="</tbody></table>";
               //console.log(`smistmp`,smistmp);
@@ -569,22 +569,22 @@
         }
     }
 
-    switchUserReviewDiv = function() {
-        //console.log("switchUserReviewDiv",id);
+    switchUserReviewDiv = function(iowner) {
+        console.log("switchUserReviewDiv",iowner);
         try{
             let id = event.srcElement.attributes['tagname'].textContent;
             let us = event.srcElement.attributes['us'].textContent;
             let owner = event.srcElement.attributes['owner'].textContent;
             let powner = event.srcElement.attributes['powner'].textContent;
             let userEmailList = [];
-            let idUserEmail = document.getElementById("idUserEmail");
+            let idUserEmail = document.getElementById(`idUserEmail${iowner}`);
             let stmp="";
             let sss = event.srcElement;
-            //console.log(idUserEmail.textContent);
+            console.log(idUserEmail);
             if(sss.textContent.indexOf("↓")>0){
                 sss.textContent = sss.textContent.replace(/↓/g,"");
-                stmp+="<div id='idUserEmail' style='display: none;'></div>";
-                $("#idUserEmail").replaceWith(stmp);
+                stmp+=`<div id='idUserEmail${iowner}' style='display: none;'></div>`;
+                $(`#idUserEmail${iowner}`).replaceWith(stmp);
             } else {
                 let eus1 = document.querySelectorAll('[us="us1"');
                 eus1.forEach(item=>{
@@ -618,7 +618,7 @@
                     }
                     //console.log('res',res);
                     //console.log(idUserEmail.style.display);
-                    stmp+="<div id='idUserEmail' style='display:block;'><div style='display: flex;'>";
+                    stmp+=`<div id='idUserEmail${iowner}' style='display:block;'><div style='display: flex;'>`;
                     //console.log("userEmailList",userEmailList);
                     //console.log("userreview",userreview);
                     if(userreview.length>0) console.log('userReviewJson',userReviewJson);
@@ -791,7 +791,7 @@
                     }
                     stmp+="</div></div>";
                     //console.log("stmp",stmp);
-                    $("#idUserEmail").replaceWith(stmp);
+                    $(`#idUserEmail${iowner}`).replaceWith(stmp);
                 },err=>{
                     console.log("err, not found", err);
                 });
@@ -810,7 +810,7 @@
     // ********** 独立扩展函数：每个新增节点的弹窗逻辑（便于后续扩展）**********
     // 新增节点1的弹窗逻辑
     async function showPopup1() {
-      const missionHtmlStr = await getMissionHTML();
+      const missionHtmlStr = await getMissionHTML(1);
       createPopup({
             title: '任务',
             content: missionHtmlStr,
@@ -1259,7 +1259,38 @@
         style.innerHTML = css;
         document.querySelector('head').appendChild(style);
     })()
-
+    //格式化日期函数
+    function formatDate(date, fmt)
+    {
+        date = date == undefined ? new Date() : date;
+        date = typeof date == 'number' ? new Date(date) : date;
+        fmt = fmt || 'yyyy-MM-dd HH:mm:ss';
+        var obj =
+            {
+                'y': date.getFullYear(), // 年份，注意必须用getFullYear
+                'M': date.getMonth() + 1, // 月份，注意是从0-11
+                'd': date.getDate(), // 日期
+                'q': Math.floor((date.getMonth() + 3) / 3), // 季度
+                'w': date.getDay(), // 星期，注意是0-6
+                'H': date.getHours(), // 24小时制
+                'h': date.getHours() % 12 == 0 ? 12 : date.getHours() % 12, // 12小时制
+                'm': date.getMinutes(), // 分钟
+                's': date.getSeconds(), // 秒
+                'S': date.getMilliseconds() // 毫秒
+            };
+        var week = ['天', '一', '二', '三', '四', '五', '六'];
+        for(var i in obj)
+        {
+            fmt = fmt.replace(new RegExp(i+'+', 'g'), function(m)
+                              {
+                var val = obj[i] + '';
+                if(i == 'w') return (m.length > 2 ? '星期' : '周') + week[val];
+                for(var j = 0, len = val.length; j < m.length - len; j++) val = '0' + val;
+                return m.length == 1 ? val : val.substring(val.length - m.length);
+            });
+        }
+        return fmt;
+    }
 
     // 配置项：可根据需求修改
     const TARGET_NODE_ID = 'idmission'; // 目标节点ID
@@ -1280,7 +1311,7 @@
     async function replaceChildNodes(targetEl) {
         if (!targetEl) return;
         // 示例1：清空所有原有子节点，添加新子节点（最常用）
-        const missionHtmlStr = await getMissionHTML();
+        const missionHtmlStr = await getMissionHTML(2);
         targetEl.innerHTML = missionHtmlStr;
     }
 
