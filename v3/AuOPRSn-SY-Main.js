@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.0.7
+// @version      7.0.8-a
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1007,7 +1007,7 @@
                             setTimeout(function(){
                                 console.log('showReviewedReview-run');
                                 showReviewedReview();
-                            },1000);
+                            },2000);
                             let score = commitScore(portalData1,loc);
                             divscore.textContent = "打分："+score;
                             scoreAlready = true;
