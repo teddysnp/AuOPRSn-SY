@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.5-a
+// @version      1.5
 // @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1317,10 +1317,17 @@
 
     // 核心检测逻辑：监听可见性变化，显示时单次替换
     function checkAndReplace() {
+        console.log('checkAndReplace');
         const targetEl = document.getElementById(TARGET_NODE_ID);
-        if (!targetEl) return; // 节点不存在则直接返回
+        //console.log('targetEl',targetEl);
+        if (!targetEl) {
+          isReplacedForCurrentShow = false; // 标记：本次显示已替换，防止重复
+          return; // 节点不存在则直接返回
+        }
 
         const isVisible = isElementVisible(targetEl);
+        //console.log('isVisible',isVisible);
+        //console.log('isReplacedForCurrentShow',isReplacedForCurrentShow);
         // 关键逻辑：节点显示 + 当前显示周期未替换 → 执行替换
         if (isVisible && !isReplacedForCurrentShow) {
             replaceChildNodes(targetEl);
