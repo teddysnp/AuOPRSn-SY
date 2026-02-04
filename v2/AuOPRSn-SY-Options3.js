@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options3
 // @namespace    AuOPR
-// @version      1.4
+// @version      1.5
 // @description  修改侧边栏第三个标签为"任务"，并默认点击该标签（仅标签页首次加载触发）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -82,7 +82,7 @@
         const customHtml = `
             <div id="idmission" style="padding: 20px; color: #333; font-size: 14px;">
                 <h2 style="margin: 0 0 15px 0; color: #007bff;">任务面板</h2>
-                <p>✅ 已自动进入任务视图（刷新/首次进入/new/触发）</p>
+                <p id="tmpmission">✅ 已自动进入任务视图（刷新/首次进入/new/触发）</p>
                 <p>更新时间：${currentTime}</p>
                 <p>💡 点击「地图」可正常跳转到mapview</p>
             </div>
@@ -90,11 +90,15 @@
 
         // 等待wf-criteria元素加载后替换内容
         waitForElement('wf-criteria', (wfElement) => {
-            // 清空原有内容
-            wfElement.innerHTML = '';
-            // 插入自定义内容
-            wfElement.insertAdjacentHTML('afterbegin', customHtml);
-            console.log('wf-criteria内容已替换为自定义任务面板');
+            let idmission = document.getElementById('idmission');
+            console.log('idmission',idmission);
+            if (!idmission) {
+              // 清空原有内容
+              wfElement.innerHTML = '';
+              // 插入自定义内容
+              wfElement.insertAdjacentHTML('afterbegin', customHtml);
+              console.log('wf-criteria内容已替换为自定义任务面板');
+          }
         });
     }
 
@@ -108,7 +112,7 @@
                 // 延迟执行，确保路由跳转完成后再替换内容
                 setTimeout(() => {
                     replaceWfCriteriaContent();
-                }, 500);
+                }, 200);
             }, { once: false });
         }
     }
@@ -125,7 +129,7 @@
         // 如果是当前标签页首次加载，直接替换wf-criteria内容
             setTimeout(() => {
                 replaceWfCriteriaContent();
-            }, 800);
+            }, 200);
     });
 
 })();
