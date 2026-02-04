@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.6
+// @version      1.7
 // @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1094,6 +1094,15 @@
                     console.log(`检测到侧边栏路由跳转：${url}，执行修复`);
                     isInited = false;
                     setTimeout(initNodes, 200); // 缩短延迟，适配DOM渲染
+                    if (url && url.startsWith('/new/review')) {
+                        setTimeout(function(){
+                            console.log(`修复任务标签`);
+                            modifyThirdSidebarLink();
+                        },500);
+                    }
+                    if (url && url.startsWith('/new/criteria/eligibility')) {
+                        setTimeout(checkAndReplace,200);
+                    }
                 }
               /*
                 // 监听跳转到review路由，执行侧边栏修复
@@ -1292,7 +1301,25 @@
         return fmt;
     }
 
-    // 配置项：可根据需求修改
+    // 1. 修改第三个sidebar-link的文本为"任务"（兼容原始文本）
+    function modifyThirdSidebarLink() {
+        const sidebarLinks = document.querySelectorAll('app-sidebar-link a.sidebar-link');
+        if (sidebarLinks.length >= 3) {
+            const thirdLink = sidebarLinks[2];
+            // 修改span显示文本
+            const textSpan = thirdLink.querySelector('span.ng-star-inserted');
+            if (textSpan && textSpan.textContent !== '任务') {
+                textSpan.textContent = '任务';
+            }
+            // 修改title属性
+            if (thirdLink.getAttribute('title') !== '任务') {
+                thirdLink.setAttribute('title', '任务');
+            }
+            console.log('第三个侧边栏标签已修改为"任务"');
+        }
+    }
+
+  // 配置项：可根据需求修改
     const TARGET_NODE_ID = 'idmission'; // 目标节点ID
 
     // 🌟 精准判断节点是否「真实显示」（排除隐藏/不可见状态）
