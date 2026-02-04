@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options3
 // @namespace    AuOPR
-// @version      1.5
+// @version      1.6
 // @description  修改侧边栏第三个标签为"任务"，并默认点击该标签（仅标签页首次加载触发）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -111,6 +111,7 @@
             taskLink.addEventListener('click', (e) => {
                 // 延迟执行，确保路由跳转完成后再替换内容
                 setTimeout(() => {
+                    modifyThirdSidebarLink();
                     replaceWfCriteriaContent();
                 }, 200);
             }, { once: false });
