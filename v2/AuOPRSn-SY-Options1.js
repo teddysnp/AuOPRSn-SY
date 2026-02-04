@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.5
+// @version      1.6
 // @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1069,7 +1069,7 @@
     let clickEventBinded = false; // 防重复绑定点击事件
     let isFirstEnter = true; // 标记是否是首次进入/new/（刷新/直接访问）
     const TARGET_ROUTE = '/new/'; // 目标入口路由
-    const HELP_ROUTE = '/new/help'; // 自动跳转的目标路由
+    const HELP_ROUTE = '/new/criteria/eligibility'; // 自动跳转的目标路由
     const MAPVIEW_ROUTE = '/new/mapview'; // 用户可主动点击的路由
     const REVIEW_ROUTE = '/new/review'; // 提交按钮跳转的路由
     // 初始路由处理：适配review路由
@@ -1294,8 +1294,6 @@
 
     // 配置项：可根据需求修改
     const TARGET_NODE_ID = 'idmission'; // 目标节点ID
-    const CHECK_INTERVAL = 200; // 可见性检测间隔（毫秒，200-500合适）
-    let isReplacedForCurrentShow = false; // 核心标记：当前显示周期是否已替换（关键！）
 
     // 🌟 精准判断节点是否「真实显示」（排除隐藏/不可见状态）
     function isElementVisible(el) {
@@ -1317,31 +1315,38 @@
 
     // 核心检测逻辑：监听可见性变化，显示时单次替换
     function checkAndReplace() {
-        console.log('checkAndReplace');
-        const targetEl = document.getElementById(TARGET_NODE_ID);
-        //console.log('targetEl',targetEl);
-        if (!targetEl) {
-          isReplacedForCurrentShow = false; // 标记：本次显示已替换，防止重复
-          return; // 节点不存在则直接返回
-        }
-
-        const isVisible = isElementVisible(targetEl);
-        //console.log('isVisible',isVisible);
-        //console.log('isReplacedForCurrentShow',isReplacedForCurrentShow);
-        // 关键逻辑：节点显示 + 当前显示周期未替换 → 执行替换
-        if (isVisible && !isReplacedForCurrentShow) {
+        if ( window.location.pathname !== HELP_ROUTE) return;
+        //console.log('checkAndReplace');
+        //console.log(`checkAndReplace${window.location.pathname}`);
+        awaitElement(() => document.getElementById('idmission'))
+            .then((ref) => {
+          let targetEl = document.getElementById('idmission');
+          console.log("checkAndReplace:get idmission!");
+          //placestr存在，说明已经替换完成
+          let iplace = document.querySelector(".placestr");
+          if(iplace) return;
             replaceChildNodes(targetEl);
-            isReplacedForCurrentShow = true; // 标记：本次显示已替换，防止重复
             console.log(`✅ ${TARGET_NODE_ID} 已显示，子节点替换完成（本次显示仅一次）`);
-        }
-        // 关键逻辑：节点隐藏 → 重置标记，为下次显示做准备
-        else if (!isVisible && isReplacedForCurrentShow) {
-            isReplacedForCurrentShow = false;
-            console.log(`ℹ️ ${TARGET_NODE_ID} 已隐藏，重置替换标记，等待下次显示`);
-        }
+
+      });
     }
 
+    listenLinkClick();
+    //监听页面点击，获取是否人工点击
+    function listenLinkClick(){
+        document.body.addEventListener("click",function(event){
+            //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
+            console.log("clicked",event.srcElement);
+          let t=event.srcElement;
+          if( (t.tagName && t.tagName.toLowerCase()=="span" && t.className.indexOf("ng-star-inserted")>-1 && t.innerText.trim()=="任务")
+             || t.querySelector("span.ng-star-inserted"))
+          {
+            checkAndReplace();
+          }
+        });
+    }
     // 启动轮询检测：持续监听节点可见性状态变化
-    setInterval(checkAndReplace, CHECK_INTERVAL);
+    //setInterval(checkAndReplace, CHECK_INTERVAL);
+    setTimeout(checkAndReplace,500);
 
 })();
