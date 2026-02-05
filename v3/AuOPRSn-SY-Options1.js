@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.7
+// @version      1.8
 // @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -477,6 +477,7 @@
         // 处理用户信息
         userEmail = restext.result.socialProfile.email;
         performance = restext.result.performance;
+        document.title = userEmail;
 
         if (userEmail != null) {
           localStorage.setItem("currentUser", userEmail);
@@ -1094,14 +1095,14 @@
                     console.log(`检测到侧边栏路由跳转：${url}，执行修复`);
                     isInited = false;
                     setTimeout(initNodes, 200); // 缩短延迟，适配DOM渲染
-                    if (url && url.startsWith('/new/review')) {
+                    //if (url && url.startsWith('/new/review')) {
                         setTimeout(function(){
                             console.log(`修复任务标签`);
                             modifyThirdSidebarLink();
                         },500);
-                    }
+                    //}
                     if (url && url.startsWith('/new/criteria/eligibility')) {
-                        setTimeout(checkAndReplace,200);
+                        //setTimeout(checkAndReplace,200);
                     }
                 }
               /*
@@ -1301,24 +1302,6 @@
         return fmt;
     }
 
-    // 1. 修改第三个sidebar-link的文本为"任务"（兼容原始文本）
-    function modifyThirdSidebarLink() {
-        const sidebarLinks = document.querySelectorAll('app-sidebar-link a.sidebar-link');
-        if (sidebarLinks.length >= 3) {
-            const thirdLink = sidebarLinks[2];
-            // 修改span显示文本
-            const textSpan = thirdLink.querySelector('span.ng-star-inserted');
-            if (textSpan && textSpan.textContent !== '任务') {
-                textSpan.textContent = '任务';
-            }
-            // 修改title属性
-            if (thirdLink.getAttribute('title') !== '任务') {
-                thirdLink.setAttribute('title', '任务');
-            }
-            console.log('第三个侧边栏标签已修改为"任务"');
-        }
-    }
-
   // 配置项：可根据需求修改
     const TARGET_NODE_ID = 'idmission'; // 目标节点ID
 
@@ -1341,19 +1324,17 @@
     }
 
     // 核心检测逻辑：监听可见性变化，显示时单次替换
-    function checkAndReplace() {
+    function checkAndReplace(id) {
         if ( window.location.pathname !== HELP_ROUTE) return;
-        //console.log('checkAndReplace');
+        console.log(`checkAndReplace-id:${id}`);
         //console.log(`checkAndReplace${window.location.pathname}`);
         awaitElement(() => document.getElementById('idmission'))
             .then((ref) => {
           let targetEl = document.getElementById('idmission');
           console.log("checkAndReplace:get idmission!");
           //placestr存在，说明已经替换完成
-          let iplace = document.querySelector(".placestr");
-          if(iplace) return;
             replaceChildNodes(targetEl);
-            console.log(`✅ ${TARGET_NODE_ID} 已显示，子节点替换完成（本次显示仅一次）`);
+            //console.log(`✅ ${TARGET_NODE_ID} 已显示，子节点替换完成（本次显示仅一次）`);
 
       });
     }
@@ -1363,17 +1344,134 @@
     function listenLinkClick(){
         document.body.addEventListener("click",function(event){
             //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
-            console.log("clicked",event.srcElement);
+            //console.log("clicked",event.srcElement);
           let t=event.srcElement;
           if( (t.tagName && t.tagName.toLowerCase()=="span" && t.className.indexOf("ng-star-inserted")>-1 && t.innerText.trim()=="任务")
              || t.querySelector("span.ng-star-inserted"))
           {
-            checkAndReplace();
+            //console.log("任务 clicked");
+            replaceWfCriteriaContent();
+            //checkAndReplace(1);
           }
         });
     }
     // 启动轮询检测：持续监听节点可见性状态变化
     //setInterval(checkAndReplace, CHECK_INTERVAL);
-    setTimeout(checkAndReplace,500);
+    //setTimeout(checkAndReplace,500);
+
+
+
+
+    //修改sidebar为任务，并替换一个缺省
+    // 1. 修改第三个sidebar-link的文本为"任务"（兼容原始文本）
+    function modifyThirdSidebarLink() {
+        const sidebarLinks = document.querySelectorAll('app-sidebar-link a.sidebar-link');
+        if (sidebarLinks.length >= 3) {
+            const thirdLink = sidebarLinks[2];
+            // 修改span显示文本
+            const textSpan = thirdLink.querySelector('span.ng-star-inserted');
+            if (textSpan && textSpan.textContent !== '任务') {
+                textSpan.textContent = '任务';
+            }
+            // 修改title属性
+            if (thirdLink.getAttribute('title') !== '任务') {
+                thirdLink.setAttribute('title', '任务');
+            }
+            console.log('第三个侧边栏标签已修改为"任务"');
+        }
+    }
+
+    // 2. 仅当前标签页首次加载时激活"任务"标签（核心修改：改用sessionStorage）
+    function activateTaskLinkOnlyFirstTime() {
+        // 从sessionStorage读取标记（仅当前标签页有效，关闭标签页自动清空）
+        const isFirstLoadInTab = sessionStorage.getItem('isFirstLoadInTab') !== 'false';
+
+        if (isFirstLoadInTab) {
+            const sidebarLinks = document.querySelectorAll('app-sidebar-link a.sidebar-link');
+            if (sidebarLinks.length >= 3) {
+                const thirdLink = sidebarLinks[2];
+                const firstLink = sidebarLinks[0];
+
+                // 移除第一个标签（地图）的激活状态
+                firstLink.classList.remove('sidebar-link--active', 'active');
+                // 给第三个标签添加激活状态
+                thirdLink.classList.add('sidebar-link--active', 'active');
+                // 模拟点击触发路由跳转
+                thirdLink.click();
+
+                // 标记当前标签页已非首次加载（刷新时生效）
+                sessionStorage.setItem('isFirstLoadInTab', 'false');
+                console.log('当前标签页首次加载，已默认激活"任务"标签');
+            }
+        } else {
+            console.log('当前标签页非首次加载（刷新），保留当前页面激活状态');
+        }
+    }
+
+    // 3. 替换wf-criteria内容为自定义任务面板
+    function replaceWfCriteriaContent() {
+        // 生成自定义任务面板HTML
+        const currentTime = new Date().toLocaleString();
+        const customHtml = `
+            <div id="idmission" style="padding: 20px; color: #333; font-size: 14px;">
+                <h2 style="margin: 0 0 15px 0; color: #007bff;">任务面板</h2>
+                <p id="tmpmission">✅ 已自动进入任务视图（刷新/首次进入/new/触发）</p>
+                <p>更新时间：${currentTime}</p>
+                <p>💡 点击「地图」可正常跳转到mapview</p>
+            </div>
+        `;
+
+        // 等待wf-criteria元素加载后替换内容
+        //awaitElement( () => document.querySelector('app-sidebar-link a.sidebar-link')).then((ref) => {
+        awaitElement( () => document.querySelector('wf-criteria')).then((wfElement) =>{
+            //let idmission = document.getElementById('idmission');
+            console.log('idmission',wfElement);
+            let idmission = document.getElementById('idmission')
+            if (!idmission) {
+              // 清空原有内容
+              wfElement.innerHTML = '';
+              // 插入自定义内容
+              wfElement.insertAdjacentHTML('afterbegin', customHtml);
+              console.log('wf-criteria内容已替换为自定义任务面板');
+            };
+            awaitElement( () => document.getElementById('idmission')).then((idm) =>{
+                console.log('replaceWfCriteriaContent');
+                checkAndReplace(2) ;
+            });
+        });
+    }
+
+    // 4. 监听侧边栏点击事件，仅点击"任务"时替换右侧内容
+    function listenSidebarClick() {
+        const sidebarLinks = document.querySelectorAll('app-sidebar-link a.sidebar-link');
+        if (sidebarLinks.length >= 3) {
+            const taskLink = sidebarLinks[2];
+            // 绑定点击事件（防止重复绑定）
+            taskLink.addEventListener('click', (e) => {
+                // 延迟执行，确保路由跳转完成后再替换内容
+                setTimeout(() => {
+                    console.log('listenSidebarClick');
+                    modifyThirdSidebarLink();
+                    replaceWfCriteriaContent();
+                    //checkAndReplace(3);
+                }, 200);
+            }, { once: false });
+        }
+    }
+
+    // 主执行逻辑
+    awaitElement( () => document.querySelector('app-sidebar-link a.sidebar-link')).then((ref) => {
+        // 第一步：修改标签文本
+        modifyThirdSidebarLink();
+        // 第二步：仅当前标签页首次加载激活任务标签
+        activateTaskLinkOnlyFirstTime();
+        // 第三步：监听任务标签点击事件
+        listenSidebarClick();
+
+        // 如果是当前标签页首次加载，直接替换wf-criteria内容
+            setTimeout(() => {
+                replaceWfCriteriaContent();
+            }, 200);
+    });
 
 })();
