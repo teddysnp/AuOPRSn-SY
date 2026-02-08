@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.8
+// @version      1.9
 // @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1425,9 +1425,10 @@
         //awaitElement( () => document.querySelector('app-sidebar-link a.sidebar-link')).then((ref) => {
         awaitElement( () => document.querySelector('wf-criteria')).then((wfElement) =>{
             //let idmission = document.getElementById('idmission');
-            console.log('idmission',wfElement);
             let idmission = document.getElementById('idmission')
-            if (!idmission) {
+            console.log('wfElement',wfElement);
+            console.log('idmission',idmission);
+            if (wfElement && wfElement !== null) {
               // 清空原有内容
               wfElement.innerHTML = '';
               // 插入自定义内容
