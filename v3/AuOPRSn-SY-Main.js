@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.0.8
+// @version      7.0.9
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -102,10 +102,14 @@
         //console.log("onload","getMission");
         // 先获取用户信息并等待完成
         const restext = await getUser();
+        console.log('restext',restext);
 
         // 处理用户信息
-        userEmail = restext.result.socialProfile.email;
-        performance = restext.result.performance;
+          if(restext.result.socialProfile){
+              userEmail = restext.result.socialProfile.email;
+              performance = restext.result.performance;
+              document.title = userEmail;
+          }
 
         if (userEmail) {
             localStorage.setItem("currentUser", userEmail);
@@ -558,7 +562,7 @@
 
     //监听http请求，不同的页面实现不同功能
     (function (open) {
-        XMLHttpRequest.prototype.open = function (method, url) {
+        XMLHttpRequest.prototype.open = async function (method, url) {
             //console.log(url);
             //console.log(method);
             //提示需重新登录
@@ -632,7 +636,14 @@
             //初始的时候，保存当前用户的email
             if (url === '/api/v1/vault/profile' && method == 'GET') {
                 if(!userEmail) {
-                    userEmail = getUser();
+                  const restext = await getUser();
+                    console.log('restext',restext);
+                  // 处理用户信息
+                  if(restext){
+                    userEmail = restext.result.socialProfile.email;
+                    performance = restext.result.performance;
+                    document.title = userEmail;
+                  }
                 }
                 this.addEventListener('load', getUserList, false);
             }
@@ -2084,9 +2095,13 @@
       if(userEmail === null) {
         // 先获取用户信息并等待完成
         const restext = await getUser();
+          console.log('restext',restext);
         // 处理用户信息
-        userEmail = restext.result.socialProfile.email;
-        performance = restext.result.performance;
+          if(restext.result.socialProfile){
+              userEmail = restext.result.socialProfile.email;
+              performance = restext.result.performance;
+              document.title = userEmail;
+          }
 
         if (userEmail != null) {
           localStorage.setItem("showReviewedReview-userEmail", userEmail);
@@ -2190,8 +2205,12 @@
                 // 先获取用户信息并等待完成
                 const restext = await getUser();
                 // 处理用户信息
-                userEmail = restext.result.socialProfile.email;
-                performance = restext.result.performance;
+                console.log('restext',restext);
+                if(restext.result.socialProfile){
+                    userEmail = restext.result.socialProfile.email;
+                    performance = restext.result.performance;
+                    document.title = userEmail;
+                }
 
                 if (userEmail != null) {
                     localStorage.setItem("currentUser", userEmail);
