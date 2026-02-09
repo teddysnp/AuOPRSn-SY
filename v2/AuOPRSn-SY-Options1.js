@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.9
+// @version      1.10
 // @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -947,7 +947,7 @@
 
     // 核心初始化逻辑
     function initNodes() {
-        console.log('isInited',isInited);
+        //console.log('isInited',isInited);
         if (isInited) return;
         const originalNode = findOriginalProfileNode();
         if (!originalNode) return;
@@ -1326,12 +1326,12 @@
     // 核心检测逻辑：监听可见性变化，显示时单次替换
     function checkAndReplace(id) {
         if ( window.location.pathname !== HELP_ROUTE) return;
-        console.log(`checkAndReplace-id:${id}`);
+        //console.log(`checkAndReplace-id:${id}`);
         //console.log(`checkAndReplace${window.location.pathname}`);
         awaitElement(() => document.getElementById('idmission'))
             .then((ref) => {
           let targetEl = document.getElementById('idmission');
-          console.log("checkAndReplace:get idmission!");
+          //console.log("checkAndReplace:get idmission!");
           //placestr存在，说明已经替换完成
             replaceChildNodes(targetEl);
             //console.log(`✅ ${TARGET_NODE_ID} 已显示，子节点替换完成（本次显示仅一次）`);
@@ -1377,7 +1377,7 @@
             if (thirdLink.getAttribute('title') !== '任务') {
                 thirdLink.setAttribute('title', '任务');
             }
-            console.log('第三个侧边栏标签已修改为"任务"');
+            //console.log('第三个侧边栏标签已修改为"任务"');
         }
     }
 
@@ -1426,17 +1426,17 @@
         awaitElement( () => document.querySelector('wf-criteria')).then((wfElement) =>{
             //let idmission = document.getElementById('idmission');
             let idmission = document.getElementById('idmission')
-            console.log('wfElement',wfElement);
-            console.log('idmission',idmission);
+            //console.log('wfElement',wfElement);
+            //console.log('idmission',idmission);
             if (wfElement && wfElement !== null) {
               // 清空原有内容
               wfElement.innerHTML = '';
               // 插入自定义内容
               wfElement.insertAdjacentHTML('afterbegin', customHtml);
-              console.log('wf-criteria内容已替换为自定义任务面板');
+              //console.log('wf-criteria内容已替换为自定义任务面板');
             };
             awaitElement( () => document.getElementById('idmission')).then((idm) =>{
-                console.log('replaceWfCriteriaContent');
+                //console.log('replaceWfCriteriaContent');
                 checkAndReplace(2) ;
             });
         });
@@ -1451,7 +1451,7 @@
             taskLink.addEventListener('click', (e) => {
                 // 延迟执行，确保路由跳转完成后再替换内容
                 setTimeout(() => {
-                    console.log('listenSidebarClick');
+                    //console.log('listenSidebarClick');
                     modifyThirdSidebarLink();
                     replaceWfCriteriaContent();
                     //checkAndReplace(3);
