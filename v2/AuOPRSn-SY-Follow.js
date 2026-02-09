@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.0.6-b
+// @version      4.0.7
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -707,8 +707,9 @@
                                             console.log("mlat",JSON.stringify(item.lat));
                                             console.log("plng",JSON.stringify(pData.submissions[i].lng));
                                             console.log("mlng",JSON.stringify(item.lng));
-                                            item.lat = pData.submissions[i].lat;item.lng = pData.submissions[i].lng;
+                                            //item.lat = pData.submissions[i].lat;item.lng = pData.submissions[i].lng;
                                             isave=1;
+                                            //新版，不再更新经纬度
                                             console.log("isave1：更新经纬度");
                                         }
                                     }
