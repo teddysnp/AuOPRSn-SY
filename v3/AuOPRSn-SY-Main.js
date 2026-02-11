@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.0.9
+// @version      7.1.0
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -650,7 +650,7 @@
             //首页，显示审po列表
             if (url === '/api/v1/vault/home' && method == 'GET') {
                 //console.log(loginNotice);
-                this.addEventListener('load', showReviewedHome, false);
+                //this.addEventListener('load', showReviewedHome, false);
             }
             open.apply(this, arguments);
         };
@@ -1228,18 +1228,18 @@
         }
     // 检查节点是否存在
         if (!photoNode) {
-            console.warn('未找到 app-photo-b 节点');
+            //console.warn('未找到 app-photo-b 节点');
             return;
         }
         if (!reviewCardNode) {
-            console.warn('未找到 wf-review-card-b 节点');
+            //console.warn('未找到 wf-review-card-b 节点');
             return;
         }
 
         // 检查节点是否已经在正确位置（避免重复移动）
         const isBefore = reviewCardNode.nextElementSibling === photoNode;
         if (isBefore) {
-            console.log('节点已在正确位置，无需移动');
+            //console.log('节点已在正确位置，无需移动');
             return;
         }
 
@@ -1253,9 +1253,7 @@
         }, 0);
 
         // 验证DOM顺序
-        console.log('DOM顺序验证：',
-                    reviewCardNode.nextElementSibling === photoNode ? '正确' : '错误'
-                   );
+        //console.log('DOM顺序验证：', reviewCardNode.nextElementSibling === photoNode ? '正确' : '错误' );
         //console.log('节点移动成功：wf-review-card-b 已移到 app-photo-b 前面');
     }
 
@@ -1279,7 +1277,7 @@
 
             // 检查元素是否存在
             if (!addrElement) {
-                console.log(`地址元素未找到，剩余尝试次数: ${attemptsLeft - 1}`);
+                //console.log(`地址元素未找到，剩余尝试次数: ${attemptsLeft - 1}`);
                 setTimeout(() => fetchAddress(attemptsLeft - 1), interval);
                 return;
             }
@@ -1287,7 +1285,7 @@
             // 检查地址是否加载完成（不含"載入中"）
             const addressText = addrElement.childNodes[1]?.innerText;
             if (!addressText) {
-                console.log(`地址文本为空，剩余尝试次数: ${attemptsLeft - 1}`);
+                //console.log(`地址文本为空，剩余尝试次数: ${attemptsLeft - 1}`);
                 setTimeout(() => fetchAddress(attemptsLeft - 1), interval);
                 return;
             }
@@ -1297,10 +1295,10 @@
                 let address = addressText.split(":")[1] || "";
                 address = address.replace(" 邮政编码", "").trim();
                 divaddr.textContent = `地址:${address}`;
-                console.log(`成功获取地址（尝试次数: ${maxAttempts - attemptsLeft + 1}）`);
+                //console.log(`成功获取地址（尝试次数: ${maxAttempts - attemptsLeft + 1}）`);
             } else {
                 // 仍在加载中，继续尝试
-                console.log(`地址加载中，剩余尝试次数: ${attemptsLeft - 1}`);
+                //console.log(`地址加载中，剩余尝试次数: ${attemptsLeft - 1}`);
                 setTimeout(() => fetchAddress(attemptsLeft - 1), interval);
             }
         };
@@ -1396,7 +1394,8 @@
                 //      console.log(userprofile);
                 //console.log(needCaptcha);
                 if (json.captcha) {
-                    if(needCaptcha=="true"){
+                    console.warn("💔需要验证",userEmail);
+                    if(needCaptcha == "true"){
                         createNotify("需要验证", {
                             body: "需要验证！",
                             icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/stop.ico",
@@ -1751,7 +1750,7 @@
                     //console.log("reviewLista",reviewList);
                 }
                 localStorage.setItem(storageKey, JSON.stringify(reviewList));
-                console.log(`成功保存本地${storageKey}`);
+                //console.log(`成功保存本地${storageKey}`);
             } catch (error) {
                 console.error(`保存${storageKey}数据失败：`, error);
             }
@@ -2030,12 +2029,12 @@
         //池中池外地址判断
         //console.log(portal);
         const priCityName = getPriCityName(portal.lng,portal.lat);
-        console.log('地址：',priCityName);
+        //console.log('地址：',priCityName);
         if (privatePortal.indexOf(portal.title)>0 || gpausePortal.indexOf(portal.title)>=0){
             return "池中"; //池中
         } else //if(portal.type === "NEW")
         {
-            console.log('原始po地址：',portal.streetAddress);
+            //console.log('原始po地址：',portal.streetAddress);
             if (priCityName !== null){
                 if(priCityName.indexOf("辽宁省") >= 0 || priCityName.indexOf("吉林省") >= 0){
                     /*            if( portal.streetAddress.indexOf("Shen Yang")>0 || portal.streetAddress.indexOf("Liao Ning")>0
@@ -2612,7 +2611,7 @@
             return -1;
         }
     }
-
+/*
     switchUserReviewDiv = function() {
         //console.log("switchUserReviewDiv",id);
         try{
@@ -2850,7 +2849,7 @@
             console.log("switchUserReviewDiv",e);
         }
     };
-
+*/
     // 滚动到页面顶部
     function scrollToTop() {
         window.scrollBy({
