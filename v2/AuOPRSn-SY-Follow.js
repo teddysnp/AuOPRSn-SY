@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.0.7
+// @version      4.0.8
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -354,7 +354,7 @@
     }
 
     function setDownLabel(obj,color){
-        console.log('setDownLabel',obj);console.log('setDownLabel',color);
+        //console.log('setDownLabel',obj);console.log('setDownLabel',color);
         const idown = document.getElementById("idcountdownlabel");
         if(idown) idown.style=`font-weight:bold;color:${color}`;
     }
@@ -458,10 +458,10 @@
                         let localpd1 = [];
                         if(localStorage.getItem(useremail+"follow")) localpd1 = JSON.parse(localStorage.getItem(useremail+"follow"));
                         if(localpd1.length==0){
-                            console.log("saving local follow 1");
+                            //console.log("saving local follow 1");
                             localStorage.setItem(useremail+"follow","["+JSON.stringify(tmpfollow)+"]");
                         } else {
-                            console.log("saving local follow n");
+                            //console.log("saving local follow n");
                             localpd1.push(tmpfollow);
                             localStorage.setItem(useremail+"follow",JSON.stringify(localpd1));
                         }
@@ -476,7 +476,7 @@
                         } else {
                             ic=0;
                         }
-                        console.log("调用上传接口",isUserClick);
+                        //console.log("调用上传接口",isUserClick);
                         uploadPostData(portalData,JSON.parse(data),ic,true);
                     //}
 
@@ -588,8 +588,8 @@
                 portalData = json.result;
                 if(!portalData) return;
                 if (missionGDoc.length === 0) {missionGDoc = JSON.parse(localStorage.missionGDoc);}
-                console.log("开始新审核:",portalData.title);
-                console.log("原始po数据:",portalData);
+                console.log("1️⃣开始新审核:",portalData.title);
+                console.log("📋原始po数据:",portalData);
 //                if(!portalData.id || portalData.id==null) return;
                 setTimeout(function(){ loadReviewData(portalData); },1000);
 //                let testid = "74908645df72e5da08ebd13be138275c";
@@ -873,7 +873,7 @@
                 shouldBreak = true;
             }
         })
-        console.log("follow-shouldBreak",shouldBreak);
+        //console.log("follow-shouldBreak",shouldBreak);
         if(!shouldBreak){
             const photo = document.querySelectorAll('app-review-photo app-photo-card .photo-card');
             if (photo)
@@ -893,7 +893,7 @@
         setTimeout(function(){
             let ilabel = document.getElementById("idscore");
             if(ilabel) ilabel.textContent = tmptext;
-            console.log("idscore",tmptext);
+            //console.log("idscore",tmptext);
         },500);
     }
 
@@ -1159,11 +1159,12 @@
                 const photoall = document.querySelector('app-review-photo app-accept-all-photos-card .photo-card .photo-card__main');
                 if(rdata.rejectPhotos.length==0){
                     if(photoall.className.indexOf("photo-card--reject") === -1){
-                        setTimeout(function(){ console.log('photoall',photoall);
+                        setTimeout(function(){
+                            //console.log('photoall',photoall);
                                               //以下，不一定哪个会被点击，很奇怪
-                                              photoall.parentNode.parentNode.click();
-                                              photoall.click();
-                                             },500);
+                            photoall.parentNode.parentNode.click();
+                            photoall.click();
+                        },500);
                         tmptext = "照抄网络审核：全选";
                     }
                 } else{
@@ -1541,19 +1542,23 @@
         let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
         let rsstr = "";
         if(areObjectsEqual(rd1,rd2)) rsstr = "一致"; else rsstr = "不一致";
-        console.log("本地与云对比",rsstr);
+        //console.log("本地与云对比",rsstr);
         setTimeout(function(){
             if(isUserClick & rsstr === "不一致") {
                 //console.log("调用上传接口",isUserClick);
                 uploadPostData(portalData,JSON.parse(data),0,false);
             } else {
                 console.log("不上传",rd2.id+":"+portalData.title);
-                console.log("审核结束:",rd2.id+":"+portalData.title);
+                console.log("⏸审核结束:",rd2.id+":"+portalData.title);
             }
         },200);
+        if(iautolabel){
         if (iautolabel.textContent == "手动" & rsstr === "不一致"){
             //console.log("data",JSON.parse(data));
             //uploadPostData(portalData,JSON.parse(data),0,false);
+        }
+        } else {
+            console.log("与云对比时发生错误，无法读取iautolabel标签");
         }
     };
 
@@ -1618,10 +1623,10 @@
         } else if(data.type=="PHOTO"){
             isave=1;
         }
-        console.log("isave",isave);
+        //console.log("isave",isave);
         if(isave==1){
             try{
-                console.log("上传审核结果...");
+                //console.log("上传审核结果...");
                 if(icloud==0 || icloud==2){
                     //保存至本地
                     if(localpd.length==0){
