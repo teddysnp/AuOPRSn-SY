@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0
+// @version      2.0.1
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -26,46 +26,28 @@
     function injectStyles() {
         // ====================== 【用户可自定义区域1：样式】 ======================
             const panelStyles = `
-        /* 面板基础样式 */
+        /* app-mapview 作为父容器，设置flex列布局 */
+        app-mapview {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%; /* 需确保app-mapview有固定高度，否则布局失效 */
+            overflow: hidden;
+        }
+        /* 任务管理面板：默认自适应高度 */
         .mission-manager-panel {
-            height: 300px;
+            flex-shrink: 0;
+            width: 100%;
+            height: auto; /* 核心：默认自适应内容高度 */
+            min-height: 35; /* 折叠状态最小高度 */
             background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            margin: 8px 0;
-            padding: 8px;
-            box-sizing: border-box;
-            transition: height 0.3s ease;
-            /* 核心改动：替换 overflow: hidden 为垂直滚动自动、水平隐藏 */
-            overflow-y: auto; /* 垂直方向内容超出时显示滚动条，否则隐藏 */
-            overflow-x: hidden; /* 水平方向禁止滚动，避免横向滚动条影响布局 */
-            position: relative;
-
-            /* 可选优化：美化滚动条（适配Chrome/Safari，不影响功能） */
-            scrollbar-width: thin; /* 火狐：窄滚动条 */
-            scrollbar-color: #ccc #f5f5f5; /* 火狐：滚动条滑块/轨道颜色 */
+            border-bottom: 1px solid #e6e6e6;
+            transition: height 0.2s; /* 高度变化过渡 */
         }
-
-        /* 可选：Chrome/Safari 滚动条美化（非必需，仅提升视觉效果） */
-        .mission-manager-panel::-webkit-scrollbar {
-            width: 6px; /* 滚动条宽度 */
-        }
-        .mission-manager-panel::-webkit-scrollbar-track {
-            background: #f5f5f5; /* 滚动条轨道背景 */
-            border-radius: 3px;
-        }
-        .mission-manager-panel::-webkit-scrollbar-thumb {
-            background: #ccc; /* 滚动条滑块颜色 */
-            border-radius: 3px;
-        }
-        .mission-manager-panel::-webkit-scrollbar-thumb:hover {
-            background: #999; /* 鼠标悬停时滑块颜色 */
-        }
+        /* 折叠状态：强制固定高度 */
         .mission-manager-panel.collapsed {
-            height: 30px;
-        }
-
-        /* 折叠按钮容器（文字+箭头） */
+            height: 35px !important; /* 覆盖auto，确保折叠高度固定 */
+        }        /* 折叠按钮容器（文字+箭头） */
         .collapse-arrow-wrapper {
             position: absolute;
             top: 8px;
@@ -93,7 +75,20 @@
         .arrow-text {
             user-select: none;
         }
+        /* 可拖动分割条（同级） */
+        .panel-resizer {
+            flex-shrink: 0;
+            height: 6px;
+            width: 100%;
+            background-color: #409eff;
+            cursor: ns-resize;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
 
+        .panel-resizer:hover {
+            background-color: #66b1ff;
+        }
         /* 标签页导航栏 */
         .tabs-nav {
             display: flex;
@@ -243,19 +238,84 @@
                 const targetTabId = item.dataset.tabId;
                 item.classList.add('active');
                 document.getElementById(targetTabId).classList.add('active');
+                // 切换标签后恢复自适应高度（如果未手动拖动）
+                if (panel.style.height !== 'auto' && !panel.classList.contains('collapsed')) {
+                    panel.style.height = 'auto';
+                }
             });
         });
     }
 
-    // 创建自定义面板（核心修改：读取并应用会话级折叠状态）
+    // 分割条拖动事件（适配自适应高度：拖动时设固定高度，未拖动则auto）
+    function bindResizerEvents(resizer, missionPanel) {
+        let isResizing = false;
+        let startY, startPanelHeight;
+        // 记录初始状态：是否为自适应高度
+        let isAutoHeight = true;
+
+        resizer.addEventListener('mousedown', (e) => {
+            if (missionPanel.classList.contains('collapsed')) return;
+
+            isResizing = true;
+            startY = e.clientY;
+
+            // 获取当前面板高度：如果是auto，取实际渲染高度
+            startPanelHeight = missionPanel.getBoundingClientRect().height;
+            isAutoHeight = missionPanel.style.height === '' || missionPanel.style.height === 'auto';
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        const handleMouseMove = (e) => {
+            if (!isResizing) return;
+
+            const deltaY = e.clientY - startY;
+            const parentHeight = missionPanel.parentElement.getBoundingClientRect().height;
+            // 新高度：基于当前渲染高度调整，限制最小/最大值
+            const newHeight = Math.max(90, Math.min(startPanelHeight + deltaY, parentHeight * 0.8));
+
+            // 拖动时强制设置固定高度（覆盖auto）
+            missionPanel.style.height = `${newHeight}px`;
+            isAutoHeight = false;
+        };
+
+        const handleMouseUp = () => {
+            isResizing = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            // 可选：如果拖动距离极小（<5px），恢复自适应高度
+            const dragDistance = Math.abs(e.clientY - startY);
+            if (dragDistance < 5) {
+                missionPanel.style.height = 'auto';
+                isAutoHeight = true;
+            }
+        };
+
+        // 监听内容变化，自动恢复自适应（可选：当tabs-content内容变化时）
+        const observer = new MutationObserver(() => {
+            if (isAutoHeight && !missionPanel.classList.contains('collapsed')) {
+                missionPanel.style.height = 'auto';
+            }
+        });
+        // 监听tabs-content的内容变化
+        const tabsContent = missionPanel.querySelector('.tabs-content');
+        if (tabsContent) {
+            observer.observe(tabsContent, { childList: true, subtree: true });
+        }
+    }
+
+    // 创建任务面板（内部结构不变，仅移除分割条子元素）
     function createMissionPanel() {
         console.log('createMissionPanel');
         const panel = document.createElement('div');
-        // 初始类名：读取sessionStorage的状态，决定是否添加collapsed
         const isCollapsed = getCollapseState();
-        panel.className = `mission-manager-panel ${isCollapsed ? 'collapsed' : ''}`;
+        panel.className = `mission-manager-panel${isCollapsed ? 'collapsed' : ''}`;
 
-        // 折叠按钮容器
+        // 折叠按钮容器（原有逻辑）
         const arrowWrapper = document.createElement('div');
         arrowWrapper.className = 'collapse-arrow-wrapper';
         arrowWrapper.title = '点击折叠/展开';
@@ -266,7 +326,7 @@
         const userEmailText = document.createElement('span');
         userEmailText.className = 'arrow-text';
         userEmailText.id = 'id-useremail';
-        userEmailText.textContent = userEmail;
+        userEmailText.textContent = userEmail || '未登录';
         userEmailText.style.marginRight = "30px";
 
         const arrowText = document.createElement('span');
@@ -281,52 +341,68 @@
         arrowWrapper.appendChild(arrowText);
         arrowWrapper.appendChild(arrow);
 
-        // 标签页导航栏
+        // 标签导航和内容（原有逻辑）
         const tabsNav = createTabsNav();
-
-        // 标签页内容区域
         const tabsContent = createTabsContent();
 
-        // 组装面板
+        // 组装面板（内部无分割条）
         panel.appendChild(arrowWrapper);
         panel.appendChild(tabsNav);
         panel.appendChild(tabsContent);
 
-        // 绑定折叠/展开事件（核心修改：点击时保存状态到sessionStorage）
+        // 折叠事件（原有逻辑）
         arrowWrapper.addEventListener('click', () => {
-            // 切换折叠状态
             panel.classList.toggle('collapsed');
-            // 保存最新状态到sessionStorage
-            const newState = panel.classList.contains('collapsed');
-            saveCollapseState(newState);
+            saveCollapseState(panel.classList.contains('collapsed'));
+            // 折叠后重置面板高度
+            if (panel.classList.contains('collapsed')) {
+                panel.style.height = '35x';
+            } else {
+                panel.style.height = 'auto'; // 恢复初始高度
+            }
         });
 
-        // 绑定标签切换事件
+        // 标签切换事件（原有逻辑）
         bindTabSwitchEvent(panel);
 
         return panel;
     }
 
-    // 检查并添加面板到app-mapview
+    //addPanelToMapView 函数（插入同级分割条）
     async function addPanelToMapView() {
         const mapView = document.querySelector('app-mapview');
         if (mapView) {
             const existingPanel = mapView.querySelector('.mission-manager-panel');
-            if (!existingPanel) {
+            // 同时检查是否已有分割条
+            const existingResizer = mapView.querySelector('.panel-resizer');
+
+            if (!existingPanel && !existingResizer) {
                 injectStyles();
                 const missionPanel = createMissionPanel();
+                // 创建同级分割条
+                const resizer = document.createElement('div');
+                resizer.className = 'panel-resizer';
+
+                // 插入顺序：先面板 → 再分割条 → 最后原mapView的子元素
                 mapView.insertBefore(missionPanel, mapView.firstChild);
-                awaitElement(() =>mapView.querySelector('#idmission2')).then( async (idmission2) => {
-                    if(idmission2) {
+                mapView.insertBefore(resizer, missionPanel.nextSibling); // 分割条紧跟面板
+
+                // 绑定分割条拖动事件（关联面板和分割条）
+                bindResizerEvents(resizer, missionPanel);
+
+                // 原有逻辑：加载任务HTML
+                awaitElement(() => mapView.querySelector('#idmission2')).then(async (idmission2) => {
+                    if (idmission2) {
                         let sHtml = await getMissionHTML(2);
                         idmission2.innerHTML = sHtml;
                         idmission2.innerHTML = idmission2.innerHTML.replace(/"{2}/g, '');
                     }
                 });
-                console.log('任务管理面板已成功注入（状态保持）');
+                console.log('任务管理面板和同级分割条已成功注入');
             }
         }
     }
+
 
     // 持续监听DOM变化
     function observeMapViewLoading() {
@@ -365,7 +441,8 @@
     let userEmailList2 = [];//审核员列表，用于显示
     let privatePortalDisplay1 = 50; //首页列表中显示池中已审po数量
     let privatePortalDisplay2 = 50; //首页列表中显示非池已审po数量
-    // 配置 - CloudFlare
+
+    // ================== 配置 - CloudFlare =======================//
     //在cloudflare中上传的链接
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
@@ -563,8 +640,9 @@
         }).catch(e => {
             console.log('Promise', e)});
     }
+    // ================== 配置 - CloudFlare 结束 ===================//
 
-    // 节点等待轮询函数（保留原版逻辑）
+    // 节点等待轮询函数
     const awaitElement = get => new Promise((resolve, reject) => {
         let triesLeft = 15; // 增加轮询次数（适配路由跳转延迟）
         const queryLoop = () => {
@@ -726,16 +804,13 @@
 
     };
 
-
     // 全局变量：缓存弹窗和遮罩元素，避免重复创建
     let reviewPopup = null;
     let reviewMask = null;
     // 全局变量：缓存触发弹窗的元素，用于关闭时重置文本
     let triggerElement = null;
 
-    /**
- * 创建并初始化居中弹窗（仅首次调用时创建）
- */
+    // ============弹窗显示已审用户==============//
     function initReviewPopup() {
         // 1. 创建遮罩层（点击遮罩关闭弹窗）
         reviewMask = document.createElement('div');
@@ -777,24 +852,19 @@
         reviewPopup.addEventListener('click', (e) => e.stopPropagation());
     }
 
-    /**
- * 打开弹窗
- * @param {string} content - 弹窗要显示的HTML内容
- */
+    //打开弹窗 @param {string} content - 弹窗要显示的HTML内容
     function openReviewPopup(content) {
-    if (!reviewPopup || !reviewMask) initReviewPopup();
-    // 设置弹窗内容
-    reviewPopup.innerHTML = content;
-    // 显示遮罩和弹窗
-    reviewMask.style.display = 'block';
-    reviewPopup.style.display = 'block';
-    // 监听全局点击：点击空白区（非弹窗/触发元素）关闭
-    document.addEventListener('click', handleDocumentClick);
-}
+        if (!reviewPopup || !reviewMask) initReviewPopup();
+        // 设置弹窗内容
+        reviewPopup.innerHTML = content;
+        // 显示遮罩和弹窗
+        reviewMask.style.display = 'block';
+        reviewPopup.style.display = 'block';
+        // 监听全局点击：点击空白区（非弹窗/触发元素）关闭
+        document.addEventListener('click', handleDocumentClick);
+    }
 
-    /**
-    * 关闭弹窗
-    */
+    //关闭弹窗
     function closeReviewPopup() {
     if (reviewPopup && reviewMask) {
         reviewPopup.style.display = 'none';
@@ -809,9 +879,7 @@
     }
 }
 
-    /**
- * 处理全局点击：仅点击空白区（非弹窗/触发元素）时关闭
- */
+    //处理全局点击：仅点击空白区（非弹窗/触发元素）时关闭
     function handleDocumentClick(e) {
         const isClickOnPopup = reviewPopup.contains(e.target);
         const isClickOnTrigger = triggerElement && triggerElement.contains(e.target);
@@ -820,10 +888,7 @@
         }
     }
 
-    /**
- * 核心函数：切换用户审核弹窗（重写版）
- * @param {number} iowner - 传入的owner标识
- */
+    //核心函数：切换用户审核弹窗（重写版） @param {number} iowner - 传入的owner标识
     switchUserReviewDiv = function(iowner) {
         console.log("switchUserReviewDiv", iowner);
         try {
@@ -1047,7 +1112,7 @@
     .sqno { color: #666; padding: 4px 8px; min-width: 80px; }
 `;
     document.head.appendChild(style);
-
+//原switchUserReviewDiv函数
 /*
     switchUserReviewDiv = function(iowner) {
         console.log("switchUserReviewDiv",iowner);
@@ -1291,6 +1356,7 @@
         }
     };
 */
+//================弹窗代码结束===============
 
     // 通用函数：生成评审数据表格
     function generateReviewTable(storageKey, displayLimit) {
