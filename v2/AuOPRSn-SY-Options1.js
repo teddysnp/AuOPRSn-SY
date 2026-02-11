@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      1.10
-// @description  适应20260129,wayfarer新版：功能为显示任务和已经审po
+// @version      2.0
+// @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.1.min.js
@@ -10,22 +10,361 @@
 // @connect      work-wayfarer.tydtyd.workers.dev
 // @connect      kvworker-warfarer-mission.tydtyd.workers.dev
 // @grant        GM_xmlhttpRequest
-// @run-at       document-body  // 确保DOM基础节点加载后执行
+// @run-at       document-body
 // ==/UserScript==
 
 (function() {
 
+    // ====================== 【核心配置：状态存储Key】 ======================
+    // 用于sessionStorage存储折叠状态的唯一标识（可自定义）
+    const STORAGE_KEY = 'missionManagerPanelCollapsed';
+
+    // 标记样式是否已注入（样式仅需注入一次）
+    let stylesInjected = false;
+
+    // 注入样式到页面
+    function injectStyles() {
+        // ====================== 【用户可自定义区域1：样式】 ======================
+            const panelStyles = `
+        /* 面板基础样式 */
+        .mission-manager-panel {
+            height: 300px;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin: 8px 0;
+            padding: 8px;
+            box-sizing: border-box;
+            transition: height 0.3s ease;
+            /* 核心改动：替换 overflow: hidden 为垂直滚动自动、水平隐藏 */
+            overflow-y: auto; /* 垂直方向内容超出时显示滚动条，否则隐藏 */
+            overflow-x: hidden; /* 水平方向禁止滚动，避免横向滚动条影响布局 */
+            position: relative;
+
+            /* 可选优化：美化滚动条（适配Chrome/Safari，不影响功能） */
+            scrollbar-width: thin; /* 火狐：窄滚动条 */
+            scrollbar-color: #ccc #f5f5f5; /* 火狐：滚动条滑块/轨道颜色 */
+        }
+
+        /* 可选：Chrome/Safari 滚动条美化（非必需，仅提升视觉效果） */
+        .mission-manager-panel::-webkit-scrollbar {
+            width: 6px; /* 滚动条宽度 */
+        }
+        .mission-manager-panel::-webkit-scrollbar-track {
+            background: #f5f5f5; /* 滚动条轨道背景 */
+            border-radius: 3px;
+        }
+        .mission-manager-panel::-webkit-scrollbar-thumb {
+            background: #ccc; /* 滚动条滑块颜色 */
+            border-radius: 3px;
+        }
+        .mission-manager-panel::-webkit-scrollbar-thumb:hover {
+            background: #999; /* 鼠标悬停时滑块颜色 */
+        }
+        .mission-manager-panel.collapsed {
+            height: 30px;
+        }
+
+        /* 折叠按钮容器（文字+箭头） */
+        .collapse-arrow-wrapper {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #666;
+            font-size: 12px;
+        }
+        .collapse-arrow {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.3s ease;
+        }
+        .mission-manager-panel.collapsed .collapse-arrow {
+            transform: rotate(180deg);
+        }
+        .collapse-arrow::after {
+            content: "▲";
+            font-size: 12px;
+            color: #666;
+        }
+        .arrow-text {
+            user-select: none;
+        }
+
+        /* 标签页导航栏 */
+        .tabs-nav {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            margin-top: 24px; /* 给折叠按钮留空间 */
+            margin-bottom: 8px;
+        }
+        .tab-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        .tab-item:hover {
+            color: #333;
+        }
+        .tab-item.active {
+            color: #1976d2;
+            border-bottom-color: #1976d2;
+            font-weight: 500;
+        }
+
+        /* 标签页内容区域 */
+        .tabs-content {
+            height: calc(100% - 60px); /* 适配面板高度，扣除导航栏和边距 */
+            overflow-y: auto; /* 内容超出时滚动 */
+            padding: 4px 0;
+        }
+        .tab-content {
+            display: none; /* 默认隐藏所有标签内容 */
+            font-size: 12px;
+            color: #333;
+        }
+        .tab-content.active {
+            display: block; /* 激活的标签内容显示 */
+        }
+    `;
+        // ====================== 【用户可自定义区域1 结束】 ======================
+        if (!stylesInjected) {
+            const styleNode = document.createElement('style');
+            styleNode.textContent = panelStyles;
+            document.head.appendChild(styleNode);
+            stylesInjected = true;
+        }
+    }
+
+    // ====================== 【状态管理工具函数】 ======================
+    // 从sessionStorage读取折叠状态
+    function getCollapseState() {
+        // 读取存储的值，默认是未折叠（false）
+        const stored = sessionStorage.getItem(STORAGE_KEY);
+        return stored === 'true'; // 转为布尔值，确保类型正确
+    }
+
+    // 保存折叠状态到sessionStorage
+    function saveCollapseState(isCollapsed) {
+        sessionStorage.setItem(STORAGE_KEY, isCollapsed.toString());
+    }
+    // ====================== 【用户可自定义区域2：标签配置】 ======================
+    const tabConfig = [
+        {
+            tabName: "任务列表",
+            tabId: "tab-1",
+            content: `
+                <div id='idmission2'>
+                    <h4 style="margin: 0 0 8px 0; font-size: 13px;">我的任务</h4>
+                    <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+                        <li>任务1：审核POI提交</li>
+                        <li>任务2：验证地图节点</li>
+                        <li>任务3：提交新POI</li>
+                    </ul>
+                    <button style="margin-top: 8px; padding: 4px 8px; font-size: 12px;">新增任务</button>
+                </div>
+            `
+        },
+        {
+            tabName: "近期通过",
+            tabId: "tab-2",
+            content: `
+                <div id='idportal2'>
+                    <h4 style="margin: 0 0 8px 0; font-size: 13px;">本周统计</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <th style="text-align: left; padding: 4px 0;">类型</th>
+                            <th style="text-align: right; padding: 4px 0;">完成数</th>
+                        </tr>
+                        <tr>
+                            <td>审核任务</td>
+                            <td style="text-align: right;">28</td>
+                        </tr>
+                        <tr>
+                            <td>提交任务</td>
+                            <td style="text-align: right;">12</td>
+                        </tr>
+                    </table>
+                </div>
+            `
+        }
+    ];
+    // ====================== 【用户可自定义区域2 结束】 ======================
+
+    // 创建标签页导航栏
+    function createTabsNav() {
+        const nav = document.createElement('div');
+        nav.className = 'tabs-nav';
+
+        tabConfig.forEach((tab, index) => {
+            const tabItem = document.createElement('div');
+            tabItem.className = `tab-item ${index === 0 ? 'active' : ''}`;
+            tabItem.dataset.tabId = tab.tabId;
+            tabItem.textContent = tab.tabName;
+            nav.appendChild(tabItem);
+        });
+
+        return nav;
+    }
+
+    // 创建标签页内容区域
+    function createTabsContent() {
+        console.log('createTabsContent');
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'tabs-content';
+
+        tabConfig.forEach((tab, index) => {
+            const tabContent = document.createElement('div');
+            tabContent.id = tab.tabId;
+            tabContent.className = `tab-content ${index === 0 ? 'active' : ''}`;
+            tabContent.innerHTML = tab.content;
+            contentWrapper.appendChild(tabContent);
+        });
+
+        return contentWrapper;
+    }
+
+    // 绑定标签切换事件
+    function bindTabSwitchEvent(panel) {
+        const tabItems = panel.querySelectorAll('.tab-item');
+        const tabContents = panel.querySelectorAll('.tab-content');
+
+        tabItems.forEach(item => {
+            item.addEventListener('click', () => {
+                tabItems.forEach(ti => ti.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                const targetTabId = item.dataset.tabId;
+                item.classList.add('active');
+                document.getElementById(targetTabId).classList.add('active');
+            });
+        });
+    }
+
+    // 创建自定义面板（核心修改：读取并应用会话级折叠状态）
+    function createMissionPanel() {
+        console.log('createMissionPanel');
+        const panel = document.createElement('div');
+        // 初始类名：读取sessionStorage的状态，决定是否添加collapsed
+        const isCollapsed = getCollapseState();
+        panel.className = `mission-manager-panel ${isCollapsed ? 'collapsed' : ''}`;
+
+        // 折叠按钮容器
+        const arrowWrapper = document.createElement('div');
+        arrowWrapper.className = 'collapse-arrow-wrapper';
+        arrowWrapper.title = '点击折叠/展开';
+
+        const userEmailLabel = document.createElement('span');
+        userEmailLabel.className = 'arrow-text';
+        userEmailLabel.textContent = '用户：';
+        const userEmailText = document.createElement('span');
+        userEmailText.className = 'arrow-text';
+        userEmailText.id = 'id-useremail';
+        userEmailText.textContent = userEmail;
+        userEmailText.style.marginRight = "30px";
+
+        const arrowText = document.createElement('span');
+        arrowText.className = 'arrow-text';
+        arrowText.textContent = '任务管理';
+
+        const arrow = document.createElement('div');
+        arrow.className = 'collapse-arrow';
+
+        arrowWrapper.appendChild(userEmailLabel);
+        arrowWrapper.appendChild(userEmailText);
+        arrowWrapper.appendChild(arrowText);
+        arrowWrapper.appendChild(arrow);
+
+        // 标签页导航栏
+        const tabsNav = createTabsNav();
+
+        // 标签页内容区域
+        const tabsContent = createTabsContent();
+
+        // 组装面板
+        panel.appendChild(arrowWrapper);
+        panel.appendChild(tabsNav);
+        panel.appendChild(tabsContent);
+
+        // 绑定折叠/展开事件（核心修改：点击时保存状态到sessionStorage）
+        arrowWrapper.addEventListener('click', () => {
+            // 切换折叠状态
+            panel.classList.toggle('collapsed');
+            // 保存最新状态到sessionStorage
+            const newState = panel.classList.contains('collapsed');
+            saveCollapseState(newState);
+        });
+
+        // 绑定标签切换事件
+        bindTabSwitchEvent(panel);
+
+        return panel;
+    }
+
+    // 检查并添加面板到app-mapview
+    async function addPanelToMapView() {
+        const mapView = document.querySelector('app-mapview');
+        if (mapView) {
+            const existingPanel = mapView.querySelector('.mission-manager-panel');
+            if (!existingPanel) {
+                injectStyles();
+                const missionPanel = createMissionPanel();
+                mapView.insertBefore(missionPanel, mapView.firstChild);
+                awaitElement(() =>mapView.querySelector('#idmission2')).then( async (idmission2) => {
+                    if(idmission2) {
+                        let sHtml = await getMissionHTML(2);
+                        idmission2.innerHTML = sHtml;
+                        idmission2.innerHTML = idmission2.innerHTML.replace(/"{2}/g, '');
+                    }
+                });
+                console.log('任务管理面板已成功注入（状态保持）');
+            }
+        }
+    }
+
+    // 持续监听DOM变化
+    function observeMapViewLoading() {
+        const targetNode = document.body;
+        const config = { childList: true, subtree: true };
+
+        const callback = function(mutationsList) {
+            for (let mutation of mutationsList) {
+                if (mutation.type === 'childList') {
+                    addPanelToMapView();
+                }
+            }
+        };
+
+        const observer = new MutationObserver(callback);
+        observer.observe(targetNode, config);
+
+        // 兜底轮询
+        setInterval(() => {
+            initNodes();
+            addPanelToMapView();
+        }, 2000);
+
+        // 监听路由变化
+        window.addEventListener('popstate', addPanelToMapView);
+        window.addEventListener('hashchange', addPanelToMapView);
+    }
+
     // 全局锁：防止重复执行
     let isInited = false;
-    // 弹窗容器标记：避免重复创建
     let popupContainer = null;
     let userEmail = null;
     let performance = null;
     let missionGDoc = [];
     let userEmailList1 = [];//审核员列表，用于显示
     let userEmailList2 = [];//审核员列表，用于显示
-    let privatePortalDisplay1 = 50;  //首页列表中显示池中已审po数量
-    let privatePortalDisplay2 = 50;  //首页列表中显示非池已审po数量
+    let privatePortalDisplay1 = 50; //首页列表中显示池中已审po数量
+    let privatePortalDisplay2 = 50; //首页列表中显示非池已审po数量
     // 配置 - CloudFlare
     //在cloudflare中上传的链接
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
@@ -237,7 +576,7 @@
         }
         queryLoop();
     }).catch(e => {
-        console.log('awaitElement 错误：', e.message);
+        //console.log('awaitElement 错误：', e.message);
         return null;
     });
 
@@ -332,244 +671,384 @@
         });
     }
 
-    // 通用函数：生成评审数据表格
-    function generateReviewTable(storageKey, displayLimit) {
-        // 1. 安全读取并解析本地存储数据
-        let reviewData = [];
-        try {
-            const storedData = localStorage.getItem(storageKey);
-            if (storedData) {
-                reviewData = JSON.parse(storedData);
-                if (!Array.isArray(reviewData)) {
-                    console.warn(`${storageKey} 数据格式错误，已重置为空数组`);
-                    reviewData = [];
-                }
-            }
-        } catch (error) {
-            console.error(`解析${storageKey}数据失败：`, error);
-            reviewData = [];
+    openPortalOnMap = function(lat,lng,portalid) {
+        console.log('openPortalOnMap',{lat,lng,portalid});
+        awaitElement(() => document.querySelector('a[href="/new/mapview"]')).then((ref) => {
+            jumpToLocation(lat,lng,18);
+        });
+        // 【核心方法1：判断/提取Google Maps实例】
+        function looksLikeGoogleMap(obj) {
+            return !!(obj &&
+                      typeof obj.getCenter === "function" &&
+                      typeof obj.addListener === "function" &&
+                      typeof obj.getDiv === "function");
         }
+        function extractMapFromCtxEntry(entry) {
+            if (!entry) return null;
+            if (looksLikeGoogleMap(entry)) return entry; // mapview
+            const m = entry?.componentRef?.map;          // submit
+            return looksLikeGoogleMap(m) ? m : null;
+        }
+        function getWfMap() {
+            return new Promise((resolve) => {
+                let attempts = 80;
 
-        // 2. 构建表格HTML
-        let tableHtml = `
-          <table style='width:100%'>
-            <thead>
-                <tr>
-                    <th style='width:18%'>用户</th>
-                    <th style='width:12%'>名称</th>
-                    <th style='width:6%'>类型</th>
-                    <th style='width:8%'>纬度</th>
-                    <th style='width:8%'>经度</th>
-                    <th style='width:12%'>打分</th>
-                    <th style='width:16%'>时间</th>
-                    <th style='width:20%'>ID</th>
-                </tr>
-            </thead>
-            <tbody>
-        `;
+                function tryFindMap() {
+                    const candidates = document.querySelectorAll("app-submit-wayspot-map nia-map, app-wf-base-map");
 
-        let itemCount = 0;
+                    for (const el of candidates) {
+                        const ctx = el && el.__ngContext__;
+                        if (!ctx) continue;
 
-        // 创建数组的反转副本，不影响原数组
-        reviewData = [...reviewData].reverse();
-        // 3. 遍历数据生成表格行
-        for (const item of reviewData) {
+                        for (const entry of ctx) {
+                            try {
+                                const map = extractMapFromCtxEntry(entry);
+                                if (map) return resolve(map);
+                            } catch {  }
+                        }
+                    }
 
-            // 处理分数格式化
-            let formattedScore = item.score;
-            if (typeof item.score === 'string' && item.score.length === 7) {
-                formattedScore = item.score
-                    .replace(/5/g, "Y")
-                    .replace(/3/g, "D")
-                    .replace(/1/g, "N");
-            }
-
-            // 安全获取字段值
-            const user = item.user || '';
-            const title = item.title || '';
-            const type = item.type || '';
-            const lat = item.lat || '';
-            const lng = item.lng || '';
-            const dateTime = item.dt || item.datetime || '';
-            const id = item.id || '';
-
-            if (itemCount < displayLimit) {
-                // 添加表格行
-                tableHtml += `
-            <tr>
-                <td>${user}</td>
-                <td><a href='${durl}/portal/portalreview/portal.${id}.json'  target='_blank'>${title}</td>
-                <td>${type}</td>
-                <td><a href='${durl}/portal/portaldata/portal.${id}.json'  target='_blank'>${lat}</td>
-                <td>${lng}</td>
-                <td>${formattedScore}</td>
-                <td>${dateTime}</td>
-                <td><a href='${durl}/portal/portaluseremail/portal.${id}.useremail.json'  target='_blank'>${id}</td>
-            </tr>
-            `;
-            }
-            itemCount++;
-
-            // 4. 更新任务状态
-            let usernamelist=localStorage[userEmail+"user"];
-            if (!usernamelist) usernamelist="";
-          if (usernamelist?.indexOf(user) >= 0 || user === userEmail) {
-
-                //通过id判断当前用户是否审过-20251007改
-                const matchingMission = missionGDoc.find(mission => mission.portalID === id);
-            /*
-            if(id === "a968d406ff815b373ffd05a297ec681c")
-            {
-            console.log(`matchingMission:${id}`,matchingMission);
-              console.log('find:',item);
-              console.log(missionGDoc.find(mission => mission.portalID === id));
-              console.log(missionGDoc);
-            } */
-                if (matchingMission) {
-                    //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
-                    matchingMission.ownerstatus = true;
+                    if (attempts-- <= 0) return resolve(null);
+                    setTimeout(tryFindMap, 250);
                 }
-                //通过名称匹配来判断当前用户是否审过
-                /*
-                const matchingMission = missionGDoc.find(mission => mission.title === title);
-                if (matchingMission) {
-                    try {
-                        const responseDate = new Date(matchingMission.responsedate);
-                        const reviewDate = new Date(dateTime.slice(0, 10));
 
-                        if (!isNaN(responseDate.getTime()) && !isNaN(reviewDate.getTime())) {
-                            const fiveDaysLater = new Date(reviewDate);
-                            fiveDaysLater.setDate(reviewDate.getDate() + 5);
+                tryFindMap();
+            });
+        }
+        const jumpToLocation = (lat, lng, zoom) => {
+            getWfMap().then((map) => {
+                console.log("jump to :",map);
+                if (!map) return;
+                map.setCenter(new google.maps.LatLng(lat, lng));
+                map.setZoom(zoom);
+            });
+        };
 
-                            if (responseDate <= fiveDaysLater) {
-                                matchingMission.ownerstatus = true;
+    };
+
+
+    // 全局变量：缓存弹窗和遮罩元素，避免重复创建
+    let reviewPopup = null;
+    let reviewMask = null;
+    // 全局变量：缓存触发弹窗的元素，用于关闭时重置文本
+    let triggerElement = null;
+
+    /**
+ * 创建并初始化居中弹窗（仅首次调用时创建）
+ */
+    function initReviewPopup() {
+        // 1. 创建遮罩层（点击遮罩关闭弹窗）
+        reviewMask = document.createElement('div');
+        reviewMask.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9998;
+        display: none;
+    `;
+        document.body.appendChild(reviewMask);
+
+        // 2. 创建弹窗容器（居中显示）
+        reviewPopup = document.createElement('div');
+        reviewPopup.id = 'reviewUserEmailPopup';
+        reviewPopup.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        max-width: 80vw;
+        max-height: 80vh;
+        overflow-y: auto;
+        display: none;
+    `;
+        document.body.appendChild(reviewPopup);
+
+        // 3. 点击遮罩关闭弹窗
+        reviewMask.addEventListener('click', closeReviewPopup);
+        // 4. 阻止弹窗内点击事件冒泡到遮罩（避免点击弹窗内容也关闭）
+        reviewPopup.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    /**
+ * 打开弹窗
+ * @param {string} content - 弹窗要显示的HTML内容
+ */
+    function openReviewPopup(content) {
+    if (!reviewPopup || !reviewMask) initReviewPopup();
+    // 设置弹窗内容
+    reviewPopup.innerHTML = content;
+    // 显示遮罩和弹窗
+    reviewMask.style.display = 'block';
+    reviewPopup.style.display = 'block';
+    // 监听全局点击：点击空白区（非弹窗/触发元素）关闭
+    document.addEventListener('click', handleDocumentClick);
+}
+
+    /**
+    * 关闭弹窗
+    */
+    function closeReviewPopup() {
+    if (reviewPopup && reviewMask) {
+        reviewPopup.style.display = 'none';
+        reviewMask.style.display = 'none';
+        // 重置触发元素的文本（去掉↓）
+        if (triggerElement && triggerElement.textContent.includes('↓')) {
+            triggerElement.textContent = triggerElement.textContent.replace(/↓/g, '');
+        }
+        // 移除全局点击监听
+        document.removeEventListener('click', handleDocumentClick);
+        triggerElement = null;
+    }
+}
+
+    /**
+ * 处理全局点击：仅点击空白区（非弹窗/触发元素）时关闭
+ */
+    function handleDocumentClick(e) {
+        const isClickOnPopup = reviewPopup.contains(e.target);
+        const isClickOnTrigger = triggerElement && triggerElement.contains(e.target);
+        if (!isClickOnPopup && !isClickOnTrigger) {
+            closeReviewPopup();
+        }
+    }
+
+    /**
+ * 核心函数：切换用户审核弹窗（重写版）
+ * @param {number} iowner - 传入的owner标识
+ */
+    switchUserReviewDiv = function(iowner) {
+        console.log("switchUserReviewDiv", iowner);
+        try {
+            // 兼容event.srcElement（改为标准的event.target）
+            const targetElement = event.target;
+            triggerElement = targetElement; // 缓存触发元素
+
+            // 提取元素属性（原生DOM操作）
+            const id = targetElement.getAttribute('tagname');
+            const us = targetElement.getAttribute('us');
+            const owner = targetElement.getAttribute('owner');
+            const powner = targetElement.getAttribute('powner');
+            let userEmailList = [];
+            let stmp = "";
+
+            // 1. 点击时先重置所有带↓的元素文本
+            const resetDownArrow = (selector) => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(item => {
+                    if (item.textContent.includes("↓")) {
+                        item.textContent = item.textContent.replace("↓", "");
+                    }
+                });
+            };
+
+            // 2. 切换箭头显示/隐藏逻辑
+            if (targetElement.textContent.includes("↓")) {
+                // 关闭弹窗 + 移除箭头
+                targetElement.textContent = targetElement.textContent.replace(/↓/g, "");
+                closeReviewPopup();
+            } else {
+                // 重置其他元素的箭头
+                resetDownArrow('[us="us1"]');
+                resetDownArrow('[us="us2"]');
+                // 当前元素添加箭头
+                targetElement.textContent = targetElement.textContent + "↓";
+
+                // 3. 初始化用户邮箱列表
+                if (us === "us1") {
+                    userEmailList = JSON.parse(JSON.stringify(userEmailList1));
+                } else if (us === "us2") {
+                    userEmailList = JSON.parse(JSON.stringify(userEmailList2));
+                }
+
+                // 4. 读取R2文件并处理业务逻辑
+                readR2File("portal/portaluseremail/portal." + id + ".useremail.json")
+                    .then(res => {
+                    let userreview = [];
+                    let userReviewJson = [];
+                    if (!res) {
+                        setTimeout(() => {
+                            console.log("switchUserReviewDiv:未找到审核文件", res);
+                        }, 1000);
+                    } else {
+                        userReviewJson = res.content;
+                        userreview = JSON.stringify(res.content);
+                    }
+
+                    // 5. 补打卡核心业务逻辑（保留原有逻辑）
+                    const matchingMission = missionGDoc.find(mission => mission.portalID === id);
+                    if (matchingMission) {
+                        let iHaveReview = false;
+                        if (matchingMission.ownerstatus) {
+                            const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
+                            if (!userReviewed) {
+                                iHaveReview = true;
+                                console.log("无用户打卡，但是本地审核中有");
+                            } else {
+                                console.log("有用户打卡，本地审核也有");
                             }
                         } else {
-                            console.warn(`无效日期 - ${storageKey}：${matchingMission.responsedate} vs ${dateTime}`);
+                            const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
+                            if (userReviewed) {
+                                console.log("云有，本地没有", userReviewed);
+                                try {
+                                    let reviewListStr = localStorage.getItem('reviewLista') || '[]';
+                                    let reviewList = JSON.parse(reviewListStr);
+                                    if (!Array.isArray(reviewList)) reviewList = [];
+
+                                    const iHaveLocal = reviewList.some(item =>
+                                                                       item?.id === matchingMission.portalID && item?.user === userEmail
+                                                                      );
+                                    if (!iHaveLocal) {
+                                        console.log("没找到，本地补一条", iHaveLocal);
+                                        const reviewStr = {
+                                            user: userReviewed.useremail,
+                                            datetime: userReviewed.datetime,
+                                            id: matchingMission.portalID,
+                                            title: matchingMission.title,
+                                            lat: matchingMission.lat,
+                                            lng: matchingMission.lng,
+                                            score: "云补，未知",
+                                            type: matchingMission.types,
+                                            imageUrl: matchingMission.imageUrl
+                                        };
+                                        reviewList.push(reviewStr);
+                                        localStorage.setItem("reviewLista", JSON.stringify(reviewList));
+                                    }
+                                } catch (error) {
+                                    console.error('处理 reviewLista 时出错:', error);
+                                    localStorage.setItem("reviewLista", '[]');
+                                }
+                            }
                         }
-                    } catch (dateError) {
-                        console.error(`${storageKey}日期处理错误：`, dateError);
+
+                        // 补打卡逻辑
+                        if (iHaveReview) {
+                            let susermark = {
+                                useremail: userEmail,
+                                datetime: formatDate(new Date(), "yyyy-MM-dd HH:mm:ss"),
+                                performance: performance,
+                                status: "补打卡"
+                            };
+                            let reviewData = [];
+                            try {
+                                const storedData = localStorage.getItem('reviewLista');
+                                if (storedData) {
+                                    reviewData = JSON.parse(storedData);
+                                    if (!Array.isArray(reviewData)) {
+                                        console.warn(`reviewLista 数据格式错误`);
+                                    } else {
+                                        const haveReview = reviewData.find(it =>
+                                                                           it.user === userEmail && it.id === matchingMission.portalID
+                                                                          );
+                                        if (haveReview) {
+                                            susermark.datetime = haveReview.datetime || '';
+                                        } else {
+                                            const storedData1 = localStorage.getItem('reviewListb');
+                                            if (storedData1) {
+                                                reviewData = JSON.parse(storedData1);
+                                                if (Array.isArray(reviewData)) {
+                                                    const haveReviewB = reviewData.find(it =>
+                                                                                        it.user === userEmail && it.id === matchingMission.portalID
+                                                                                       );
+                                                    if (haveReviewB) {
+                                                        susermark.datetime = haveReviewB.datetime || '';
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (error) {
+                                console.error(`数据失败：`, error);
+                            }
+                            userReviewJson.push(susermark);
+                            setTimeout(() => {
+                                console.log("补用户打卡：portal/portaluseremail/", "portal." + id + ".useremail.json", susermark);
+                                uploadDataToR2("portal/portaluseremail/", "portal." + id + ".useremail.json", userReviewJson);
+                            }, 500);
+                        }
                     }
-                }
-                */
 
-            }
-        }
+                    // 6. 构建弹窗内容HTML（保留原有渲染逻辑）
+                    stmp += `<div style='display: flex;'>`;
+                    if (userreview.length > 0) console.log('userReviewJson', userReviewJson);
 
-        // 完成表格HTML
-        tableHtml += `
-            </tbody>
-        </table>
-    `;
+                    for (let i = 0; i < userEmailList.length; i++) {
+                        let sname = null;
+                        let semail = null;
+                        let slink = null;
+                        let po = "";
+                        sname = userEmailList[i].substring(0, userEmailList[i].indexOf(';'));
+                        semail = userEmailList[i].substring(
+                            userEmailList[i].indexOf(';') + 1,
+                            userEmailList[i].indexOf(';', userEmailList[i].indexOf(';') + 1)
+                        );
+                        slink = userEmailList[i].substring(userEmailList[i].lastIndexOf(';') + 1);
 
-        //console.log(storageKey,tableHtml);
-        return tableHtml;
-    }
+                        if (powner) {
+                            po = semail.includes(powner) ? "<span style='color:red'>O:</span>" : "<span></span>";
+                        } else {
+                            po = "<span></span>";
+                        }
 
-    //首页home显示用户审过的po
-    async function getMissionHTML(iowner) {
-      // 等待获取任务数据（现在处于async函数中，可安全使用await）
-      //console.log("getmissionhome");
-      await getMissionFromCloudFlare();
-      if(userEmail === null) {
-        // 先获取用户信息并等待完成
-        const restext = await getUser();
-        // 处理用户信息
-        userEmail = restext.result.socialProfile.email;
-        performance = restext.result.performance;
-        document.title = userEmail;
+                        // 审核状态判断
+                        if (findUserEmail(userreview, semail) > 0) {
+                            if (userEmailList[i].includes(userEmail)) {
+                                stmp += `<div class='sqselfok'>${po}${sname}</div>`;
+                            } else {
+                                stmp += `<div class='sqok'>${po}${sname}</div>`;
+                            }
+                        } else {
+                            if (semail.includes(userEmail)) {
+                                if (owner === "true") {
+                                    stmp += `<div class='sqselfowner'>${po}${sname}</div>`;
+                                } else {
+                                    stmp += `<div class='sqselfno'>${po}${sname}</div>`;
+                                }
+                            } else {
+                                stmp += `<div class='sqno'>${po}${sname}</div>`;
+                            }
+                        }
 
-        if (userEmail != null) {
-          localStorage.setItem("currentUser", userEmail);
-        } else return;
-        console.log("最终获取到的用户邮箱：", userEmail);
-      }
-      // 处理池中评审列表（reviewLista → #privatePortal1）
-      const tableHtmlA = await generateReviewTable('reviewLista', privatePortalDisplay1);
-      ////replaceElement("#privatePortal1", tableHtmlA);
-      // 处理池外评审列表（reviewListb → #privatePortal2）
-      const tableHtmlB = await generateReviewTable('reviewListb', privatePortalDisplay2);
-      ////replaceElement("#privatePortal2", tableHtmlB);
-
-      try {
-          // 更新页面DOM
-          let sHtml = `<div class='placestr'><font size=5>${userEmail}</font></div>` ;
-          // 处理任务数据
-          try{
-
-            //以下，生成任务列表显示：smis：表头；smistmp：最终表格；sultmp：用户邮箱排列块
-            //放在最后，因为需要generateReviewTable里读取本地来判断是否审过=>更新missionGDoc中的ownerstatus
-            //下一步，是否加入读取网络文件来判断是否审过？
-            {
-              //smistmp(字符串)/missionPortal(DOM元素)  ; sultmp(字符串，用户邮箱)/missionuser(显示用户邮箱排列块)
-              //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
-              let smis="<table style='width:100%'><thead><tr>"
-              +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
-              +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
-              +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
-              +"<th style='width:14%'>挪po</th>"
-              +"</tr></thead>";
-              let smistmp="";let sstmp="";let ssok="";
-              smistmp=smis+"<tbody>";
-              missionGDoc.forEach(item => {
-                smistmp+="<tr><td><a href='"+item.imageUrl+"' target='_blank'>"+item.title+"</a></td>"
-                  +"<td>"+(item.status === "通过" ? "✓" : "" )+"</td>"
-                  +'<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>"
-                  +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.types+"</a></td>"
-                  +"<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td><td>"+ (item.ownerstatus === true ? '✓' : '') +"</td>"+
-                  "<td><a href='"+durl+"/portal/portaluseremail/portal."+item.portalID+".useremail.json'  target='_blank'>"+item.submitteddate+"</a></td>"
-                  +"<td><a href='https://www.google.com/maps/search/?api=1&query="+item.lat+','+item.lng+"&zoom=16' target='_blank'>"+item.lat+"</a></td><td>"+item.lng+"</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
-                  +"</tr>";
-              });
-              //console.log('homepage',missionGDoc);
-              let sultmp = `<div id='idUserEmail${iowner}' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>`;
-              //console.log("missionPortal1",$("#missionPortal1"));
-              smistmp+="</tbody></table>";
-              //console.log(`smistmp`,smistmp);
-              // 使用const声明变量，避免意外修改
-              sHtml += `<div>${smistmp}</div><div>${sultmp}</div>` ;
-            }
-            return sHtml;
-
-          } catch(e){console.log(e); return "";}
-        } catch (error) {
-          // 集中捕获所有可能的错误
-          console.log("执行失败：", error);
-          return "";
-          // 刷新窗口（根据实际需求决定是否保留）
-          // mywin.location.reload();
-        }
-    }
-
-    function findUserEmail(userreview,UEmailList){
-        try{
-            //console.log(userreview);
-            if(UEmailList.indexOf(",")>=0){
-                let sss=UEmailList+",";
-                while(sss.indexOf(",")>=0){
-                    let sss1 = sss.substring(0,sss.indexOf(","));
-                    if(userreview.indexOf(sss1)>=0) {
-                        if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss1",sss1);console.log("sss",sss);}
-                        return 1;
+                        // 每5个元素换行
+                        if ((i + 1) % 5 === 0) {
+                            stmp += `</div><p></p><div style='padding-top:1em;display: flex;'>`;
+                        }
                     }
-                    sss=sss.substring(sss.indexOf(",")+1,sss.length-1);
-                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss12",sss1);console.log("sss2",sss);}
-                }
-                if(userreview.indexOf(sss)>=0) {
-                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss3",sss);}
-                    return 1;
-                }
-                return -1;
-            } else {
-                return userreview.indexOf(UEmailList);
-            }
-        }
-        catch(e){
-            console.log(e);
-            return -1;
-        }
-    }
+                    stmp += `</div>`;
 
+                    // 7. 打开弹窗并渲染内容（替代原replaceWith）
+                    openReviewPopup(stmp);
+                })
+                    .catch(err => {
+                    console.log("err, not found", err);
+                });
+            }
+        } catch (e) {
+            console.log("switchUserReviewDiv 异常：", e);
+        }
+    };
+
+    // 补充：确保弹窗样式类生效（可根据需要调整）
+    const style = document.createElement('style');
+    style.textContent = `
+    .sqselfok { color: #008000; padding: 4px 8px; min-width: 80px; }
+    .sqok { color: #0066cc; padding: 4px 8px; min-width: 80px; }
+    .sqselfowner { color: #ff8c00; padding: 4px 8px; min-width: 80px; }
+    .sqselfno { color: #ff4444; padding: 4px 8px; min-width: 80px; }
+    .sqno { color: #666; padding: 4px 8px; min-width: 80px; }
+`;
+    document.head.appendChild(style);
+
+/*
     switchUserReviewDiv = function(iowner) {
         console.log("switchUserReviewDiv",iowner);
         try{
@@ -584,8 +1063,9 @@
             console.log(idUserEmail);
             if(sss.textContent.indexOf("↓")>0){
                 sss.textContent = sss.textContent.replace(/↓/g,"");
-                stmp+=`<div id='idUserEmail${iowner}' style='display: none;'></div>`;
-                $(`#idUserEmail${iowner}`).replaceWith(stmp);
+                //stmp+=`<div id='idUserEmail${iowner}' style='display: none;'></div>`;
+                idUserEmail.style.display = "none";
+                //$(`#idUserEmail${iowner}`).replaceWith(stmp);
             } else {
                 let eus1 = document.querySelectorAll('[us="us1"');
                 eus1.forEach(item=>{
@@ -619,7 +1099,9 @@
                     }
                     //console.log('res',res);
                     //console.log(idUserEmail.style.display);
-                    stmp+=`<div id='idUserEmail${iowner}' style='display:block;'><div style='display: flex;'>`;
+                    idUserEmail.style.display = "block";
+
+                    stmp+=`<div style='display: flex;'>`;
                     //console.log("userEmailList",userEmailList);
                     //console.log("userreview",userreview);
                     if(userreview.length>0) console.log('userReviewJson',userReviewJson);
@@ -792,7 +1274,8 @@
                     }
                     stmp+="</div></div>";
                     //console.log("stmp",stmp);
-                    $(`#idUserEmail${iowner}`).replaceWith(stmp);
+                    //$(`#idUserEmail${iowner}`).replaceWith(stmp);
+                    idUserEmail.innerHTML = stmp;
                 },err=>{
                     console.log("err, not found", err);
                 });
@@ -807,6 +1290,261 @@
             console.log("switchUserReviewDiv",e);
         }
     };
+*/
+
+    // 通用函数：生成评审数据表格
+    function generateReviewTable(storageKey, displayLimit) {
+        // 1. 安全读取并解析本地存储数据
+        let reviewData = [];
+        try {
+            const storedData = localStorage.getItem(storageKey);
+            if (storedData) {
+                reviewData = JSON.parse(storedData);
+                if (!Array.isArray(reviewData)) {
+                    console.warn(`${storageKey} 数据格式错误，已重置为空数组`);
+                    reviewData = [];
+                }
+            }
+        } catch (error) {
+            console.error(`解析${storageKey}数据失败：`, error);
+            reviewData = [];
+        }
+
+        // 2. 构建表格HTML
+        let tableHtml = `
+          <table style='width:100%'>
+            <thead>
+                <tr>
+                    <th style='width:18%'>用户</th>
+                    <th style='width:12%'>名称</th>
+                    <th style='width:6%'>类型</th>
+                    <th style='width:8%'>纬度</th>
+                    <th style='width:8%'>经度</th>
+                    <th style='width:12%'>打分</th>
+                    <th style='width:16%'>时间</th>
+                    <th style='width:20%'>ID</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+
+        let itemCount = 0;
+
+        // 创建数组的反转副本，不影响原数组
+        reviewData = [...reviewData].reverse();
+        // 3. 遍历数据生成表格行
+        for (const item of reviewData) {
+
+            // 处理分数格式化
+            let formattedScore = item.score;
+            if (typeof item.score === 'string' && item.score.length === 7) {
+                formattedScore = item.score
+                    .replace(/5/g, "Y")
+                    .replace(/3/g, "D")
+                    .replace(/1/g, "N");
+            }
+
+            // 安全获取字段值
+            const user = item.user || '';
+            const title = item.title || '';
+            const type = item.type || '';
+            const lat = item.lat || '';
+            const lng = item.lng || '';
+            const dateTime = item.dt || item.datetime || '';
+            const id = item.id || '';
+
+            if (itemCount < displayLimit) {
+                // 添加表格行
+                tableHtml += `
+            <tr>
+                <td>${user}</td>
+                <td><a href='${durl}/portal/portalreview/portal.${id}.json'  target='_blank'>${title}</td>
+                <td>${type}</td>
+                <td><a href='${durl}/portal/portaldata/portal.${id}.json'  target='_blank'>${lat}</td>
+                <td>${lng}</td>
+                <td>${formattedScore}</td>
+                <td>${dateTime}</td>
+                <td><a href='${durl}/portal/portaluseremail/portal.${id}.useremail.json'  target='_blank'>${id}</td>
+            </tr>
+            `;
+            }
+            itemCount++;
+
+            // 4. 更新任务状态
+            let usernamelist=localStorage[userEmail+"user"];
+            if (!usernamelist) usernamelist="";
+          if (usernamelist?.indexOf(user) >= 0 || user === userEmail) {
+
+                //通过id判断当前用户是否审过-20251007改
+                const matchingMission = missionGDoc.find(mission => mission.portalID === id);
+            /*
+            if(id === "a968d406ff815b373ffd05a297ec681c")
+            {
+            console.log(`matchingMission:${id}`,matchingMission);
+              console.log('find:',item);
+              console.log(missionGDoc.find(mission => mission.portalID === id));
+              console.log(missionGDoc);
+            } */
+                if (matchingMission) {
+                    //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
+                    matchingMission.ownerstatus = true;
+                }
+                //通过名称匹配来判断当前用户是否审过
+                /*
+                const matchingMission = missionGDoc.find(mission => mission.title === title);
+                if (matchingMission) {
+                    try {
+                        const responseDate = new Date(matchingMission.responsedate);
+                        const reviewDate = new Date(dateTime.slice(0, 10));
+
+                        if (!isNaN(responseDate.getTime()) && !isNaN(reviewDate.getTime())) {
+                            const fiveDaysLater = new Date(reviewDate);
+                            fiveDaysLater.setDate(reviewDate.getDate() + 5);
+
+                            if (responseDate <= fiveDaysLater) {
+                                matchingMission.ownerstatus = true;
+                            }
+                        } else {
+                            console.warn(`无效日期 - ${storageKey}：${matchingMission.responsedate} vs ${dateTime}`);
+                        }
+                    } catch (dateError) {
+                        console.error(`${storageKey}日期处理错误：`, dateError);
+                    }
+                }
+                */
+
+            }
+        }
+
+        // 完成表格HTML
+        tableHtml += `
+            </tbody>
+        </table>
+    `;
+
+        //console.log(storageKey,tableHtml);
+        return tableHtml;
+    }
+
+    //首页home显示用户审过的po
+    async function getMissionHTML(iowner) {
+      // 等待获取任务数据（现在处于async函数中，可安全使用await）
+      //console.log(`getMissionHTML:${iowner}`);
+      await getMissionFromCloudFlare();
+      if(userEmail === null) {
+        // 先获取用户信息并等待完成
+        const restext = await getUser();
+        // 处理用户信息
+        userEmail = restext.result.socialProfile.email;
+        performance = restext.result.performance;
+        document.title = userEmail;
+
+        if (userEmail != null) {
+          localStorage.setItem("currentUser", userEmail);
+        } else return;
+        console.log("最终获取到的用户邮箱：", userEmail);
+      }
+      // 处理池中评审列表（reviewLista → #privatePortal1）
+      const tableHtmlA = await generateReviewTable('reviewLista', privatePortalDisplay1);
+      ////replaceElement("#privatePortal1", tableHtmlA);
+      // 处理池外评审列表（reviewListb → #privatePortal2）
+      const tableHtmlB = await generateReviewTable('reviewListb', privatePortalDisplay2);
+      ////replaceElement("#privatePortal2", tableHtmlB);
+
+      try {
+          // 更新页面DOM
+          let sHtml = `<div class='placestr'></div><br>` ;
+          //let sHtml = `<div class='placestr'><font size=3>${userEmail}</font></div><br>` ;
+          //let iduseremail = `<div id='idUserEmail${iowner}' style='display:none'><div></div>`;
+          const iduseremail = document.createElement('div');
+          let divuseremail = document.getElementById('id-useremail');
+          if(divuseremail) divuseremail.textContent = userEmail;
+          //iduseremail.className = 'au-location-modal';
+          iduseremail.id = `idUserEmail${iowner}`;
+          iduseremail.style.display = `none`;
+          iduseremail.style.position = 'absolute';
+          iduseremail.innerHTML = `<table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div>`;
+          document.body.appendChild(iduseremail);
+          //console.log('sHtml',sHtml);
+          // 处理任务数据
+          try{
+
+            //以下，生成任务列表显示：smis：表头；smistmp：最终表格；sultmp：用户邮箱排列块
+            //放在最后，因为需要generateReviewTable里读取本地来判断是否审过=>更新missionGDoc中的ownerstatus
+            //下一步，是否加入读取网络文件来判断是否审过？
+            {
+              //smistmp(字符串)/missionPortal(DOM元素)  ; sultmp(字符串，用户邮箱)/missionuser(显示用户邮箱排列块)
+              //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
+              let smistmp="<table style='width:100%'><thead><tr>"
+              +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
+              +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
+              +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
+              +"<th style='width:14%'>挪po</th>"
+              +"</tr></thead><tbody>";
+              //console.log('smistmp',smistmp);
+              missionGDoc.forEach(item => {
+                  let stitle = item.portalID ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>` : `"<td>${item.title}</td>"`;
+                  let sstatus = "<td>"+(item.status === "通过" ? "✓" : "" )+"</td>";
+                  let ssubmitter = '<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter;
+                  let slatlng = '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>";
+                  let stypes = '<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter
+                    + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.types+"</a></td>";
+                  let sbegin = "<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td>";
+                  let sownerstatus = "<td>" + (item.ownerstatus === true ? '✓' : '') +"</td>";
+                  let ssubmitteddate = item.portalID ? `<td><a href='${durl}/portal/portaluseremail/portal.${item.portalID}.useremail.json' target='_blank'>${item.submitteddate}</a></td>` : `<td>${item.submitteddate}</td>` ;
+                  let slat = `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${item.lat},${item.lng},'${item.portalID}')";>` + item.lat+"</a></td>";
+                  let slng = "<td>"+item.lng;
+                  let smove = "</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>";
+                  smistmp += "<tr>" + stitle + sstatus + ssubmitter + slatlng + stypes + sbegin + sownerstatus + ssubmitteddate + slat + slng + smove + "</tr>";
+              });
+              //console.log('homepage',missionGDoc);
+              //console.log("missionPortal1",$("#missionPortal1"));
+              smistmp+="</tbody></table>";
+              //console.log(`smistmp`,smistmp);
+              // 使用const声明变量，避免意外修改
+              sHtml += `<div>${smistmp}</div>` ;
+            }
+            //console.log('sHtml',sHtml);
+            return sHtml;
+
+          } catch(e){console.log(e); return "";}
+        } catch (error) {
+          // 集中捕获所有可能的错误
+          console.log("执行失败：", error);
+          return "";
+          // 刷新窗口（根据实际需求决定是否保留）
+          // mywin.location.reload();
+        }
+    }
+
+    function findUserEmail(userreview,UEmailList){
+        try{
+            //console.log(userreview);
+            if(UEmailList.indexOf(",")>=0){
+                let sss=UEmailList+",";
+                while(sss.indexOf(",")>=0){
+                    let sss1 = sss.substring(0,sss.indexOf(","));
+                    if(userreview.indexOf(sss1)>=0) {
+                        if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss1",sss1);console.log("sss",sss);}
+                        return 1;
+                    }
+                    sss=sss.substring(sss.indexOf(",")+1,sss.length-1);
+                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss12",sss1);console.log("sss2",sss);}
+                }
+                if(userreview.indexOf(sss)>=0) {
+                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss3",sss);}
+                    return 1;
+                }
+                return -1;
+            } else {
+                return userreview.indexOf(UEmailList);
+            }
+        }
+        catch(e){
+            console.log(e);
+            return -1;
+        }
+    }
 
     // ********** 独立扩展函数：每个新增节点的弹窗逻辑（便于后续扩展）**********
     // 新增节点1的弹窗逻辑
@@ -1065,8 +1803,8 @@
     }
 
     // 页面加载后执行（延时确保DOM渲染完成）
-    window.addEventListener('load', () => setTimeout(initNodes, 300));
-
+    //window.addEventListener('load', () => setTimeout(initNodes, 300));
+/*
     let clickEventBinded = false; // 防重复绑定点击事件
     let isFirstEnter = true; // 标记是否是首次进入/new/（刷新/直接访问）
     const TARGET_ROUTE = '/new/'; // 目标入口路由
@@ -1092,12 +1830,12 @@
             return function(state, title, url) {
         // 新增：所有路由修改都触发侧边栏修复（覆盖侧边栏点击）
                 if (url && url.startsWith('/new/')) {
-                    console.log(`检测到侧边栏路由跳转：${url}，执行修复`);
+                    //console.log(`检测到侧边栏路由跳转：${url}，执行修复`);
                     isInited = false;
                     setTimeout(initNodes, 200); // 缩短延迟，适配DOM渲染
                     //if (url && url.startsWith('/new/review')) {
                         setTimeout(function(){
-                            console.log(`修复任务标签`);
+                            //console.log(`修复任务标签`);
                             modifyThirdSidebarLink();
                         },500);
                     //}
@@ -1105,13 +1843,6 @@
                         //setTimeout(checkAndReplace,200);
                     }
                 }
-              /*
-                // 监听跳转到review路由，执行侧边栏修复
-                if (url && url.includes(REVIEW_ROUTE)) {
-                    console.log(`检测到跳转到review路由，准备修复右上角`);
-                    isInited = false;
-                    setTimeout(initNodes, 2000); // 延迟修复，等DOM渲染完成
-                }*/
                 originalFn.call(history, state, title, url);
             };
         };
@@ -1143,8 +1874,8 @@
         });
         console.log('Review接口AJAX监听已启动');
     };
-    interceptRoute();
-    listenReviewAjax();
+    //interceptRoute();
+    //listenReviewAjax();
 
   // 监听DOM变化，防止节点被覆盖
     const observer = new MutationObserver((mutations) => {
@@ -1169,7 +1900,7 @@
         document.querySelectorAll('a[href="/new/profile"][data-cloned]').forEach(node => node.remove());
         initNodes();
     };
-
+*/
     // 快捷键关闭弹窗（ESC键）
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeAllPopups();
@@ -1302,177 +2033,12 @@
         return fmt;
     }
 
-  // 配置项：可根据需求修改
-    const TARGET_NODE_ID = 'idmission'; // 目标节点ID
-
-    // 🌟 精准判断节点是否「真实显示」（排除隐藏/不可见状态）
-    function isElementVisible(el) {
-        if (!el) return false;
-        const rect = el.getBoundingClientRect(); // 获取节点布局位置
-        // 可见性核心条件：宽高>0（未被隐藏）+ 与视口有重叠（在页面可视范围内）
-        return rect.width > 0 && rect.height > 0 &&
-               rect.top < window.innerHeight && rect.bottom > 0 &&
-               rect.left < window.innerWidth && rect.right > 0;
-    }
-
-    // 📌 自定义替换逻辑（修改此函数即可实现你的需求）
-    async function replaceChildNodes(targetEl) {
-        if (!targetEl) return;
-        // 示例1：清空所有原有子节点，添加新子节点（最常用）
-        const missionHtmlStr = await getMissionHTML(2);
-        targetEl.innerHTML = missionHtmlStr;
-    }
-
-    // 核心检测逻辑：监听可见性变化，显示时单次替换
-    function checkAndReplace(id) {
-        if ( window.location.pathname !== HELP_ROUTE) return;
-        //console.log(`checkAndReplace-id:${id}`);
-        //console.log(`checkAndReplace${window.location.pathname}`);
-        awaitElement(() => document.getElementById('idmission'))
-            .then((ref) => {
-          let targetEl = document.getElementById('idmission');
-          //console.log("checkAndReplace:get idmission!");
-          //placestr存在，说明已经替换完成
-            replaceChildNodes(targetEl);
-            //console.log(`✅ ${TARGET_NODE_ID} 已显示，子节点替换完成（本次显示仅一次）`);
-
-      });
-    }
-
-    listenLinkClick();
-    //监听页面点击，获取是否人工点击
-    function listenLinkClick(){
-        document.body.addEventListener("click",function(event){
-            //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
-            //console.log("clicked",event.srcElement);
-          let t=event.srcElement;
-          if( (t.tagName && t.tagName.toLowerCase()=="span" && t.className.indexOf("ng-star-inserted")>-1 && t.innerText.trim()=="任务")
-             || t.querySelector("span.ng-star-inserted"))
-          {
-            //console.log("任务 clicked");
-            replaceWfCriteriaContent();
-            //checkAndReplace(1);
-          }
-        });
-    }
-    // 启动轮询检测：持续监听节点可见性状态变化
-    //setInterval(checkAndReplace, CHECK_INTERVAL);
-    //setTimeout(checkAndReplace,500);
-
-
-
-
-    //修改sidebar为任务，并替换一个缺省
-    // 1. 修改第三个sidebar-link的文本为"任务"（兼容原始文本）
-    function modifyThirdSidebarLink() {
-        const sidebarLinks = document.querySelectorAll('app-sidebar-link a.sidebar-link');
-        if (sidebarLinks.length >= 3) {
-            const thirdLink = sidebarLinks[2];
-            // 修改span显示文本
-            const textSpan = thirdLink.querySelector('span.ng-star-inserted');
-            if (textSpan && textSpan.textContent !== '任务') {
-                textSpan.textContent = '任务';
-            }
-            // 修改title属性
-            if (thirdLink.getAttribute('title') !== '任务') {
-                thirdLink.setAttribute('title', '任务');
-            }
-            //console.log('第三个侧边栏标签已修改为"任务"');
-        }
-    }
-
-    // 2. 仅当前标签页首次加载时激活"任务"标签（核心修改：改用sessionStorage）
-    function activateTaskLinkOnlyFirstTime() {
-        // 从sessionStorage读取标记（仅当前标签页有效，关闭标签页自动清空）
-        const isFirstLoadInTab = sessionStorage.getItem('isFirstLoadInTab') !== 'false';
-
-        if (isFirstLoadInTab) {
-            const sidebarLinks = document.querySelectorAll('app-sidebar-link a.sidebar-link');
-            if (sidebarLinks.length >= 3) {
-                const thirdLink = sidebarLinks[2];
-                const firstLink = sidebarLinks[0];
-
-                // 移除第一个标签（地图）的激活状态
-                firstLink.classList.remove('sidebar-link--active', 'active');
-                // 给第三个标签添加激活状态
-                thirdLink.classList.add('sidebar-link--active', 'active');
-                // 模拟点击触发路由跳转
-                thirdLink.click();
-
-                // 标记当前标签页已非首次加载（刷新时生效）
-                sessionStorage.setItem('isFirstLoadInTab', 'false');
-                console.log('当前标签页首次加载，已默认激活"任务"标签');
-            }
-        } else {
-            console.log('当前标签页非首次加载（刷新），保留当前页面激活状态');
-        }
-    }
-
-    // 3. 替换wf-criteria内容为自定义任务面板
-    function replaceWfCriteriaContent() {
-        // 生成自定义任务面板HTML
-        const currentTime = new Date().toLocaleString();
-        const customHtml = `
-            <div id="idmission" style="padding: 20px; color: #333; font-size: 14px;">
-                <h2 style="margin: 0 0 15px 0; color: #007bff;">任务面板</h2>
-                <p id="tmpmission">✅ 已自动进入任务视图（刷新/首次进入/new/触发）</p>
-                <p>更新时间：${currentTime}</p>
-                <p>💡 点击「地图」可正常跳转到mapview</p>
-            </div>
-        `;
-
-        // 等待wf-criteria元素加载后替换内容
-        //awaitElement( () => document.querySelector('app-sidebar-link a.sidebar-link')).then((ref) => {
-        awaitElement( () => document.querySelector('wf-criteria')).then((wfElement) =>{
-            //let idmission = document.getElementById('idmission');
-            let idmission = document.getElementById('idmission')
-            //console.log('wfElement',wfElement);
-            //console.log('idmission',idmission);
-            if (wfElement && wfElement !== null) {
-              // 清空原有内容
-              wfElement.innerHTML = '';
-              // 插入自定义内容
-              wfElement.insertAdjacentHTML('afterbegin', customHtml);
-              //console.log('wf-criteria内容已替换为自定义任务面板');
-            };
-            awaitElement( () => document.getElementById('idmission')).then((idm) =>{
-                //console.log('replaceWfCriteriaContent');
-                checkAndReplace(2) ;
-            });
-        });
-    }
-
-    // 4. 监听侧边栏点击事件，仅点击"任务"时替换右侧内容
-    function listenSidebarClick() {
-        const sidebarLinks = document.querySelectorAll('app-sidebar-link a.sidebar-link');
-        if (sidebarLinks.length >= 3) {
-            const taskLink = sidebarLinks[2];
-            // 绑定点击事件（防止重复绑定）
-            taskLink.addEventListener('click', (e) => {
-                // 延迟执行，确保路由跳转完成后再替换内容
-                setTimeout(() => {
-                    //console.log('listenSidebarClick');
-                    modifyThirdSidebarLink();
-                    replaceWfCriteriaContent();
-                    //checkAndReplace(3);
-                }, 200);
-            }, { once: false });
-        }
-    }
-
-    // 主执行逻辑
-    awaitElement( () => document.querySelector('app-sidebar-link a.sidebar-link')).then((ref) => {
-        // 第一步：修改标签文本
-        modifyThirdSidebarLink();
-        // 第二步：仅当前标签页首次加载激活任务标签
-        activateTaskLinkOnlyFirstTime();
-        // 第三步：监听任务标签点击事件
-        listenSidebarClick();
-
-        // 如果是当前标签页首次加载，直接替换wf-criteria内容
-            setTimeout(() => {
-                replaceWfCriteriaContent();
-            }, 200);
-    });
+    // 初始化
+    // 页面加载后执行（延时确保DOM渲染完成）
+    window.addEventListener('load', () => setTimeout( function() {
+        addPanelToMapView();
+        observeMapViewLoading();
+        initNodes();
+    }, 300));
 
 })();
