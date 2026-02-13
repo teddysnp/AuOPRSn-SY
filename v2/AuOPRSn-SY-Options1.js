@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.2
+// @version      2.0.3
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -157,7 +157,7 @@
     // ====================== 【用户可自定义区域2：标签配置】 ======================
     const tabConfig = [
         {
-            tabName: "任务列表",
+            tabName: "在审任务",
             tabId: "tab-1",
             content: `
                 <div id='idmission2'>
@@ -172,10 +172,56 @@
             `
         },
         {
-            tabName: "近期通过",
+            tabName: "所有任务",
             tabId: "tab-2",
             content: `
                 <div id='idportal2'>
+                    <h4 style="margin: 0 0 8px 0; font-size: 13px;">本周统计</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <th style="text-align: left; padding: 4px 0;">类型</th>
+                            <th style="text-align: right; padding: 4px 0;">完成数</th>
+                        </tr>
+                        <tr>
+                            <td>审核任务</td>
+                            <td style="text-align: right;">28</td>
+                        </tr>
+                        <tr>
+                            <td>提交任务</td>
+                            <td style="text-align: right;">12</td>
+                        </tr>
+                    </table>
+                </div>
+            `
+        },
+        {
+            tabName: "近期审核",
+            tabId: "tab-3",
+            content: `
+                <div id='idreview2'>
+                    <h4 style="margin: 0 0 8px 0; font-size: 13px;">本周统计</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <th style="text-align: left; padding: 4px 0;">类型</th>
+                            <th style="text-align: right; padding: 4px 0;">完成数</th>
+                        </tr>
+                        <tr>
+                            <td>审核任务</td>
+                            <td style="text-align: right;">28</td>
+                        </tr>
+                        <tr>
+                            <td>提交任务</td>
+                            <td style="text-align: right;">12</td>
+                        </tr>
+                    </table>
+                </div>
+            `
+        },
+        {
+            tabName: "近期跟审",
+            tabId: "tab-4",
+            content: `
+                <div id='idfollow2'>
                     <h4 style="margin: 0 0 8px 0; font-size: 13px;">本周统计</h4>
                     <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
                         <tr style="border-bottom: 1px solid #e0e0e0;">
@@ -422,6 +468,22 @@
                         });
                     }
                 });
+                // 原有逻辑：加载任务HTML
+                awaitElement(() => mapView.querySelector('#idreview2')).then(async (idreview2) => {
+                    if (idreview2) {
+                        let sHtml = await generateReviewTable('reviewLista', privatePortalDisplay1);
+                        idreview2.innerHTML = sHtml;
+                        idreview2.innerHTML = idreview2.innerHTML.replace(/"{2}/g, '');
+                    }
+                });
+                // 原有逻辑：加载任务HTML
+                awaitElement(() => mapView.querySelector('#idfollow2')).then(async (idfollow2) => {
+                    if (idfollow2) {
+                        let sHtml = await getFollowHTML();
+                        idfollow2.innerHTML = sHtml;
+                        idfollow2.innerHTML = idfollow2.innerHTML.replace(/"{2}/g, '');
+                    }
+                });
                 console.log('任务管理面板和同级分割条已成功注入');
             }
         }
@@ -462,10 +524,13 @@
     let performance = null;
     let missionGDoc = [];
     let missionGDocAll = [];
+    let portalReviewed = [];
+    let portalFollowed = [];
     let userEmailList1 = [];//审核员列表，用于显示
     let userEmailList2 = [];//审核员列表，用于显示
     let privatePortalDisplay1 = 50; //首页列表中显示池中已审po数量
     let privatePortalDisplay2 = 50; //首页列表中显示非池已审po数量
+    let followPortalDisplay = 50;
 
     // ================== 配置 - CloudFlare =======================//
     //在cloudflare中上传的链接
@@ -796,9 +861,9 @@
 
     let marker = null;
     openPortalOnMap = function(lat,lng,portalid) {
-        console.log('marker',marker);
+        //console.log('marker',marker);
         if (marker) {marker.setMap(null);marker = null; console.log("set marker null");};
-        console.log('openPortalOnMap',{lat,lng,portalid});
+        //console.log('openPortalOnMap',{lat,lng,portalid});
         awaitElement(() => document.querySelector('a[href="/new/mapview"]')).then((ref) => {
             jumpToLocation(lat, lng, 18);
             putMarkerOnMap(lat, lng, "");
@@ -844,7 +909,7 @@
         }
         const jumpToLocation = (lat, lng, zoom) => {
             getWfMap().then((map) => {
-                console.log("jump to :",map);
+                //console.log("jump to :",map);
                 if (!map) return;
                 map.setCenter(new google.maps.LatLng(lat, lng));
                 map.setZoom(zoom);
@@ -1544,7 +1609,7 @@
                 <td><a href='${durl}/portal/portalreview/portal.${id}.json'  target='_blank'>${title}</td>
                 <td>${type}</td>
                 <td><a href='${durl}/portal/portaldata/portal.${id}.json'  target='_blank'>${lat}</td>
-                <td>${lng}</td>
+                <td><a href="javascript:void(0);" onclick="openPortalOnMap(${lat},${lng},'${id}')";>${lng}</td>
                 <td>${formattedScore}</td>
                 <td>${dateTime}</td>
                 <td><a href='${durl}/portal/portaluseremail/portal.${id}.useremail.json'  target='_blank'>${id}</td>
@@ -1607,6 +1672,50 @@
 
         //console.log(storageKey,tableHtml);
         return tableHtml;
+    }
+
+    async function getFollowHTML()
+    {
+        function getHTML() {
+            let sftitle="<table style='width:100%'><thead><tr><th style='width:20%'>ID</th><th style='width:15%'>名称</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th><th style='width:15%'>时间</th><th style='width:29%'>跟审情况</th></thead>";
+            let sfdetail = "";
+            let slocalfollow = [];
+            if(localStorage.getItem(userEmail+"follow")) slocalfollow = JSON.parse(localStorage.getItem(userEmail+"follow"));
+            //console.log(slocalfollow);
+            if(slocalfollow.length>0){
+                sfdetail+="<tbody>";
+                //console.log(slocalfollow[0]);
+                let icnt = 0;if (slocalfollow.length>followPortalDisplay) icnt = slocalfollow.length - followPortalDisplay;
+                for (let i=slocalfollow.length - 1;i>=icnt;i--){
+                    //let tmpDateTime = slocalfollow[i].dateTime ? (slocalfollow[i].dateTime.substring(0,10)+" "+slocalfollow[i].dateTime.substring(11,19)) : "";
+                    const tmpDateTime = slocalfollow[i].dateTime ? (new Date(slocalfollow[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
+                    //console.log(tmpDateTime); // 输出示例：2025-10-09 12:36:06（GMT+8 时间）
+                    sfdetail+="<tr><td><a href='" + durl + "/portal/portaluseremail/portal." + slocalfollow[i].id + ".useremail.json'  target='_blank'>" + slocalfollow[i].id + "</a></td>"+
+                        "<td><a href='" + durl + "/portal/portalreview/portal." + slocalfollow[i].id + ".json'  target='_blank'>" + slocalfollow[i].title + "</a></td>"+
+                        `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${slocalfollow[i].lat},${slocalfollow[i].lng},'${slocalfollow[i].id}')";>` + slocalfollow[i].lat + "</a></td>"+
+                        "<td>"+slocalfollow[i].lng+"</td><td>" + tmpDateTime + "</td><td>"+slocalfollow[i].review+"</td></tr>";
+                }
+                sfdetail+="</tbody></table>";
+            }
+            console.log('sftitle+sfdetail',sftitle+sfdetail);
+            return sftitle+sfdetail;
+        }
+        if(userEmail === null) {
+            // 先获取用户信息并等待完成
+            const restext = await getUser();
+            // 处理用户信息
+            userEmail = restext.result.socialProfile.email;
+            performance = restext.result.performance;
+            document.title = userEmail;
+            if (userEmail != null) {
+                localStorage.setItem("currentUser", userEmail);
+                return getHTML();
+            } else return "";
+            console.log("最终获取到的用户邮箱：", userEmail);
+        } else
+        {
+            return getHTML();
+        }
     }
 
     //首页home显示用户审过的po
