@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.3
+// @version      2.0.4
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -195,8 +195,31 @@
             `
         },
         {
-            tabName: "近期审核",
+            tabName: "池中审核",
             tabId: "tab-3",
+            content: `
+                <div id='idreview1'>
+                    <h4 style="margin: 0 0 8px 0; font-size: 13px;">本周统计</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <th style="text-align: left; padding: 4px 0;">类型</th>
+                            <th style="text-align: right; padding: 4px 0;">完成数</th>
+                        </tr>
+                        <tr>
+                            <td>审核任务</td>
+                            <td style="text-align: right;">28</td>
+                        </tr>
+                        <tr>
+                            <td>提交任务</td>
+                            <td style="text-align: right;">12</td>
+                        </tr>
+                    </table>
+                </div>
+            `
+        },
+        {
+            tabName: "池外审核",
+            tabId: "tab-4",
             content: `
                 <div id='idreview2'>
                     <h4 style="margin: 0 0 8px 0; font-size: 13px;">本周统计</h4>
@@ -219,7 +242,7 @@
         },
         {
             tabName: "近期跟审",
-            tabId: "tab-4",
+            tabId: "tab-5",
             content: `
                 <div id='idfollow2'>
                     <h4 style="margin: 0 0 8px 0; font-size: 13px;">本周统计</h4>
@@ -469,9 +492,17 @@
                     }
                 });
                 // 原有逻辑：加载任务HTML
+                awaitElement(() => mapView.querySelector('#idreview1')).then(async (idreview1) => {
+                    if (idreview1) {
+                        let sHtml = await generateReviewTable('reviewLista', privatePortalDisplay1);
+                        idreview1.innerHTML = sHtml;
+                        idreview1.innerHTML = idreview1.innerHTML.replace(/"{2}/g, '');
+                    }
+                });
+                // 原有逻辑：加载任务HTML
                 awaitElement(() => mapView.querySelector('#idreview2')).then(async (idreview2) => {
                     if (idreview2) {
-                        let sHtml = await generateReviewTable('reviewLista', privatePortalDisplay1);
+                        let sHtml = await generateReviewTable('reviewListb', privatePortalDisplay2);
                         idreview2.innerHTML = sHtml;
                         idreview2.innerHTML = idreview2.innerHTML.replace(/"{2}/g, '');
                     }
@@ -1697,7 +1728,7 @@
                 }
                 sfdetail+="</tbody></table>";
             }
-            console.log('sftitle+sfdetail',sftitle+sfdetail);
+            //console.log('sftitle+sfdetail',sftitle+sfdetail);
             return sftitle+sfdetail;
         }
         if(userEmail === null) {
