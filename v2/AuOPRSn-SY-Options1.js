@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.4
+// @version      2.0.5
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -15,7 +15,7 @@
 
 (function() {
 
-    // ====================== 【核心配置：状态存储Key】 ======================
+    // ======================  任务管理 ======================
     // 用于sessionStorage存储折叠状态的唯一标识（可自定义）
     const STORAGE_KEY = 'missionManagerPanelCollapsed';
 
@@ -142,7 +142,6 @@
         }
     }
 
-    // ====================== 【状态管理工具函数】 ======================
     // 从sessionStorage读取折叠状态
     function getCollapseState() {
         // 读取存储的值，默认是未折叠（false）
@@ -245,6 +244,29 @@
             tabId: "tab-5",
             content: `
                 <div id='idfollow2'>
+                    <h4 style="margin: 0 0 8px 0; font-size: 13px;">本周统计</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                            <th style="text-align: left; padding: 4px 0;">类型</th>
+                            <th style="text-align: right; padding: 4px 0;">完成数</th>
+                        </tr>
+                        <tr>
+                            <td>审核任务</td>
+                            <td style="text-align: right;">28</td>
+                        </tr>
+                        <tr>
+                            <td>提交任务</td>
+                            <td style="text-align: right;">12</td>
+                        </tr>
+                    </table>
+                </div>
+            `
+        },
+        {
+            tabName: "近期上传",
+            tabId: "tab-6",
+            content: `
+                <div id='idupload2'>
                     <h4 style="margin: 0 0 8px 0; font-size: 13px;">本周统计</h4>
                     <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
                         <tr style="border-bottom: 1px solid #e0e0e0;">
@@ -515,11 +537,18 @@
                         idfollow2.innerHTML = idfollow2.innerHTML.replace(/"{2}/g, '');
                     }
                 });
+                // 原有逻辑：加载任务HTML
+                awaitElement(() => mapView.querySelector('#idupload2')).then(async (idupload2) => {
+                    if (idupload2) {
+                        let sHtml = await getUploadHTML();
+                        idupload2.innerHTML = sHtml;
+                        idupload2.innerHTML = idupload2.innerHTML.replace(/"{2}/g, '');
+                    }
+                });
                 console.log('任务管理面板和同级分割条已成功注入');
             }
         }
     }
-
 
     // 持续监听DOM变化
     function observeMapViewLoading() {
@@ -548,7 +577,7 @@
         window.addEventListener('hashchange', addPanelToMapView);
     }
 
-    // 全局锁：防止重复执行
+    // ======================  任务管理 ======================
     let isInited = false;
     let popupContainer = null;
     let userEmail = null;
@@ -562,6 +591,7 @@
     let privatePortalDisplay1 = 50; //首页列表中显示池中已审po数量
     let privatePortalDisplay2 = 50; //首页列表中显示非池已审po数量
     let followPortalDisplay = 50;
+    let uploadPortalDisplay = 50;
 
     // ================== 配置 - CloudFlare =======================//
     //在cloudflare中上传的链接
@@ -893,7 +923,8 @@
     let marker = null;
     openPortalOnMap = function(lat,lng,portalid) {
         //console.log('marker',marker);
-        if (marker) {marker.setMap(null);marker = null; console.log("set marker null");};
+        if (marker) {marker.setMap(null);marker = null; //console.log("set marker null");
+                    };
         //console.log('openPortalOnMap',{lat,lng,portalid});
         awaitElement(() => document.querySelector('a[href="/new/mapview"]')).then((ref) => {
             jumpToLocation(lat, lng, 18);
@@ -1626,7 +1657,7 @@
             // 安全获取字段值
             const user = item.user || '';
             const title = item.title || '';
-            const type = item.type || '';
+            const type = { EDIT: '编辑', NEW: '新增', PHOTO: '图片' }[item.type] || '';
             const lat = item.lat || '';
             const lng = item.lng || '';
             const dateTime = item.dt || item.datetime || '';
@@ -1705,8 +1736,8 @@
         return tableHtml;
     }
 
-    async function getFollowHTML()
-    {
+    //跟审及上传HTML
+    async function getFollowHTML() {
         function getHTML() {
             let sftitle="<table style='width:100%'><thead><tr><th style='width:20%'>ID</th><th style='width:15%'>名称</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th><th style='width:15%'>时间</th><th style='width:29%'>跟审情况</th></thead>";
             let sfdetail = "";
@@ -1748,8 +1779,51 @@
             return getHTML();
         }
     }
+    async function getUploadHTML() {
+        function getHTML() {
+            let sftitle="<table style='width:100%'><thead><tr><th style='width:20%'>ID</th><th style='width:15%'>名称</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th><th style='width:15%'>时间</th><th style='width:29%'>上传情况</th></thead>";
+            let sfdetail = "";
+            let slocalupload = [];
+            if(localStorage.getItem(userEmail+"upload")) slocalupload = JSON.parse(localStorage.getItem(userEmail+"upload"));
+            //console.log(slocalupload);
+            if(slocalupload.length>0){
+                sfdetail+="<tbody>";
+                //console.log(slocalupload[0]);
+                let icnt = 0;if (slocalupload.length>uploadPortalDisplay) icnt = slocalupload.length - uploadPortalDisplay;
+                for (let i=slocalupload.length - 1;i>=icnt;i--){
+                    const tmpDateTime = slocalupload[i].dateTime ? (new Date(slocalupload[i].dateTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }).replace(/\//g, '-')) : "";
+                    sfdetail+="<tr>" +
+                        "<td><a href='" + durl + "/portal/portaluseremail/portal." + slocalupload[i].id + ".useremail.json'  target='_blank'>" + slocalupload[i].id + "</a></td>" +
+                        "<td><a href='" + durl + "/portal/portalreview/portal." + slocalupload[i].id + ".json'  target='_blank'>" + slocalupload[i].title + "</a></td>" +
+                        `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${slocalupload[i].lat},${slocalupload[i].lng},'${slocalupload[i].id}')";>` + slocalupload[i].lat + "</a></td>" +
+                        "<td>"+slocalupload[i].lng+"</td>" +
+                        "<td>" + tmpDateTime + "</td>" +
+                        "<td>"+slocalupload[i].review+"</td></tr>";
+                }
+                sfdetail+="</tbody></table>";
+            }
+            //console.log('sftitle+sfdetail',sftitle+sfdetail);
+            return sftitle+sfdetail;
+        }
+        if(userEmail === null) {
+            // 先获取用户信息并等待完成
+            const restext = await getUser();
+            // 处理用户信息
+            userEmail = restext.result.socialProfile.email;
+            performance = restext.result.performance;
+            document.title = userEmail;
+            if (userEmail != null) {
+                localStorage.setItem("currentUser", userEmail);
+                return getHTML();
+            } else return "";
+            console.log("最终获取到的用户邮箱：", userEmail);
+        } else
+        {
+            return getHTML();
+        }
+    }
 
-    //首页home显示用户审过的po
+    //所有任务HTML
     async function getMissionHTMLAccepted(iowner) {
         function getHTML() {
             // 更新页面DOM
@@ -1769,10 +1843,10 @@
             //smistmp(字符串)/missionPortal(DOM元素)  ; sultmp(字符串，用户邮箱)/missionuser(显示用户邮箱排列块)
             //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
             let smistmp="<table style='width:100%'><thead><tr>"
-            +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
-            +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
-            +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
-            +"<th style='width:14%'>挪po</th>"
+            +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:12%'>位置</th>"
+            +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th>"
+            +"<th style='width:15%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
+            +"<th style='width:10%'>挪po</th><th style='width:12%'>申请者</th>"
             +"</tr></thead><tbody>";
             //console.log('smistmp',smistmp);
             let MISSION_ACCEPT_DISPLAY = 30;
@@ -1780,18 +1854,20 @@
             missionGDocAll.forEach(item => {
                 if(icnt > MISSION_ACCEPT_DISPLAY) return;
                 let stitle = item.portalID ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>` : `"<td>${item.title}</td>"`;
-                let sstatus = "<td>"+(item.status === "通过" ? "✓" : "" )+"</td>";
-                let ssubmitter = '<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter;
-                let slatlng = '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>";
+                let sstatus = "<td>"+item.status+"</td>";
+                let slatlng = '<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter +
+                  '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>";
                 let stypes = '<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter
                 + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.types+"</a></td>";
                 let sbegin = "<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td>";
-                let sownerstatus = "<td>" + (item.ownerstatus === true ? '✓' : '') +"</td>";
+                //所有任务中：已审只针对用户，所以不需要
+                //let sownerstatus = "<td>" + (item.ownerstatus === true ? '✓' : '') +"</td>";
                 let ssubmitteddate = item.portalID ? `<td><a href='${durl}/portal/portaluseremail/portal.${item.portalID}.useremail.json' target='_blank'>${item.submitteddate}</a></td>` : `<td>${item.submitteddate}</td>` ;
                 let slat = `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${item.lat},${item.lng},'${item.portalID}')";>` + item.lat+"</a></td>";
-                let slng = "<td>"+item.lng;
-                let smove = "</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>";
-                smistmp += "<tr>" + stitle + sstatus + ssubmitter + slatlng + stypes + sbegin + sownerstatus + ssubmitteddate + slat + slng + smove + "</tr>";
+                let slng = "<td>"+item.lng+"</td>";
+                let smove = "<td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>";
+                let ssubmitter = "<td>"+item.submitter+"</td>";
+                smistmp += "<tr>" + stitle + sstatus + slatlng + stypes + sbegin + ssubmitteddate + slat + slng + smove + ssubmitter + "</tr>";
                 icnt += 1;
             });
             //console.log('homepage',missionGDoc);
@@ -1821,94 +1897,91 @@
             return getHTML();
         }
     }
-    //首页home显示用户审过的po
+    //在审任务HTML
     async function getMissionHTML(iowner) {
-      // 等待获取任务数据（现在处于async函数中，可安全使用await）
-      //console.log(`getMissionHTML:${iowner}`);
-      await getMissionFromCloudFlare();
-      if(userEmail === null) {
-        // 先获取用户信息并等待完成
-        const restext = await getUser();
-        // 处理用户信息
-        userEmail = restext.result.socialProfile.email;
-        performance = restext.result.performance;
-        document.title = userEmail;
+        // 等待获取任务数据（现在处于async函数中，可安全使用await）
+        //console.log(`getMissionHTML:${iowner}`);
+        await getMissionFromCloudFlare();
+        if(userEmail === null) {
+            // 先获取用户信息并等待完成
+            const restext = await getUser();
+            // 处理用户信息
+            userEmail = restext.result.socialProfile.email;
+            performance = restext.result.performance;
+            document.title = userEmail;
 
-        if (userEmail != null) {
-          localStorage.setItem("currentUser", userEmail);
-        } else return;
-        console.log("最终获取到的用户邮箱：", userEmail);
-      }
-      // 处理池中评审列表（reviewLista → #privatePortal1）
-      const tableHtmlA = await generateReviewTable('reviewLista', privatePortalDisplay1);
-      ////replaceElement("#privatePortal1", tableHtmlA);
-      // 处理池外评审列表（reviewListb → #privatePortal2）
-      const tableHtmlB = await generateReviewTable('reviewListb', privatePortalDisplay2);
-      ////replaceElement("#privatePortal2", tableHtmlB);
+            if (userEmail != null) {
+                localStorage.setItem("currentUser", userEmail);
+            } else return;
+            console.log("最终获取到的用户邮箱：", userEmail);
+        }
+        //调用generateReviewTable目的：更新已审标识
+        // 处理池中评审列表（reviewLista → #privatePortal1）
+        const tableHtmlA = await generateReviewTable('reviewLista', privatePortalDisplay1);
+        ////replaceElement("#privatePortal1", tableHtmlA);
+        // 处理池外评审列表（reviewListb → #privatePortal2）
+        const tableHtmlB = await generateReviewTable('reviewListb', privatePortalDisplay2);
+        ////replaceElement("#privatePortal2", tableHtmlB);
 
-      try {
-          // 更新页面DOM
-          let sHtml = `<div class='placestr'></div><br>` ;
-          //let sHtml = `<div class='placestr'><font size=3>${userEmail}</font></div><br>` ;
-          //let iduseremail = `<div id='idUserEmail${iowner}' style='display:none'><div></div>`;
-          const iduseremail = document.createElement('div');
-          let divuseremail = document.getElementById('id-useremail');
-          if(divuseremail) divuseremail.textContent = userEmail;
-          //iduseremail.className = 'au-location-modal';
-          iduseremail.id = `idUserEmail${iowner}`;
-          iduseremail.style.display = `none`;
-          iduseremail.style.position = 'absolute';
-          iduseremail.innerHTML = `<table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div>`;
-          document.body.appendChild(iduseremail);
-          //console.log('sHtml',sHtml);
-          // 处理任务数据
-          try{
-
-            //以下，生成任务列表显示：smis：表头；smistmp：最终表格；sultmp：用户邮箱排列块
-            //放在最后，因为需要generateReviewTable里读取本地来判断是否审过=>更新missionGDoc中的ownerstatus
-            //下一步，是否加入读取网络文件来判断是否审过？
-            {
-              //smistmp(字符串)/missionPortal(DOM元素)  ; sultmp(字符串，用户邮箱)/missionuser(显示用户邮箱排列块)
-              //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
-              let smistmp="<table style='width:100%'><thead><tr>"
-              +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
-              +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
-              +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
-              +"<th style='width:14%'>挪po</th>"
-              +"</tr></thead><tbody>";
-              //console.log('smistmp',smistmp);
-              missionGDoc.forEach(item => {
-                  let stitle = item.portalID ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>` : `"<td>${item.title}</td>"`;
-                  let sstatus = "<td>"+(item.status === "通过" ? "✓" : "" )+"</td>";
-                  let ssubmitter = '<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter;
-                  let slatlng = '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>";
-                  let stypes = '<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter
-                    + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.types+"</a></td>";
-                  let sbegin = "<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td>";
-                  let sownerstatus = "<td>" + (item.ownerstatus === true ? '✓' : '') +"</td>";
-                  let ssubmitteddate = item.portalID ? `<td><a href='${durl}/portal/portaluseremail/portal.${item.portalID}.useremail.json' target='_blank'>${item.submitteddate}</a></td>` : `<td>${item.submitteddate}</td>` ;
-                  let slat = `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${item.lat},${item.lng},'${item.portalID}')";>` + item.lat+"</a></td>";
-                  let slng = "<td>"+item.lng;
-                  let smove = "</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>";
-                  smistmp += "<tr>" + stitle + sstatus + ssubmitter + slatlng + stypes + sbegin + sownerstatus + ssubmitteddate + slat + slng + smove + "</tr>";
-              });
-              //console.log('homepage',missionGDoc);
-              //console.log("missionPortal1",$("#missionPortal1"));
-              smistmp+="</tbody></table>";
-              //console.log(`smistmp`,smistmp);
-              // 使用const声明变量，避免意外修改
-              sHtml += `<div>${smistmp}</div>` ;
-            }
+        try {
+            // 更新页面DOM
+            let sHtml = `<div class='placestr'></div><br>` ;
+            const iduseremail = document.createElement('div');
+            let divuseremail = document.getElementById('id-useremail');
+            if(divuseremail) divuseremail.textContent = userEmail;
+            //iduseremail.className = 'au-location-modal';
+            iduseremail.id = `idUserEmail${iowner}`;
+            iduseremail.style.display = `none`;
+            iduseremail.style.position = 'absolute';
+            iduseremail.innerHTML = `<table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div>`;
+            document.body.appendChild(iduseremail);
             //console.log('sHtml',sHtml);
-            return sHtml;
+            // 处理任务数据
+            try{
+                //以下，生成任务列表显示：smis：表头；smistmp：最终表格；sultmp：用户邮箱排列块
+                //放在最后，因为需要generateReviewTable里读取本地来判断是否审过=>更新missionGDoc中的ownerstatus
+                //下一步，是否加入读取网络文件来判断是否审过？
+                //smistmp(字符串)/missionPortal(DOM元素)  ; sultmp(字符串，用户邮箱)/missionuser(显示用户邮箱排列块)
+                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
+                let smistmp="<table style='width:100%'><thead><tr>"
+                +"<th style='width:15%'>名称</th><th style='width:15%'>位置</th>"
+                +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
+                +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
+                +"<th style='width:14%'>挪po</th>"
+                +"</tr></thead><tbody>";
+                //console.log('smistmp',smistmp);
+                missionGDoc.forEach(item => {
+                    let stitle = item.portalID ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>` : `"<td>${item.title}</td>"`;
+                    //只能显示通过的，所以下面不再需要
+                    //let sstatus = "<td>"+(item.status === "通过" ? "✓" : "" )+"</td>";
+                    let ssubmitter = '<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter;
+                    let slatlng = '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>";
+                    let stypes = '<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter
+                    + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.types+"</a></td>";
+                    let sbegin = "<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td>";
+                    let sownerstatus = "<td>" + (item.ownerstatus === true ? '✓' : '') +"</td>";
+                    let ssubmitteddate = item.portalID ? `<td><a href='${durl}/portal/portaluseremail/portal.${item.portalID}.useremail.json' target='_blank'>${item.submitteddate}</a></td>` : `<td>${item.submitteddate}</td>` ;
+                    let slat = `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${item.lat},${item.lng},'${item.portalID}')";>` + item.lat+"</a></td>";
+                    let slng = "<td>"+item.lng;
+                    let smove = "</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>";
+                    smistmp += "<tr>" + stitle + ssubmitter + slatlng + stypes + sbegin + sownerstatus + ssubmitteddate + slat + slng + smove + "</tr>";
+                });
+                //console.log('homepage',missionGDoc);
+                //console.log("missionPortal1",$("#missionPortal1"));
+                smistmp+="</tbody></table>";
+                //console.log(`smistmp`,smistmp);
+                // 使用const声明变量，避免意外修改
+                sHtml += `<div>${smistmp}</div>` ;
+                //console.log('sHtml',sHtml);
+                return sHtml;
 
-          } catch(e){console.log(e); return "";}
+            } catch(e){console.log(e); return "";}
         } catch (error) {
-          // 集中捕获所有可能的错误
-          console.log("执行失败：", error);
-          return "";
-          // 刷新窗口（根据实际需求决定是否保留）
-          // mywin.location.reload();
+            // 集中捕获所有可能的错误
+            console.log("执行失败：", error);
+            return "";
+            // 刷新窗口（根据实际需求决定是否保留）
+            // mywin.location.reload();
         }
     }
 
