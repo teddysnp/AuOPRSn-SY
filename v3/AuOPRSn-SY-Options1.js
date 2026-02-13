@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.1
+// @version      2.0.2
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -39,7 +39,11 @@
             flex-shrink: 0;
             width: 100%;
             height: auto; /* 核心：默认自适应内容高度 */
-            min-height: 35; /* 折叠状态最小高度 */
+            min-height: 35px; /* 折叠状态最小高度 */
+            max-height:250px;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            scrollbar-width: thin;
             background: #fff;
             border-bottom: 1px solid #e6e6e6;
             transition: height 0.2s; /* 高度变化过渡 */
@@ -398,6 +402,26 @@
                         idmission2.innerHTML = idmission2.innerHTML.replace(/"{2}/g, '');
                     }
                 });
+                awaitElement(() => mapView.querySelector('#idportal2')).then(async (idportal2) => {
+                    if (idportal2) {
+                        awaitElement(() => {
+                            const dataLength = Object.keys(missionGDocAll || {}).length;
+                            return dataLength > 0 ? missionGDocAll : null;
+                        }).then((validData) => {
+                            getMissionHTMLAccepted(3).then((sHtml) => {
+                                //console.log('sHtml',sHtml);
+                                //console.log('idportal2',sHtml);
+                                idportal2.innerHTML = sHtml;
+                                idportal2.innerHTML = idportal2.innerHTML.replace(/"{2}/g, '');
+                            }).catch((err) => {
+                            });
+                        }).catch((e) => {
+                            // 超时/未满足条件：10次×100ms=1秒后触发
+                            console.error("超时：1秒内未检测到有效数据",e);
+                            return "";
+                        });
+                    }
+                });
                 console.log('任务管理面板和同级分割条已成功注入');
             }
         }
@@ -437,6 +461,7 @@
     let userEmail = null;
     let performance = null;
     let missionGDoc = [];
+    let missionGDocAll = [];
     let userEmailList1 = [];//审核员列表，用于显示
     let userEmailList2 = [];//审核员列表，用于显示
     let privatePortalDisplay1 = 50; //首页列表中显示池中已审po数量
@@ -692,7 +717,7 @@
         // 返回 Promise 对象，包裹异步请求逻辑
         return new Promise((resolve, reject) => {
             // 调用getDatasByStatus方法
-            const statusList = ["提交", "审核"]; // 状态列表数组（与方法定义匹配）
+            const statusList = []; //["提交", "审核"]; // 状态列表数组（与方法定义匹配）
             cfClass.getDatasByStatus(
                 statusList, // 第一个参数：状态数组（与方法定义一致）
                 (res) => { // 成功回调：使用res参数（不是success变量）
@@ -701,8 +726,28 @@
                         let markercollection = res;
                         // 筛选状态为'提交'或'审核'的元素
                         let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
-                        console.log('Main-getCloudFlare', filteredMarkers);
                         missionGDoc = filteredMarkers;
+                        console.log('Options1-missionGDoc', missionGDoc);
+
+                        let filteredMarkersAll = markercollection.filter(item => item.status !== '定位' );
+                        //按日期submitteddate排序
+                        const sortedEntries = Object.entries(filteredMarkersAll).sort(([keyA, valA], [keyB, valB]) => {
+                            const dateA = new Date(valA.submitteddate || '');
+                            const dateB = new Date(valB.submitteddate || '');
+                            const timeA = dateA.getTime();
+                            const timeB = dateB.getTime();
+                            const isValidA = !isNaN(timeA);
+                            const isValidB = !isNaN(timeB);
+                            if (!isValidA && !isValidB) return 0;
+                            if (!isValidA) return 1;
+                            if (!isValidB) return -1;
+                            return timeB - timeA;
+                        });
+                        sortedEntries.forEach(([originalKey, item], index) => {
+                            missionGDocAll[index] = item;
+                        });
+                        console.log('Options1-missionGDocAll',missionGDocAll);
+
                         localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
 
                         // 初始化 ownerstatus 字段
@@ -733,7 +778,7 @@
             }
 
             const restext = JSON.parse(res);
-            console.log("getUser 解析结果：", restext);
+            //console.log("getUser 解析结果：", restext);
 
             // 仅验证响应结构，不处理数据
             if (!restext.result?.socialProfile) {
@@ -749,10 +794,14 @@
         });
     }
 
+    let marker = null;
     openPortalOnMap = function(lat,lng,portalid) {
+        console.log('marker',marker);
+        if (marker) {marker.setMap(null);marker = null; console.log("set marker null");};
         console.log('openPortalOnMap',{lat,lng,portalid});
         awaitElement(() => document.querySelector('a[href="/new/mapview"]')).then((ref) => {
-            jumpToLocation(lat,lng,18);
+            jumpToLocation(lat, lng, 18);
+            putMarkerOnMap(lat, lng, "");
         });
         // 【核心方法1：判断/提取Google Maps实例】
         function looksLikeGoogleMap(obj) {
@@ -801,8 +850,76 @@
                 map.setZoom(zoom);
             });
         };
+        function putMarkerOnMap(lat, lng, title){
+            getWfMap().then((map) => {
+                const color = "#a855f7";
+                let icon = {
+                    // 自定义SVG路径：靶心十字（中心圆 + 横竖十字线）
+                    path: 'M 0,0 m -4,0 a 4,4 0 1,1 8,0 a 4,4 0 1,1 -8,0 M -8,0 H 8 M 0,-8 V 8',
+                    scale: 4, // 由于path中已定义尺寸，scale设为1即可（如需整体缩放可调整此值）
+                    fillColor: 'RED',       // 填充色（中心圆）
+                    fillOpacity: 0.9,         // 填充透明度
+                    strokeColor: 'Golden',    // 描边色（十字线+圆边框）
+                    strokeWeight: 2           // 描边宽度
+                };
+                const titleText = `A`;
 
-    };
+                // Titles only shown at/above zoom threshold
+                const zoom = map.getZoom ? map.getZoom() : null;
+                if (!marker) {
+                    marker = new google.maps.Marker({
+                        map: null,
+                        position: { lat, lng },
+                        title: title,
+                        icon,
+                        draggable: false,
+                        optimized: false
+                    });
+                }
+                // 保存marker的原始样式（用于闪烁结束后恢复）
+                const originalFillOpacity = icon.fillOpacity;
+                // 声明定时器变量（便于后续清理）
+                let blinkTimer = null;
+                // 添加marker到地图并触发闪烁
+                if (!marker.getMap()) {
+                    marker.setMap(map);
+                    // 启动2秒闪烁效果
+                    startBlinking(marker);
+                }
+                //让marker闪烁2秒的函数 * @param {google.maps.Marker} marker - 要闪烁的marker
+                function startBlinking(marker) {
+                    // 先清除可能存在的旧定时器（避免重复闪烁）
+                    if (blinkTimer) clearInterval(blinkTimer);
+
+                    let isVisible = true; // 标记当前是否显示
+                    const blinkInterval = 300; // 闪烁间隔（ms），值越小闪烁越快
+
+                    // 启动闪烁定时器
+                    blinkTimer = setInterval(() => {
+                        // 切换透明度：显示时设为0.9，隐藏时设为0（也可改用visible属性）
+                        const newOpacity = isVisible ? 0 : originalFillOpacity;
+                        // 更新marker的icon样式
+                        marker.setIcon({
+                            ...marker.getIcon(), // 继承原有样式
+                            fillOpacity: newOpacity
+                        });
+                        isVisible = !isVisible; // 切换状态
+                    }, blinkInterval);
+
+                    // 2秒后停止闪烁，并恢复原始样式
+                    setTimeout(() => {
+                        clearInterval(blinkTimer);
+                        blinkTimer = null;
+                        // 恢复marker的原始透明度
+                        marker.setIcon({
+                            ...marker.getIcon(),
+                            fillOpacity: originalFillOpacity
+                        });
+                    }, 2000); // 2000ms = 2秒
+                }
+            });
+        };
+    }
 
     // 全局变量：缓存弹窗和遮罩元素，避免重复创建
     let reviewPopup = null;
@@ -1492,6 +1609,78 @@
         return tableHtml;
     }
 
+    //首页home显示用户审过的po
+    async function getMissionHTMLAccepted(iowner) {
+        function getHTML() {
+            // 更新页面DOM
+            let sHtml = `<div class='placestr1'></div><br>` ;
+            const iduseremail = document.createElement('div');
+            let divuseremail = document.getElementById('id-useremail');
+            if(divuseremail) divuseremail.textContent = userEmail;
+            //iduseremail.className = 'au-location-modal';
+            iduseremail.id = `idUserEmail${iowner}`;
+            iduseremail.style.display = `none`;
+            iduseremail.style.position = 'absolute';
+            iduseremail.innerHTML = `<table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div>`;
+            document.body.appendChild(iduseremail);
+            //以下，生成任务列表显示：smis：表头；smistmp：最终表格；sultmp：用户邮箱排列块
+            //放在最后，因为需要generateReviewTable里读取本地来判断是否审过=>更新missionGDoc中的ownerstatus
+            //下一步，是否加入读取网络文件来判断是否审过？
+            //smistmp(字符串)/missionPortal(DOM元素)  ; sultmp(字符串，用户邮箱)/missionuser(显示用户邮箱排列块)
+            //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
+            let smistmp="<table style='width:100%'><thead><tr>"
+            +"<th style='width:15%'>名称</th><th style='width:5%'>通过</th><th style='width:15%'>位置</th>"
+            +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
+            +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
+            +"<th style='width:14%'>挪po</th>"
+            +"</tr></thead><tbody>";
+            //console.log('smistmp',smistmp);
+            let MISSION_ACCEPT_DISPLAY = 30;
+            let icnt = 1;
+            missionGDocAll.forEach(item => {
+                if(icnt > MISSION_ACCEPT_DISPLAY) return;
+                let stitle = item.portalID ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>` : `"<td>${item.title}</td>"`;
+                let sstatus = "<td>"+(item.status === "通过" ? "✓" : "" )+"</td>";
+                let ssubmitter = '<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter;
+                let slatlng = '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>";
+                let stypes = '<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter
+                + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.types+"</a></td>";
+                let sbegin = "<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td>";
+                let sownerstatus = "<td>" + (item.ownerstatus === true ? '✓' : '') +"</td>";
+                let ssubmitteddate = item.portalID ? `<td><a href='${durl}/portal/portaluseremail/portal.${item.portalID}.useremail.json' target='_blank'>${item.submitteddate}</a></td>` : `<td>${item.submitteddate}</td>` ;
+                let slat = `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${item.lat},${item.lng},'${item.portalID}')";>` + item.lat+"</a></td>";
+                let slng = "<td>"+item.lng;
+                let smove = "</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>";
+                smistmp += "<tr>" + stitle + sstatus + ssubmitter + slatlng + stypes + sbegin + sownerstatus + ssubmitteddate + slat + slng + smove + "</tr>";
+                icnt += 1;
+            });
+            //console.log('homepage',missionGDoc);
+            //console.log("missionPortal1",$("#missionPortal1"));
+            smistmp+="</tbody></table>";
+            //console.log(`smistmp`,smistmp);
+            // 使用const声明变量，避免意外修改
+            sHtml += `<div>${smistmp}</div>` ;
+            return sHtml;
+        }
+        if(userEmail === null) {
+            console.log('userEmail.null',userEmail);
+            let restext = await getUser();
+            userEmail = restext.result.socialProfile.email;
+            performance = restext.result.performance;
+            document.title = userEmail;
+            if (userEmail != null) {
+                localStorage.setItem("currentUser", userEmail);
+            } else return "";
+            console.log("最终获取到的用户邮箱：", userEmail);
+            let sHtml = getHTML();
+            //console.log('sHtml',sHtml);
+            return sHtml;
+        } else
+        {
+            console.log('userEmail.exists',userEmail);
+            return getHTML();
+        }
+    }
     //首页home显示用户审过的po
     async function getMissionHTML(iowner) {
       // 等待获取任务数据（现在处于async函数中，可安全使用await）
