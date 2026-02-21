@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.5
+// @version      2.0.6
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -448,12 +448,15 @@
         // 折叠事件（原有逻辑）
         arrowWrapper.addEventListener('click', () => {
             panel.classList.toggle('collapsed');
+            console.log("panel.classList",panel.classList);
             saveCollapseState(panel.classList.contains('collapsed'));
             // 折叠后重置面板高度
             if (panel.classList.contains('collapsed')) {
-                panel.style.height = '35x';
+                panel.style.height = '35px';
+                console.log("panel.style.height:35px",panel.style.height);
             } else {
                 panel.style.height = 'auto'; // 恢复初始高度
+                console.log("panel.style.height:auto",panel.style.height);
             }
         });
 
