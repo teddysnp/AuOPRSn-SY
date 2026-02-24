@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.0.8
+// @version      4.1.0
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -210,6 +210,15 @@
                 let iauto = document.getElementById("idautolabel");
                 //if(iauto) console.log(iauto.textContent);
                 if(event.srcElement.innerText == "thumb_down" || event.srcElement.innerText == "標記為重複") {
+                    if (iauto.textContent == "自动") {
+                        iautoman = "自动";
+                        let ibtn = document.getElementById("btnauto");
+                        if (ibtn) {
+                            ibtn.click();
+                        }
+                    }
+                }
+                if(event.srcElement.innerText == "檢舉") {
                     if (iauto.textContent == "自动") {
                         iautoman = "自动";
                         let ibtn = document.getElementById("btnauto");
@@ -1127,9 +1136,16 @@
             let rdata = creviewdata;
             //rejectReasons 是个数组
             tmpfollow.id=id;tmpfollow.title=title;tmpfollow.lat=lat;tmpfollow.lng=lng;
+            let iauto = document.getElementById("idautolabel");
             //skip：NEW,EDIT,PHOTO都有
             if(rdata.skip){
-                if(pdata.canSkip){
+                let iskip = true;
+                if (iauto)
+                {
+                    if (iauto.textContent === "手动") iskip = false;
+                }
+                if(pdata.canSkip && iskip){
+                    console.log(`pdata.canSkip:${pdata.canSkip},iskip:${iskip}`);
                     tmptext = "照抄网络审核：略过";
                     tmpfollow.review="skip";
                     let perr = document.querySelector('button[title=""]');
@@ -1334,7 +1350,43 @@
                         tmptext = "照抄网络审核：非重复";
                         tmpfollow.review="正常非重复";
                     }
-                } else if(rdata.rejectReasons){
+                } else if (rdata.spam)
+                {
+                    let btncontainer = document.querySelector('.action-button-container');
+                    if(btncontainer) {
+                        let btn = document.querySelectorAll('.wf-button');
+                        if(btn[0]){
+                            btn[0].click();
+                            //click "检举"
+                            //选择检举的项目
+                            //document.querySelectorAll('mat-checkbox.mat-checkbox')[3].childNodes[0].click();
+                            setTimeout(function(){
+                                let chxbtn = document.querySelectorAll('mat-checkbox.mat-checkbox')[3].childNodes[0].click();
+                                if(chxbtn.length === 5 ) {
+                                    for(let i=0;i<rdata.rejectReasons.length;i++)
+                                    {
+                                        if(rdata.rejectReasons[i] === "ABUSE")
+                                        {
+                                            chxbtn[0].childNodex[0].click();
+                                        } else if(rdata.rejectReasons[i] === "FAKE")
+                                        {
+                                            chxbtn[1].childNodex[0].click();
+                                        } else if(rdata.rejectReasons[i] === "PERSONAL")
+                                        {
+                                            chxbtn[2].childNodex[0].click();
+                                        } else if(rdata.rejectReasons[i] === "EXPLICIT")
+                                        {
+                                            chxbtn[3].childNodex[0].click();
+                                        } else if(rdata.rejectReasons[i] === "OFFENSIVE")
+                                        {
+                                            chxbtn[4].childNodex[0].click();
+                                        }
+                                    }
+                                }
+                            },500);
+                        }
+                    }
+                } else if (rdata.rejectReasons){
                     tmptext = "照抄网络审核：否决";
                     tmpfollow.review="否决:"+rdata.rejectReasons;
                     console.log("审核记录拒",rdata.rejectReasons);
@@ -1385,7 +1437,8 @@
                                 }
                             },500);
                         }
-                        else {
+                        else
+                        {
                             if(rejcbxengstr.indexOf(rdata.rejectReasons[i])>=0) {
                                 console.log("准确拒",rdata.rejectReasons);
                                 let dcbxstr = rejcbxchnstr[rejcbxengstr.indexOf(rdata.rejectReasons[i])];
