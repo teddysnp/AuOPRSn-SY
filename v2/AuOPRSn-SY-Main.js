@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.1.0
+// @version      7.1.a
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -397,8 +397,8 @@
                     }
                 },
                 onerror: function(error) {
-                    console.log('error',error);
-                    showLog(`连接失败: ${error.message}`, true);
+                    console.log("onerror",error);
+                    err(new Error(error));
                 }
             });
         }).catch(e => {
@@ -1031,7 +1031,8 @@
                                 ilimit = postTimeoutLimit;
                             }
                         }
-                        if(Math.ceil((expiry - new Date().getTime()) / 1000) < ilimit +10 & Math.ceil((expiry - new Date().getTime()) / 1000) >= ilimit +9) {
+                        if(Math.ceil((expiry - new Date().getTime()) / 1000) < ilimit +10 & Math.ceil((expiry - new Date().getTime()) / 1000) >= ilimit +9)
+                        {
                             createNotify("注意", {
                                 body: "将到截止时间，10秒后强制提交!",
                                 icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
@@ -1040,11 +1041,13 @@
                         }
                         //console.log(Math.ceil((expiry - new Date().getTime())) < ilimit);
                         //console.log("autoReview",autoReview);
-                        if(( autoReview === "true") || ( autoReview === "false" & ( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit)) ){
+                        if(( autoReview === "true") || ( autoReview === "false" & ( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit)) )
+                        {
                             //console.log(( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit) );
                             //console.log(Math.ceil((expiry - new Date().getTime()) / 1000));
                             //console.log(ilimit);
                             //console.log(false || false);
+                //提交
                             if(submitCountDown <= 0){  //倒计时0，提交
                                 //如果秒数负数太多，且提交按钮不可用，则reload
                                 if(submitCountDown <= -60){
@@ -1055,7 +1058,7 @@
                                         mywin.clearInterval(ttm);
                                         ttm=null;
                                     },10);
-                                    //错误po 忽略
+                                //错误po 忽略
                                     if(errPortal.indexOf(portalData.id)>=0){
                                         let perr = document.querySelector('button[title=""]');
                                         if(perr) {
@@ -1069,7 +1072,9 @@
                                             perr.click();
 //                                            }
                                         }
-                                    } else {
+                                    } else
+                 //提交
+                                    {
                                         let isub = false;
                                         //适当拒
                                         let rej1 = document.querySelector("app-appropriate-rejection-flow-modal");
@@ -1116,28 +1121,43 @@
                                         //重复
                                         setTimeout(function(){
                                             if(!isub){
-                                                let supcommit = document.querySelector("app-confirm-duplicate-modal");
-                                                let supcommitbtn = null;
-                                                if(supcommit){
-                                                    //console.log(supcommit);
-                                                    supcommitbtn = supcommit.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
-                                                    if(supcommitbtn) {
-                                                        console.log("timer submit","duplicate clicked!");
-                                                        isub = true;
-                                                        supcommitbtn.click();
+                                  //检举
+                                                let sabusebtn = document.querySelector("app-report-modal") || document.querySelector("app-review-rejection-abuse-modal");
+                                                if (sabusebtn) {
+                                                    let p1 = sabusebtn.querySelector('button[class="wf-button wf-button--primary"]');
+                                                    if(p1) {
+                                                        if(!submitButtonClicked){
+                                                            //console.log(submitButtonClicked);
+                                                            isub = true;
+                                                            submitButtonClicked = true;
+                                                            console.log("timer","abuse submit!");
+                                                            submitCountDown=null;
+                                                            p1.click();
+                                                        }
                                                     }
-                                                }
-                                            }},200);
-                                        setTimeout(function(){
-                                            if(!isub){
-                                                let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
-                                                if (p1){
-                                                    if(!submitButtonClicked){
-                                                        //console.log(submitButtonClicked);
-                                                        submitButtonClicked = true;
-                                                        console.log("timer","submit!");
-                                                        submitCountDown=null;
-                                                        p1.click();
+                                                } else {
+                                    //重复
+                                                    let supcommit = document.querySelector("app-confirm-duplicate-modal");
+                                                    let supcommitbtn = null;
+                                                    if(supcommit){
+                                                        //console.log(supcommit);
+                                                        supcommitbtn = supcommit.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                                        if(supcommitbtn) {
+                                                            console.log("timer submit","duplicate clicked!");
+                                                            isub = true;
+                                                            supcommitbtn.click();
+                                                        }
+                                                    } else {
+                                                        let p1 = document.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
+                                                        if (p1){
+                                                            if(!submitButtonClicked){
+                                                                //console.log(submitButtonClicked);
+                                                                submitButtonClicked = true;
+                                                                console.log("timer","submit!");
+                                                                submitCountDown=null;
+                                                                p1.click();
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }},200);
@@ -1202,7 +1222,7 @@
             console.warn('未找到节点');
         } else{
             if(targetParent.childNodes.length >1){
-                console.log(targetParent.childNodes[1].tagName);
+                //console.log(targetParent.childNodes[1].tagName);
                 if( targetParent.childNodes[1].tagName === 'P') {
                     targetParent.childNodes[1].remove();
                 }
@@ -1217,7 +1237,7 @@
             console.warn('未找到节点');
         } else{
             if(targetParent1.childNodes.length >1){
-                console.log(targetParent1.childNodes[1].tagName);
+                //console.log(targetParent1.childNodes[1].tagName);
                 if( targetParent1.childNodes[1].tagName === 'P') {
                     targetParent1.childNodes[1].remove();
                 }
@@ -1535,108 +1555,123 @@
 
     //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
     function uploadReviewMark(portaldata){
-        try{
-            //console.log("uploadReviewMark:portaldata",portaldata);
-            //console.log("uploadReviewMark:missionGDoc",missionGDoc);
-            if(!missionGDoc){ return;}
-            let pname = null; let preview=null;
-            missionGDoc.forEach(item => {
-                let isMissPortal = false ;
-                if(item.portalID != null) {
-                    if(item.portalID === portaldata.id) {
-                        isMissPortal = true;
-                        console.log("任务po有人审过",portaldata.id+","+portaldata.title);
-                    }
-                } else{
-                    if (item.title === portaldata.title) {
-                        if(Math.abs(item.lat-portaldata.lat)<=ilatdis & Math.abs(item.lng-portaldata.lng)<=ilngdis) {
-                            isMissPortal = true;
-                            console.log("任务po没人审过",portaldata.id+","+portaldata.title);
-                            pname = portaldata.title;preview=item.status;
-                        }
+        function saveNewUserMark()
+        {
+            setTimeout(function(){
+                //保存任务id :
+                let sLocalEmail = userEmail ? userEmail : localStorage.currentUser;
+                console.log(`第一个审到的用户：${userEmail},${sLocalEmail}`);
+                let susermark='[{"useremail":"' + sLocalEmail +'",'
+                + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
+                +'"performance":"' + performance +'"'
+                + "}]";
+                //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
+                uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",JSON.parse(susermark));
+            },1000);
+        }
+        //console.log("uploadReviewMark:portaldata",portaldata);
+        //console.log("uploadReviewMark:missionGDoc",missionGDoc);
+        if(!missionGDoc){ return;}
+        let pname = null; let preview=null;
+        missionGDoc.forEach(item => {
+            let isFirstReview = false ;
+            //显示一个log是否有人审过，没有真正的作用
+            if(item.portalID != null) {
+                if(item.portalID === portaldata.id) {
+                    console.log("任务po有人审过",portaldata.id+","+portaldata.title);
+                }
+            } else {
+                if (item.title === portaldata.title) {
+                    if(Math.abs(item.lat-portaldata.lat)<=ilatdis & Math.abs(item.lng-portaldata.lng)<=ilngdis) {
+                        isFirstReview = true;
+                        console.log("任务po没人审过",portaldata.id+","+portaldata.title);
+                        pname = portaldata.title;preview=item.status;
                     }
                 }
+            }
+            try{
                 if (item.title === portaldata.title) {
                     if(Math.abs(item.lat-portaldata.lat)<=ilatdis & Math.abs(item.lng-portaldata.lng)<=ilngdis) {
                         pname = portaldata.title;preview=item.status;
+                    } else
+                    {
+                        console.log("同名po，非任务po");
+                        return;
                     }
                     if(pname === null) {return;}
+                    if(!item.portalID || item.portalID === null || item.portalID === "" ){
+                        //if(item.portalID === null || item.portalID === "" || item.status !== "审核"){
+                        console.log("更新任务portalID",item.portalID);
+                        console.log("更新任务status",item.status);
+                        item.status = "审核";
+                        item.portalID = portaldata.id;item.responsedate = formatDate(new Date(),"yyyy-MM-dd");
+                        if(portaldata.type !== "PHOTO") {
+                            item.imageUrl = portaldata.imageUrl;
+                            item.supportingImageUrls = portaldata.supportingImageUrls;
+                        }
+                        //saveToGDoc(item);
+                        let updateField={portalID:portaldata.id,status:item.status,responsedate:formatDate(new Date(),"yyyy-MM-dd"),imageUrl:item.imageUrl,supportingImageUrls:item.supportingImageUrls};
+                        cfClass.updateData(
+                            item.id, updateField,
+                            (res) => {
+                                console.log("更新任务状态为开审成功"+portaldata.id,res);
+                            },
+                            (err) => {
+                                console.log("更新任务状态为开审错误"+portaldata.id,err);
+                            });
+                    }
 
-                    if(portaldata.id){
+                    //无论是否有人审过，增多读取文件进行判断
+                    if(portaldata.id)
+                    {
                         console.log("任务po，保存用户审核打卡...");
                         //let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
                         let resp1 = readR2File("portal/portaluseremail/portal."+portaldata.id+".useremail.json")
                         .then(res=>{
-                            //如果任务未开审，则更新任务为开审并加id
-                            //console.log("preview",preview);
-                            if(item.portalID === null || item.portalID === "" || item.status !== "审核"){
-                                console.log("更新任务portalID",item.portalID);
-                                console.log("更新任务status",item.status);
-                                item.status = "审核";
-                                item.portalID = portaldata.id;item.responsedate = formatDate(new Date(),"yyyy-MM-dd");
-                                if(portaldata.type !== "PHOTO") {
-                                    item.imageUrl = portaldata.imageUrl;
-                                    item.supportingImageUrls = portaldata.supportingImageUrls;
-                                }
-                                //saveToGDoc(item);
-                                let updateField={portalID:portaldata.id,status:item.status,responsedate:formatDate(new Date(),"yyyy-MM-dd"),imageUrl:item.imageUrl,supportingImageUrls:item.supportingImageUrls};
-                                cfClass.updateData(
-                                    item.id, updateField,
-                                    (res) => {
-                                        console.log("更新任务状态为开审成功"+portaldata.id,res);
-                                    },
-                                    (err) => {
-                                        console.log("更新任务状态为开审错误"+portaldata.id,err);
-                                    });
-                            }
-
-                            console.log("读取用户打卡");
-                            //console.log("res",res);
-                            if(!res) {
-                                setTimeout(function(){
-                                    console.log("读取用户打卡","未找到用户打卡记录");
-                                    //保存任务id :
-                                    let sLocalEmail = userEmail ? userEmail : localStorage.currentUser;
-                                    console.log(`第一个审到的用户：${userEmail},${sLocalEmail}`);
-                                    let susermark='[{"useremail":"' + sLocalEmail +'",'
-                                    + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
-                                    +'"performance":"' + performance +'"'
-                                    + "}]";
-                                    //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
-                                    uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",JSON.parse(susermark));
-                                },1000);
+                            console.log("读取打卡res",res);
+                            console.log("读取打卡resp1",resp1);
+                            /*if(restext.indexOf("Error 404")>=0) {
+                                console.log("未找到打卡文件:",portaldata.id);
+                                saveNewUserMark();
                                 return;
-                            } else {
-                                const dupload = res.content;
-                                console.log("res",res);
-                                //const dupload = JSON.parse(res.content);
-                                for(let i=0;i<dupload.length;i++){
-                                    if(dupload[i].useremail == userEmail) {
-                                        console.log("存过打卡了");
-                                        return;
-                                    }
-                                }
-                                //console.log(dupload);
-                                let dupdata = dupload ;
-                                //dupdata.push(dupload);
-                                let sLocalEmail = userEmail ? userEmail : localStorage.currentUser;
-                                let susermark={useremail:sLocalEmail,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),performance:performance};
-                                dupdata.push(susermark);
-                                //console.log(dupdata);
-                                //console.log(JSON.stringify(dupdata));
-                                //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",JSON.stringify(dupdata));
-                                uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",dupdata);
+                            }*/
+                            if(!res)
+                            {
+                                saveNewUserMark();
+                                return;
                             }
+                            const dupload = res.content;
+                            console.log("res",res);
+                            //const dupload = JSON.parse(res.content);
+                            for(let i=0;i<dupload.length;i++){
+                                if(dupload[i].useremail == userEmail) {
+                                    console.log("存过打卡了");
+                                    return;
+                                }
+                            }
+                            //console.log(dupload);
+                            let dupdata = dupload ;
+                            //dupdata.push(dupload);
+                            let sLocalEmail = userEmail ? userEmail : localStorage.currentUser;
+                            let susermark={useremail:sLocalEmail,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),performance:performance};
+                            dupdata.push(susermark);
+                            uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",dupdata);
+                            console.log("保存用户打卡成功:",sLocalEmail);
                         },err=>{
-                            console.log(err);
+                            console.log("读取用户打卡错误err:",err);
+                            saveNewUserMark();
                         });
+                    } else
+                    {
+                        console.warn("无法保存用户打卡：",portaldata);
                     }
                     return ; //找到一个，就不进行下一个循环
                 }
-            });
-        } catch(e) {
-            console.log(e);
-        }
+            } catch(e) {
+                console.log("读取用户打卡错误try:",e);
+                saveNewUserMark();
+            }
+        });
     }
 
     //保存审po记录到本地：review1,review2 ; 新6.1.0以后：reviewLista reviewListb
