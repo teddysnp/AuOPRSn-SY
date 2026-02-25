@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.6
+// @version      2.0.7
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -493,7 +493,7 @@
                     if (idmission2) {
                         let sHtml = await getMissionHTML(2);
                         idmission2.innerHTML = sHtml;
-                        idmission2.innerHTML = idmission2.innerHTML.replace(/"{2}/g, '');
+                        //idmission2.innerHTML = idmission2.innerHTML.replace(/"{2}/g, '');
                     }
                 });
                 awaitElement(() => mapView.querySelector('#idportal2')).then(async (idportal2) => {
@@ -1941,40 +1941,40 @@
             //console.log('sHtml',sHtml);
             // 处理任务数据
             try{
-                //以下，生成任务列表显示：smis：表头；smistmp：最终表格；sultmp：用户邮箱排列块
-                //放在最后，因为需要generateReviewTable里读取本地来判断是否审过=>更新missionGDoc中的ownerstatus
-                //下一步，是否加入读取网络文件来判断是否审过？
-                //smistmp(字符串)/missionPortal(DOM元素)  ; sultmp(字符串，用户邮箱)/missionuser(显示用户邮箱排列块)
-                //0:title;1:位置;2:开审;3:type;4:显示已审;5:日期;6:审结;7:lat;8:lng;9:userEmail;10:id;11:挪的方向
-                let smistmp="<table style='width:100%'><thead><tr>"
-                +"<th style='width:15%'>名称</th><th style='width:15%'>位置</th>"
-                +"<th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>"
-                +"<th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>"
-                +"<th style='width:14%'>挪po</th>"
-                +"</tr></thead><tbody>";
-                //console.log('smistmp',smistmp);
+                let smistmp = `<table style='width:100%'>
+                                 <thead><tr>
+                                   <th style='width:15%'>名称</th><th style='width:15%'>位置</th>
+                                   <th style='width:10%'>类型</th><th style='width:5%'>开审</th><th style='width:5%'>已审</th>
+                                   <th style='width:20%'>时间</th><th style='width:8%'>纬度</th><th style='width:8%'>经度</th>
+                                   <th style='width:14%'>挪po</th>
+                                 </tr></thead>
+                                 <tbody>`;
+
                 missionGDoc.forEach(item => {
-                    let stitle = item.portalID ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>` : `"<td>${item.title}</td>"`;
-                    //只能显示通过的，所以下面不再需要
-                    //let sstatus = "<td>"+(item.status === "通过" ? "✓" : "" )+"</td>";
-                    let ssubmitter = '<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter;
-                    let slatlng = '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>";
-                    let stypes = '<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter
-                    + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.types+"</a></td>";
-                    let sbegin = "<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td>";
-                    let sownerstatus = "<td>" + (item.ownerstatus === true ? '✓' : '') +"</td>";
-                    let ssubmitteddate = item.portalID ? `<td><a href='${durl}/portal/portaluseremail/portal.${item.portalID}.useremail.json' target='_blank'>${item.submitteddate}</a></td>` : `<td>${item.submitteddate}</td>` ;
-                    let slat = `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${item.lat},${item.lng},'${item.portalID}')";>` + item.lat+"</a></td>";
-                    let slng = "<td>"+item.lng;
-                    let smove = "</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>";
-                    smistmp += "<tr>" + stitle + ssubmitter + slatlng + stypes + sbegin + sownerstatus + ssubmitteddate + slat + slng + smove + "</tr>";
+                    let powner = (item.submitter && item.submitter !== null) ? String(item.submitter).trim() : "";
+                    let isOwner = item.submitter === userEmail;
+                    let stitle = item.portalID
+                    ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>`
+                    : `<td>${item.title}</td>`;
+                    let ssubmitter_latlng = `<td><a href="javascript:void(0);" us="us2" owner="${isOwner}" powner="${powner}"
+                        tagName="${item.portalID}" onclick="switchUserReviewDiv(${iowner})">${item.lat},${item.lng}</a> </td>`;
+                    let stypes = `<td> <a href="javascript:void(0);" us="us1" owner="${isOwner}" powner="${powner}"
+                        tagName="${item.portalID}" onclick="switchUserReviewDiv(${iowner})">${item.types}</a></td>`;
+                    let sbegin = `<td>${(item.status === "审核" || item.status === "通过" ? "✓" : "")}</td>`;
+                    let sownerstatus = `<td>${(item.ownerstatus === true ? '✓' : '')}</td>`;
+                    let ssubmitteddate = item.portalID ? `<td><a href='${durl}/portal/portaluseremail/portal.${item.portalID}.useremail.json'
+                         target='_blank'>${item.submitteddate}</a></td>` : `<td>${item.submitteddate}</td>`;
+                    let slat = `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${item.lat},${item.lng},'${item.portalID}')">${item.lat}</a></td>`;
+                    let slng = `<td>${item.lng}</td>`;
+                    let moveText = item.moveoptions === "右" ? "最右" : (item.moveoptions === "下" ? "最下" : (item.moveoptions + item.moveplace));
+                    let smove = `<td>${moveText}</td>`;
+
+                    smistmp += `<tr>${stitle}${ssubmitter_latlng}${stypes}${sbegin}${sownerstatus}${ssubmitteddate}${slat}${slng}${smove}</tr>`;
                 });
-                //console.log('homepage',missionGDoc);
-                //console.log("missionPortal1",$("#missionPortal1"));
-                smistmp+="</tbody></table>";
-                //console.log(`smistmp`,smistmp);
-                // 使用const声明变量，避免意外修改
-                sHtml += `<div>${smistmp}</div>` ;
+
+                smistmp += "</tbody></table>";
+                sHtml += `<div>${smistmp}</div>`;
+
                 //console.log('sHtml',sHtml);
                 return sHtml;
 
