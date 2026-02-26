@@ -1361,7 +1361,7 @@
                             //选择检举的项目
                             //document.querySelectorAll('mat-checkbox.mat-checkbox')[3].childNodes[0].click();
                             setTimeout(function(){
-                                let chxbtn = document.querySelectorAll('mat-checkbox.mat-checkbox')[3].childNodes[0].click();
+                                let chxbtn = document.querySelectorAll('mat-checkbox.mat-checkbox');
                                 if(chxbtn.length === 5 ) {
                                     for(let i=0;i<rdata.rejectReasons.length;i++)
                                     {
