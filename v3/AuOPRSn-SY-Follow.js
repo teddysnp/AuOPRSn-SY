@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.1.0
+// @version      4.1.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -489,8 +489,8 @@
                         uploadPostData(portalData,JSON.parse(data),ic,true);
                     //}
 
-                    console.log("skip",data);
-                    console.log("skip",portalData);
+                    //console.log("skip",data);
+                    //console.log("skip",portalData);
                     return send.apply(_this,data);
                 }
             }
@@ -1136,24 +1136,37 @@
             let rdata = creviewdata;
             //rejectReasons 是个数组
             tmpfollow.id=id;tmpfollow.title=title;tmpfollow.lat=lat;tmpfollow.lng=lng;
-            let iauto = document.getElementById("idautolabel");
             //skip：NEW,EDIT,PHOTO都有
             if(rdata.skip){
-                let iskip = true;
-                if (iauto)
-                {
-                    if (iauto.textContent === "手动") iskip = false;
-                }
-                if(pdata.canSkip && iskip){
-                    console.log(`pdata.canSkip:${pdata.canSkip},iskip:${iskip}`);
+                if(pdata.canSkip){
                     tmptext = "照抄网络审核：略过";
+                    setTimeout(function(){
+                        let ilabel = document.getElementById("iduserlabel");
+                        if(ilabel) ilabel.textContent = tmptext;
+                        //console.log("iduserlabel",tmptext);
+                    },200);
                     tmpfollow.review="skip";
                     let perr = document.querySelector('button[title=""]');
                     if(perr) {
                         if(perr.textContent=" 略過 "){
-                            console.log("略过","略过按钮被点击");
                             setTimeout(function(){
-                                perr.click();
+                                let iauto = document.getElementById("idautolabel");
+                                let iskip = true;
+                                //console.log("follow:iauto",iauto);
+                                if (iauto)
+                                {
+                                    if (iauto.textContent === "手动") iskip = false;
+                                }
+                                //console.log("follow:iskip",iskip);
+                                if(iskip)
+                                {
+                                    console.log("略过","略过按钮被点击");
+                                    perr.click();
+                                }
+                                else
+                                {
+                                    console.log("略过","手动：略过按钮未点击");
+                                }
                             },5000);
                         }
                     }
@@ -1367,19 +1380,19 @@
                                     {
                                         if(rdata.rejectReasons[i] === "ABUSE")
                                         {
-                                            chxbtn[0].childNodex[0].click();
+                                            chxbtn[0].childNodes[0].click();
                                         } else if(rdata.rejectReasons[i] === "FAKE")
                                         {
-                                            chxbtn[1].childNodex[0].click();
+                                            chxbtn[1].childNodes[0].click();
                                         } else if(rdata.rejectReasons[i] === "PERSONAL")
                                         {
-                                            chxbtn[2].childNodex[0].click();
+                                            chxbtn[2].childNodes[0].click();
                                         } else if(rdata.rejectReasons[i] === "EXPLICIT")
                                         {
-                                            chxbtn[3].childNodex[0].click();
+                                            chxbtn[3].childNodes[0].click();
                                         } else if(rdata.rejectReasons[i] === "OFFENSIVE")
                                         {
-                                            chxbtn[4].childNodex[0].click();
+                                            chxbtn[4].childNodes[0].click();
                                         }
                                     }
                                 }
