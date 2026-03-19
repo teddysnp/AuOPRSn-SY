@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.7
+// @version      2.0.8
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1097,6 +1097,26 @@
         reviewMask.addEventListener('click', closeReviewPopup);
         // 4. 阻止弹窗内点击事件冒泡到遮罩（避免点击弹窗内容也关闭）
         reviewPopup.addEventListener('click', (e) => e.stopPropagation());
+
+        // 5. 绑定点击打开进程事件
+        setTimeout(function(){
+            console.log("btn-all",document.getElementById('btn-all'));
+            if(document.getElementById('btn-all')){
+                document.getElementById('btn-all').addEventListener('click', () => {
+                    openProfiles('.wayfarer-useremail');
+                });
+
+                document.getElementById('btn-unreviewed-all').addEventListener('click', () => {
+                    // 这里假设“未审过”包含 .unreviewed 这个类，请根据实际网页结构修改
+                    openProfiles('.wayfarer-sqno');
+                });
+
+                document.getElementById('btn-unreviewed-5').addEventListener('click', () => {
+                    openProfiles('.wayfarer-sqno', 5);
+                });
+            }
+        },500);
+
     }
 
     //打开弹窗 @param {string} content - 弹窗要显示的HTML内容
@@ -1289,6 +1309,7 @@
                         }
                     }
 
+                    const stmpbtn = `  <div style="display: flex; gap: 10px;"> <button id="btn-all">打开全部</button> <button id="btn-unreviewed-all">打开全部未审过</button> <button id="btn-unreviewed-5">打开5个未审过</button> </div>`;
                     // 6. 构建弹窗内容HTML（保留原有渲染逻辑）
                     stmp += `<div style='display: flex;'>`;
                     if (userreview.length > 0) console.log('userReviewJson', userReviewJson);
@@ -1304,6 +1325,17 @@
                             userEmailList[i].indexOf(';', userEmailList[i].indexOf(';') + 1)
                         );
                         slink = userEmailList[i].substring(userEmailList[i].lastIndexOf(';') + 1);
+                        if (slink === "default") {
+                            slink = "Default";
+                        } else
+                        {
+                            slink = "Profile%20" + slink;
+                        }
+                        if (us === "us1") {
+                            slink = "mychrome://"+slink;
+                        } else if (us === "us2") {
+                            slink = "mywinchrome://"+slink;
+                        }
 
                         if (powner) {
                             po = semail.includes(powner) ? "<span style='color:red'>O:</span>" : "<span></span>";
@@ -1314,19 +1346,19 @@
                         // 审核状态判断
                         if (findUserEmail(userreview, semail) > 0) {
                             if (userEmailList[i].includes(userEmail)) {
-                                stmp += `<div class='sqselfok'>${po}${sname}</div>`;
+                                stmp += `<div class='wayfarer-sqselfok wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
                             } else {
-                                stmp += `<div class='sqok'>${po}${sname}</div>`;
+                                stmp += `<div class='wayfarer-sqok wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
                             }
                         } else {
                             if (semail.includes(userEmail)) {
                                 if (owner === "true") {
-                                    stmp += `<div class='sqselfowner'>${po}${sname}</div>`;
+                                    stmp += `<div class='wayfarer-sqselfowner wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
                                 } else {
-                                    stmp += `<div class='sqselfno'>${po}${sname}</div>`;
+                                    stmp += `<div class='wayfarer-sqselfno wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
                                 }
                             } else {
-                                stmp += `<div class='sqno'>${po}${sname}</div>`;
+                                stmp += `<div class='wayfarer-sqno wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
                             }
                         }
 
@@ -1336,9 +1368,10 @@
                         }
                     }
                     stmp += `</div>`;
+                    const shtml = `<div>${stmpbtn}<br>${stmp} </div>`
 
                     // 7. 打开弹窗并渲染内容（替代原replaceWith）
-                    openReviewPopup(stmp);
+                    openReviewPopup(shtml);
                 })
                     .catch(err => {
                     console.log("err, not found", err);
@@ -1348,6 +1381,39 @@
             console.log("switchUserReviewDiv 异常：", e);
         }
     };
+    const openProfiles = (selector, limit = 999) => {
+        const containers = document.querySelectorAll(selector);
+        let count = 0;
+
+        containers.forEach((box) => {
+            if (count >= limit) return;
+            const link = box.querySelector('a');
+
+            if (link && link.href.includes('mychrome://')) {
+                // 关键修改：利用闭包和稍微快一点的频率
+                const targetProtocol = link.href;
+                if(targetProtocol === "mychrome://Profile%20") return;
+
+                setTimeout(() => {
+                    console.log(`尝试启动: ${targetProtocol}`);
+                    // 使用 window.open 通常比 location.assign 在处理多协议时更少被拦截
+                    const win = window.open(targetProtocol, '_self');
+
+                    // 如果 _self 被拦截，可以尝试创建一个隐藏的 iframe 来触发
+                    if (!win) {
+                        const iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        iframe.src = targetProtocol;
+                        document.body.appendChild(iframe);
+                        setTimeout(() => document.body.removeChild(iframe), 1000);
+                    }
+                }, count * 500); // 间隔设为 500ms 左右比较平衡
+
+                count++;
+            }
+        });
+    };
+
 
     // 补充：确保弹窗样式类生效（可根据需要调整）
     const style = document.createElement('style');
@@ -2379,15 +2445,15 @@
 
     initUserEmailList();
     function initUserEmailList(){
-        userEmailList1=["snpsl;snp66666@gmail.com;open chrome 1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;","tydtyd;tydtyd@gmail.com;",
-                        "kingsnan;zhangnan107107@gmail.com;","18kpt;sunkpty@gmail.com;","zhangnan007;zhangnan_007@outlook.com;","znan008Uni163-11.35;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;open chrome 23",
-                       "pkpkqq01;pkpkqq01@gmail.com;","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;","poketydf02;poketydf02@gmail.com;","poketydf03;poketydf03@gmail.com;",
+        userEmailList1=["snpsl;snp66666@gmail.com;1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;9","tydtyd;tydtyd@gmail.com;default",
+                        "kingsnan;zhangnan107107@gmail.com;2","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;open chrome 23",
+                       "pkpkqq01;pkpkqq01@gmail.com;4","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;5","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;6","poketydf02;poketydf02@gmail.com;7","poketydf03;poketydf03@gmail.com;8",
                        "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;","pokepokem01;pokepokem01@outlook.com;",
                        "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
                        ];
-        userEmailList2=["shixz1;w4b4uh134@gmail.com;","shixz7;1806424832mjn@gmail.com;","FishDragonKing;269999205@qq.com;","15998804246dyh-shixz3;15998804246dyh@gmail.com;","hch463734529;hch463734529@gmail.com;",
-                        "masterxiaoli666;masterxiaoli666@gmail.com;","shizx1twk-wcy;shizx1twk@gmail.com;","470274941;470274941@qq.com;","wczmw;wczmw@sina.com;","jbhluciuscoke;jbhluciuscoke@gmail.com;",
-                        "1272970170qq;1272970170qq@gmail.com;","Sjn/3301502859qq;3301502859qq@gmail.com;",";;",";;",";;"
+        userEmailList2=["shixz1;w4b4uh134@gmail.com;2","shixz7;1806424832mjn@gmail.com;1","FishDragonKing;269999205@qq.com;4","shixz3;15998804246dyh@gmail.com;83","hch463734529;hch463734529@gmail.com;5",
+                        "masterxiaoli666;masterxiaoli666@gmail.com;11","shizx1twk-wcy;shizx1twk@gmail.com;21","470274941;470274941@qq.com;19","wczmw;wczmw@sina.com;50","jbhluciuscoke;jbhluciuscoke@gmail.com;10",
+                        "1272970170qq;1272970170qq@gmail.com;101","Sjn/3301502859qq;3301502859qq@gmail.com;38","lykillua13;lykillua13@gmail.com;98","jiaotianxing940111;jiaotianxing940111@gmail.com;99",";;"
                        ];
 
     }
@@ -2412,7 +2478,7 @@
               align-items: center;
               height: 100vh;
           }
-          .sqno {
+          .wayfarer-sqno {
               margin-left: 2em;
               padding-top: 1em;
               width: 250px;
@@ -2420,7 +2486,7 @@
               font-size:18px;
               background-color: #cccccc;
           }
-          .sqok {
+          .wayfarer-sqok {
               margin-left: 2em;
               padding-top: 1em;
               width: 250px;
@@ -2429,7 +2495,7 @@
               color: #ffe600;
               background-color: #007947;
           }
-          .sqselfowner {
+          .wayfarer-sqselfowner {
               margin-left: 2em;
               padding-top: 1em;
               width: 250px;
@@ -2441,7 +2507,7 @@
               color:#fcf16e;
               background-color: #7bbfea;
           }
-          .sqselfno {
+          .wayfarer-sqselfno {
               margin-left: 2em;
               padding-top: 1em;
               width: 250px;
@@ -2453,7 +2519,7 @@
               color:#f58220;
               background-color: #cccccc;
           }
-          .sqselfok {
+          .wayfarer-sqselfok {
               margin-left: 2em;
               padding-top: 1em;
               width: 250px;
