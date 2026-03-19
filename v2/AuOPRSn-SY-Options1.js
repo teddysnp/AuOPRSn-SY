@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.9
+// @version      2.0.10
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1381,38 +1381,35 @@
             console.log("switchUserReviewDiv 异常：", e);
         }
     };
-    const openProfiles = (selector, limit = 999) => {
-        const containers = document.querySelectorAll(selector);
-        let count = 0;
+const openProfiles = (selector, limit = 999) => {
+    const containers = document.querySelectorAll(selector);
+    const profileList = [];
 
-        containers.forEach((box) => {
-            if (count >= limit) return;
-            const link = box.querySelector('a');
+    containers.forEach((box) => {
+        if (profileList.length >= limit) return;
+        const link = box.querySelector('a');
 
-            if (link && (link.href.includes('mychrome://') || link.href.includes('mywinchrome://'))) {
-                // 关键修改：利用闭包和稍微快一点的频率
-                const targetProtocol = link.href;
-                if(targetProtocol === "mychrome://Profile%20" || targetProtocol === "mywinchrome://Profile%20") return;
+        if (link && (link.href.includes('mychrome://') || link.href.includes('mywinchrome://'))) {
+            // 提取 Profile 名称（去除协议头和末尾斜杠）
+            let pName = link.href.replace(/my(win)?chrome:\/\//, '').replace(/\/$/, '');
 
-                setTimeout(() => {
-                    console.log(`尝试启动: ${targetProtocol}`);
-                    // 使用 window.open 通常比 location.assign 在处理多协议时更少被拦截
-                    const win = window.open(targetProtocol, '_self');
+            // 过滤无效或空的 Profile
+            if (pName === "Profile%20" || pName === "") return;
 
-                    // 如果 _self 被拦截，可以尝试创建一个隐藏的 iframe 来触发
-                    if (!win) {
-                        const iframe = document.createElement('iframe');
-                        iframe.style.display = 'none';
-                        iframe.src = targetProtocol;
-                        document.body.appendChild(iframe);
-                        setTimeout(() => document.body.removeChild(iframe), 1000);
-                    }
-                }, count * 500); // 间隔设为 500ms 左右比较平衡
+            profileList.push(pName);
+        }
+    });
 
-                count++;
-            }
-        });
-    };
+    if (profileList.length > 0) {
+        // 将所有 Profile 拼接到一起，例如: Profile%201,Profile%202,Profile%203
+        const finalUrl = `mywinchrome://${profileList.join(',')}`;
+        console.log(`正在批量启动: ${finalUrl}`);
+
+        // 关键：由于是批量启动，必须由用户点击触发的操作流直接执行此行
+        window.location.href = finalUrl;
+    }
+};
+
 
 
     // 补充：确保弹窗样式类生效（可根据需要调整）
