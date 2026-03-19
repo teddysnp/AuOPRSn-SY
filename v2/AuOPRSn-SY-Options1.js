@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.8
+// @version      2.0.9
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1389,10 +1389,10 @@
             if (count >= limit) return;
             const link = box.querySelector('a');
 
-            if (link && link.href.includes('mychrome://')) {
+            if (link && (link.href.includes('mychrome://') || link.href.includes('mywinchrome://'))) {
                 // 关键修改：利用闭包和稍微快一点的频率
                 const targetProtocol = link.href;
-                if(targetProtocol === "mychrome://Profile%20") return;
+                if(targetProtocol === "mychrome://Profile%20" || targetProtocol === "mywinchrome://Profile%20") return;
 
                 setTimeout(() => {
                     console.log(`尝试启动: ${targetProtocol}`);
