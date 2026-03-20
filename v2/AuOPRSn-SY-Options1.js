@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.10
+// @version      2.0.11
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1324,7 +1324,8 @@
                             userEmailList[i].indexOf(';') + 1,
                             userEmailList[i].indexOf(';', userEmailList[i].indexOf(';') + 1)
                         );
-                        slink = userEmailList[i].substring(userEmailList[i].lastIndexOf(';') + 1);
+                        const slinkid = userEmailList[i].substring(userEmailList[i].lastIndexOf(';') + 1);
+                        slink = slinkid;
                         if (slink === "default") {
                             slink = "Default";
                         } else
@@ -1337,6 +1338,7 @@
                             slink = "mywinchrome://"+slink;
                         }
 
+                        const sFinallink = `${slink}TARGETURLwayfarer.nianticlabs.com/new/review`;
                         if (powner) {
                             po = semail.includes(powner) ? "<span style='color:red'>O:</span>" : "<span></span>";
                         } else {
@@ -1346,19 +1348,19 @@
                         // 审核状态判断
                         if (findUserEmail(userreview, semail) > 0) {
                             if (userEmailList[i].includes(userEmail)) {
-                                stmp += `<div class='wayfarer-sqselfok wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
+                                stmp += `<div class='wayfarer-sqselfok wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
                             } else {
-                                stmp += `<div class='wayfarer-sqok wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
+                                stmp += `<div class='wayfarer-sqok wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
                             }
                         } else {
                             if (semail.includes(userEmail)) {
                                 if (owner === "true") {
-                                    stmp += `<div class='wayfarer-sqselfowner wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
+                                    stmp += `<div class='wayfarer-sqselfowner wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
                                 } else {
-                                    stmp += `<div class='wayfarer-sqselfno wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
+                                    stmp += `<div class='wayfarer-sqselfno wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
                                 }
                             } else {
-                                stmp += `<div class='wayfarer-sqno wayfarer-useremail'>${po}<a href="${slink}">${sname}</a></div>`;
+                                stmp += `<div class='wayfarer-sqno wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
                             }
                         }
 
@@ -1381,34 +1383,51 @@
             console.log("switchUserReviewDiv 异常：", e);
         }
     };
-const openProfiles = (selector, limit = 999) => {
-    const containers = document.querySelectorAll(selector);
-    const profileList = [];
+    const openProfiles = (selector, limit = 999) => {
+        const containers = document.querySelectorAll(selector);
+        const profileList = [];
 
-    containers.forEach((box) => {
-        if (profileList.length >= limit) return;
-        const link = box.querySelector('a');
+        let poto = "";
+        console.log('selector',selector);
+        containers.forEach((box) => {
+            if (profileList.length >= limit) return;
+            const link = box.querySelector('a');
 
-        if (link && (link.href.includes('mychrome://') || link.href.includes('mywinchrome://'))) {
-            // 提取 Profile 名称（去除协议头和末尾斜杠）
-            let pName = link.href.replace(/my(win)?chrome:\/\//, '').replace(/\/$/, '');
+            console.log('link',link);
+            if (link && (link.href.includes('mychrome://') || link.href.includes('mywinchrome://'))) {
+                if (link.href.includes('mychrome://')) {
+                    poto = `mychrome`;
+                }
+                if (link.href.includes('mywinchrome://')) {
+                    poto = `mywinchrome`;
+                }
+                // 提取 Profile 名称（去除协议头和末尾斜杠）
+                //let pName = link.href.replace(/my(win)?chrome:\/\//, '').replace(/\/$/, '');
+                let pName = `Profile%20${link.id}`;
 
-            // 过滤无效或空的 Profile
-            if (pName === "Profile%20" || pName === "") return;
+                // 过滤无效或空的 Profile
+                if (pName === "Profile%20" || pName === "") return;
 
-            profileList.push(pName);
+                profileList.push(pName);
+            }
+        });
+
+            console.log('profileList',profileList);
+        if (profileList.length > 0) {
+            // 将所有 Profile 拼接到一起，例如: Profile%201,Profile%202,Profile%203
+            const profiles = profileList.join(',');
+            const target = "wayfarer.nianticlabs.com/new/review";
+
+            // 构造一个绝对不含特殊字符的纯文本：Profile 2URLhttps...
+            // 我们用 "TARGETURL" 作为分隔符
+            const finalUrl = `${poto}://${profiles}TARGETURL${target}`;
+
+            console.log(`发送协议链接: ${finalUrl}`);
+            window.location.href = finalUrl;
+
+
         }
-    });
-
-    if (profileList.length > 0) {
-        // 将所有 Profile 拼接到一起，例如: Profile%201,Profile%202,Profile%203
-        const finalUrl = `mywinchrome://${profileList.join(',')}`;
-        console.log(`正在批量启动: ${finalUrl}`);
-
-        // 关键：由于是批量启动，必须由用户点击触发的操作流直接执行此行
-        window.location.href = finalUrl;
-    }
-};
+    };
 
 
 
@@ -2445,7 +2464,7 @@ const openProfiles = (selector, limit = 999) => {
         userEmailList1=["snpsl;snp66666@gmail.com;1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;9","tydtyd;tydtyd@gmail.com;default",
                         "kingsnan;zhangnan107107@gmail.com;2","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;open chrome 23",
                        "pkpkqq01;pkpkqq01@gmail.com;4","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;5","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;6","poketydf02;poketydf02@gmail.com;7","poketydf03;poketydf03@gmail.com;8",
-                       "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;","pokepokem01;pokepokem01@outlook.com;",
+                       "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;13","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;12","pokepokem01;pokepokem01@outlook.com;11",
                        "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
                        ];
         userEmailList2=["shixz1;w4b4uh134@gmail.com;2","shixz7;1806424832mjn@gmail.com;1","FishDragonKing;269999205@qq.com;4","shixz3;15998804246dyh@gmail.com;83","hch463734529;hch463734529@gmail.com;5",
@@ -2497,9 +2516,9 @@ const openProfiles = (selector, limit = 999) => {
               padding-top: 1em;
               width: 250px;
               height: 50px;
-              borderStyle:solid;
-              borderWidth:2px;
-              bordercolor:#f58220;
+              border-style:solid;
+              border-width:2px;
+              border-color:#f58220;
               font-size:18px;
               color:#fcf16e;
               background-color: #7bbfea;
@@ -2509,9 +2528,9 @@ const openProfiles = (selector, limit = 999) => {
               padding-top: 1em;
               width: 250px;
               height: 50px;
-              borderStyle:solid;
-              borderWidth:2px;
-              bordercolor:#f58220;
+              border-style:solid;
+              border-width:2px;
+              border-color:#f58220;
               font-size:18px;
               color:#f58220;
               background-color: #cccccc;
@@ -2521,9 +2540,9 @@ const openProfiles = (selector, limit = 999) => {
               padding-top: 1em;
               width: 250px;
               height: 50px;
-              borderStyle:solid;
-              borderWidth:2px;
-              bordercolor:#f58220;
+              border-style:solid;
+              border-width:2px;
+              border-color:#f58220;
               font-size:18px;
               color: #faa755;
               background-color: #007947;
