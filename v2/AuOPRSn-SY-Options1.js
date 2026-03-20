@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.11
+// @version      2.0.12
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1388,12 +1388,12 @@
         const profileList = [];
 
         let poto = "";
-        console.log('selector',selector);
+        //console.log('selector',selector); //.wayfarer-useremail
         containers.forEach((box) => {
             if (profileList.length >= limit) return;
             const link = box.querySelector('a');
 
-            console.log('link',link);
+            //console.log('link',link);
             if (link && (link.href.includes('mychrome://') || link.href.includes('mywinchrome://'))) {
                 if (link.href.includes('mychrome://')) {
                     poto = `mychrome`;
@@ -1416,13 +1416,22 @@
         if (profileList.length > 0) {
             // 将所有 Profile 拼接到一起，例如: Profile%201,Profile%202,Profile%203
             const profiles = profileList.join(',');
-            const target = "wayfarer.nianticlabs.com/new/review";
+            let target ;
+            if (selector === ".wayfarer-useremail")
+            {
+                target = "wayfarer.nianticlabs.com/new";
+            }
+            else
+            {
+                target = "wayfarer.nianticlabs.com/new/review";
+            }
 
             // 构造一个绝对不含特殊字符的纯文本：Profile 2URLhttps...
             // 我们用 "TARGETURL" 作为分隔符
             const finalUrl = `${poto}://${profiles}TARGETURL${target}`;
 
             console.log(`发送协议链接: ${finalUrl}`);
+            //return;
             window.location.href = finalUrl;
 
 
