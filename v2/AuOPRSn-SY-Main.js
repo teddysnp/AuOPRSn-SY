@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.1.a
+// @version      7.2.0
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -244,7 +244,53 @@
     }
 
     // 上传数据到R2   uploadDataToR2(folderPath:路径 , fileName:文件名 , data:json数据)
-    function uploadDataToR2(folderPath,fileName,data) {
+    function uploadDataToR2(folderPath, fileName, data) {
+        // 返回 Promise
+        return new Promise((resolve, reject) => {
+            try {
+                console.log(`正在上传数据:${folderPath}`);
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: CONFIG.WORKER_URL,
+                    fetch: true, // 某些环境下开启 fetch 模式
+                    keepalive: true, // 关键：允许请求在页面卸载后继续执行
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Secret-Key': CONFIG.SECRET_KEY
+                    },
+                    data: JSON.stringify({
+                        folderPath: folderPath,
+                        fileName: fileName,
+                        data: data
+                    }),
+                    onload: function(response) {
+                        try {
+                            const result = JSON.parse(response.responseText);
+                            if (result.success) {
+                                console.log(`数据上传成功: ${result.fullPath}`);
+                                resolve(result); // 成功时触发 resolve
+                            } else {
+                                console.log(`上传失败: ${result.error || result.details}`);
+                                reject(result.error); // 业务逻辑失败
+                            }
+                        } catch (e) {
+                            console.log(`解析响应失败: ${e.message}`);
+                            reject(e);
+                        }
+                    },
+                    onerror: function(error) {
+                        console.log(`请求错误: ${error.message}`);
+                        reject(error);
+                    }
+                });
+            } catch (e) {
+                console.log(`执行异常: ${e.message}`);
+                reject(e);
+            }
+        });
+    }
+
+ /*   function uploadDataToR2(folderPath,fileName,data) {
         try {
             console.log(`正在上传数据:${folderPath}`);
             GM_xmlhttpRequest({
@@ -279,6 +325,7 @@
             console.log(`解析响应失败: ${e.message}`);
         }
     }
+*/
     // 列出R2中的文件
     function listR2Files(folderPath) {
         const listContainer = document.getElementById('fileList');
@@ -748,6 +795,7 @@
             let ltimerlabel2 = document.getElementById("idltimerlabel");
             let countdown = document.getElementById("idcountdown");
             //console.log("countdown",countdown);
+      //提交在这里
             if(countdown === null){  //标签不存在则创建
                 let loc = "";
                 const divall=document.createElement("div");
@@ -959,6 +1007,7 @@
                     },1000);
                //}
                 let iexp = false ;
+          //提交在这里
                 if(timer==null) { timer = mywin.setInterval(() => {
                     //moveReviewCardBeforePhoto();
 
@@ -1011,6 +1060,7 @@
                     //updateTime(ltimerlabel2, expiry);
                     //console.log(submitCountDown);
                     let ss1=document.getElementById('appropriate-card');
+            //提交在这里
                     if (document.getElementById('appropriate-card') || document.querySelector('app-review-edit') || document.querySelector('app-review-photo'))
                     {
                         //console.log('scoreAlready',scoreAlready);
@@ -1041,6 +1091,7 @@
                         }
                         //console.log(Math.ceil((expiry - new Date().getTime())) < ilimit);
                         //console.log("autoReview",autoReview);
+                    //提交在这里
                         if(( autoReview === "true") || ( autoReview === "false" & ( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit)) )
                         {
                             //console.log(( (Math.ceil((expiry - new Date().getTime()) / 1000)) < ilimit) );
@@ -1058,6 +1109,7 @@
                                         mywin.clearInterval(ttm);
                                         ttm=null;
                                     },10);
+                                //略过po
                                 //错误po 忽略
                                     if(errPortal.indexOf(portalData.id)>=0){
                                         let perr = document.querySelector('button[title=""]');
@@ -1557,16 +1609,16 @@
     function uploadReviewMark(portaldata){
         function saveNewUserMark()
         {
+            //保存任务id :
+            let sLocalEmail = userEmail ? userEmail : localStorage.currentUser;
+            console.log(`第一个审到的用户：${userEmail},${sLocalEmail}`);
+            let susermark='[{"useremail":"' + sLocalEmail +'",'
+            + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
+            +'"performance":"' + performance +'"'
+            + "}]";
+            uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",JSON.parse(susermark));
             setTimeout(function(){
-                //保存任务id :
-                let sLocalEmail = userEmail ? userEmail : localStorage.currentUser;
-                console.log(`第一个审到的用户：${userEmail},${sLocalEmail}`);
-                let susermark='[{"useremail":"' + sLocalEmail +'",'
-                + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
-                +'"performance":"' + performance +'"'
-                + "}]";
                 //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
-                uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",JSON.parse(susermark));
             },1000);
         }
         //console.log("uploadReviewMark:portaldata",portaldata);
@@ -1586,7 +1638,13 @@
                         isFirstReview = true;
                         console.log("任务po没人审过",portaldata.id+","+portaldata.title);
                         pname = portaldata.title;preview=item.status;
+                    } else
+                    {
+                        console.log("任务po，但是位置信息奇怪");
                     }
+                } else
+                {
+                    console.log("item.title,portaldata.title",item.title,portaldata.title);
                 }
             }
             try{
@@ -1627,7 +1685,7 @@
                         console.log("任务po，保存用户审核打卡...");
                         //let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
                         let resp1 = readR2File("portal/portaluseremail/portal."+portaldata.id+".useremail.json")
-                        .then(res=>{
+                        .then(async (res)=>{
                             console.log("读取打卡res",res);
                             console.log("读取打卡resp1",resp1);
                             /*if(restext.indexOf("Error 404")>=0) {
@@ -1655,8 +1713,8 @@
                             let sLocalEmail = userEmail ? userEmail : localStorage.currentUser;
                             let susermark={useremail:sLocalEmail,datetime:formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),performance:performance};
                             dupdata.push(susermark);
-                            uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",dupdata);
-                            console.log("保存用户打卡成功:",sLocalEmail);
+                            await uploadDataToR2("portal/portaluseremail/", "portal." + portaldata.id + ".useremail.json", dupdata);
+                            console.log("保存用户打卡成功:", sLocalEmail);
                         },err=>{
                             console.log("读取用户打卡错误err:",err);
                             saveNewUserMark();
