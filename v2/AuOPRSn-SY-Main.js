@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.0
+// @version      7.2.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -762,6 +762,8 @@
                     return;
                 }
                 //console.log('portalData',portalData);
+                console.log("1️⃣开始新审核:",portalData.title);
+                console.log("📋原始po数据:",portalData);
                 uploadReviewMark(portalData);  //上传数据至用户打卡
                 expireTime = portalData.expires;
                 initTimer(ref.parentNode.parentNode, portalData.expires ,portalData);
@@ -1607,6 +1609,7 @@
 
     //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
     function uploadReviewMark(portaldata){
+        console.log("uploadReviewMark loaded");
         function saveNewUserMark()
         {
             //保存任务id :
@@ -1623,14 +1626,24 @@
         }
         //console.log("uploadReviewMark:portaldata",portaldata);
         //console.log("uploadReviewMark:missionGDoc",missionGDoc);
-        if(!missionGDoc){ return;}
+        if(!missionGDoc){
+            console.log("uploadReviewMark:missionGDoc not found",missionGDoc);
+            return;
+        } else
+        {
+            console.log("uploadReviewMark:missionGDoc",missionGDoc);
+        }
         let pname = null; let preview=null;
         missionGDoc.forEach(item => {
             let isFirstReview = false ;
             //显示一个log是否有人审过，没有真正的作用
+            console.log("判断是否有人审过");
             if(item.portalID != null) {
                 if(item.portalID === portaldata.id) {
                     console.log("任务po有人审过",portaldata.id+","+portaldata.title);
+                } else
+                {
+                    console.log("判断是否任务po：",portaldata.id+","+portaldata.title);
                 }
             } else {
                 if (item.title === portaldata.title) {
@@ -1650,6 +1663,7 @@
             try{
                 if (item.title === portaldata.title) {
                     if(Math.abs(item.lat-portaldata.lat)<=ilatdis & Math.abs(item.lng-portaldata.lng)<=ilngdis) {
+                        console.log("任务po确认");
                         pname = portaldata.title;preview=item.status;
                     } else
                     {
