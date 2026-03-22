@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.1.1
+// @version      4.1.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -429,7 +429,8 @@
                 this.send = function (...data) {
                     try{
                         let tmpdata = JSON.parse(data[0]);
-                        //console.log("olddata",data);
+                        console.log("原版审核数据",data);
+                        console.log("原版审核数据",JSON.parse(data[0]));
                         //console.log("cloudReviewData",cloudReviewData);
                         //NEW+挪po,直接用网络审核结果覆盖data
                         if(cloudReviewData!=null) {
@@ -450,7 +451,8 @@
                         //跟po，保存记录至本地：用户名+follow
                         //console.log("查看是否跟po，保存至本地",tmpfollow);
                         savePostData(tmpfollow,data);
-                        //console.log("tmpdata",tmpdata);
+                        console.log("提交的审核数据",data);
+                        console.log("提交的审核数据",JSON.parse(data[0]));
                         return send.apply(_this,data);
                     } catch(e) {
                         console.log(e);
@@ -597,8 +599,6 @@
                 portalData = json.result;
                 if(!portalData) return;
                 if (missionGDoc.length === 0) {missionGDoc = JSON.parse(localStorage.missionGDoc);}
-                console.log("1️⃣开始新审核:",portalData.title);
-                console.log("📋原始po数据:",portalData);
 //                if(!portalData.id || portalData.id==null) return;
                 setTimeout(function(){ loadReviewData(portalData); },1000);
 //                let testid = "74908645df72e5da08ebd13be138275c";
@@ -1375,25 +1375,23 @@
                             //document.querySelectorAll('mat-checkbox.mat-checkbox')[3].childNodes[0].click();
                             setTimeout(function(){
                                 let chxbtn = document.querySelectorAll('mat-checkbox.mat-checkbox');
-                                if(chxbtn.length === 5 ) {
-                                    for(let i=0;i<rdata.rejectReasons.length;i++)
+                                for(let i=0;i<rdata.rejectReasons.length;i++)
+                                {
+                                    if(rdata.rejectReasons[i] === "ABUSE")
                                     {
-                                        if(rdata.rejectReasons[i] === "ABUSE")
-                                        {
-                                            chxbtn[0].childNodes[0].click();
-                                        } else if(rdata.rejectReasons[i] === "FAKE")
-                                        {
-                                            chxbtn[1].childNodes[0].click();
-                                        } else if(rdata.rejectReasons[i] === "PERSONAL")
-                                        {
-                                            chxbtn[2].childNodes[0].click();
-                                        } else if(rdata.rejectReasons[i] === "EXPLICIT")
-                                        {
-                                            chxbtn[3].childNodes[0].click();
-                                        } else if(rdata.rejectReasons[i] === "OFFENSIVE")
-                                        {
-                                            chxbtn[4].childNodes[0].click();
-                                        }
+                                        if(chxbtn[0]) chxbtn[0].childNodes[0].click();
+                                    } else if(rdata.rejectReasons[i] === "FAKE")
+                                    {
+                                        if(chxbtn[1]) chxbtn[1].childNodes[0].click();
+                                    } else if(rdata.rejectReasons[i] === "PERSONAL")
+                                    {
+                                        if(chxbtn[2]) chxbtn[2].childNodes[0].click();
+                                    } else if(rdata.rejectReasons[i] === "EXPLICIT")
+                                    {
+                                        if(chxbtn[3]) chxbtn[3].childNodes[0].click();
+                                    } else if(rdata.rejectReasons[i] === "OFFENSIVE")
+                                    {
+                                        if(chxbtn[4]) chxbtn[4].childNodes[0].click();
                                     }
                                 }
                             },500);
@@ -1513,6 +1511,7 @@
     async function savePostData(tmpfollow,data){
         let rd1=cloudReviewData;
         let rd2=JSON.parse(data);
+        console.log("传入的审核数据",data);
         //云端非空：跟审
         //console.log("rd1",rd1);console.log("rd2",rd2);console.log("jsondata0",JSON.parse(data[0]));
         if(cloudReviewData !== null ) {
