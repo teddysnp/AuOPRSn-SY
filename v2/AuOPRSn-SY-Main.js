@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.2
+// @version      7.2.3-a
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1612,7 +1612,7 @@
     }
 
     //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
-    function uploadReviewMark(portaldata){
+    async function uploadReviewMark(portaldata){
         console.log("uploadReviewMark loaded");
         function saveNewUserMark()
         {
@@ -1635,6 +1635,10 @@
             return;
         } else
         {
+            if(missionGDoc.length === 0){
+                console.log("missionGDoc.length",missionGDoc.length);
+                await getMissionFromCloudFlare();
+            }
             console.log("uploadReviewMark:missionGDoc",missionGDoc);
         }
         let pname = null; let preview=null;
