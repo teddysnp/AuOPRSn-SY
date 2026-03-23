@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.1
+// @version      7.2.2
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -120,7 +120,7 @@
         missionGDoc = JSON.parse(localStorage.missionGDoc);
         //console.log(mywin.location.href);
         //如果是在展示页，那么获取用户的动作在XMLHttpRequest-showReviewedHome中完成
-        if(mywin.location.href != "https://wayfarer.nianticlabs.com/new/showcase")
+        if(mywin.location.href != "https://wayfarer.nianticlabs.com/new/mapview")
         {
             console.log("getmissionload");
             await getMissionFromCloudFlare();
@@ -728,7 +728,11 @@
             try {
                 const response = this.response;
                 const json = JSON.parse(response);
-                if (!json) return;
+                if (!json)
+                {
+                    console.log("response is not json:",response);
+                    return;
+                }
                 //console.log(json);
                 if(bNextAuto){
                     autoReview = "true";
