@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.12
+// @version      2.0.13
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1348,19 +1348,19 @@
                         // 审核状态判断
                         if (findUserEmail(userreview, semail) > 0) {
                             if (userEmailList[i].includes(userEmail)) {
-                                stmp += `<div class='wayfarer-sqselfok wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
+                                stmp += `<div class='wayfarer-sqselfok wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
                             } else {
-                                stmp += `<div class='wayfarer-sqok wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
+                                stmp += `<div class='wayfarer-sqok wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
                             }
                         } else {
                             if (semail.includes(userEmail)) {
                                 if (owner === "true") {
-                                    stmp += `<div class='wayfarer-sqselfowner wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
+                                    stmp += `<div class='wayfarer-sqselfowner wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
                                 } else {
-                                    stmp += `<div class='wayfarer-sqselfno wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
+                                    stmp += `<div class='wayfarer-sqselfno wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
                                 }
                             } else {
-                                stmp += `<div class='wayfarer-sqno wayfarer-useremail'>${po}<a id=${slinkid} href="${sFinallink}">${sname}</a></div>`;
+                                stmp += `<div class='wayfarer-sqno wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
                             }
                         }
 
@@ -1384,11 +1384,12 @@
         }
     };
     const openProfiles = (selector, limit = 999) => {
-        const containers = document.querySelectorAll(selector);
+        const containers = document.querySelectorAll(`${selector}:has(a[id]:not([id='']))`); //${selector}
         const profileList = [];
 
         let poto = "";
-        //console.log('selector',selector); //.wayfarer-useremail
+        console.log('selector',selector); //.wayfarer-useremail
+        console.log('containers',containers); //.wayfarer-useremail
         containers.forEach((box) => {
             if (profileList.length >= limit) return;
             const link = box.querySelector('a');
@@ -1403,7 +1404,8 @@
                 }
                 // 提取 Profile 名称（去除协议头和末尾斜杠）
                 //let pName = link.href.replace(/my(win)?chrome:\/\//, '').replace(/\/$/, '');
-                let pName = `Profile%20${link.id}`;
+                let pName = link.id;
+                if(link.id !=="default" ) pName = `Profile%20${pName}`;
 
                 // 过滤无效或空的 Profile
                 if (pName === "Profile%20" || pName === "") return;
@@ -2471,7 +2473,7 @@
     initUserEmailList();
     function initUserEmailList(){
         userEmailList1=["snpsl;snp66666@gmail.com;1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;9","tydtyd;tydtyd@gmail.com;default",
-                        "kingsnan;zhangnan107107@gmail.com;2","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;open chrome 23",
+                        "kingsnan;zhangnan107107@gmail.com;2","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;",
                        "pkpkqq01;pkpkqq01@gmail.com;4","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;5","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;6","poketydf02;poketydf02@gmail.com;7","poketydf03;poketydf03@gmail.com;8",
                        "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;13","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;12","pokepokem01;pokepokem01@outlook.com;11",
                        "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
