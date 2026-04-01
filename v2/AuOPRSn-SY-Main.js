@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.3-a
+// @version      7.2.3
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -3104,15 +3104,15 @@
 
     initUserEmailList();
     function initUserEmailList(){
-        userEmailList1=["snpsl;snp66666@gmail.com;open chrome 1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;","tydtyd;tydtyd@gmail.com;",
-                        "kingsnan;zhangnan107107@gmail.com;","18kpt;sunkpty@gmail.com;","zhangnan007;zhangnan_007@outlook.com;","znan008Uni163-11.35;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;open chrome 23",
-                       "pkpkqq01;pkpkqq01@gmail.com;","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;","poketydf02;poketydf02@gmail.com;","poketydf03;poketydf03@gmail.com;",
-                       "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;","pokepokem01;pokepokem01@outlook.com;",
+        userEmailList1=["snpsl;snp66666@gmail.com;1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;9","tydtyd;tydtyd@gmail.com;default",
+                        "kingsnan;zhangnan107107@gmail.com;2","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;",
+                       "pkpkqq01;pkpkqq01@gmail.com;4","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;5","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;6","poketydf02;poketydf02@gmail.com;7","poketydf03;poketydf03@gmail.com;8",
+                       "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;13","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;12","pokepokem01;pokepokem01@outlook.com;11",
                        "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
                        ];
-        userEmailList2=["shixz1;w4b4uh134@gmail.com;","shixz7;1806424832mjn@gmail.com;","FishDragonKing;269999205@qq.com;","15998804246dyh-shixz3;15998804246dyh@gmail.com;","hch463734529;hch463734529@gmail.com;",
-                        "masterxiaoli666;masterxiaoli666@gmail.com;","shizx1twk-wcy;shizx1twk@gmail.com;","470274941;470274941@qq.com;","wczmw;wczmw@sina.com;","jbhluciuscoke;jbhluciuscoke@gmail.com;",
-                        "1272970170qq;1272970170qq@gmail.com;","Sjn/3301502859qq;3301502859qq@gmail.com;",";;",";;",";;"
+        userEmailList2=["shixz1;w4b4uh134@gmail.com;2","shixz7;1806424832mjn@gmail.com;1","FishDragonKing;269999205@qq.com;4","shixz3;15998804246dyh@gmail.com;83","hch463734529;hch463734529@gmail.com;5",
+                        "masterxiaoli666;masterxiaoli666@gmail.com;11","shizx1twk-wcy;shizx1twk@gmail.com;21","470274941;470274941@qq.com;19","wczmw;wczmw@sina.com;50","jbhluciuscoke;jbhluciuscoke@gmail.com;10",
+                        "1272970170qq;1272970170qq@gmail.com;101","Sjn/3301502859qq;3301502859qq@gmail.com;38","lykillua13;lykillua13@gmail.com;98","jiaotianxing940111;jiaotianxing940111@gmail.com;99",";;"
                        ];
 
     }
