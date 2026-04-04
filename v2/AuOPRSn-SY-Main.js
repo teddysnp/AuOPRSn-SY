@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.3
+// @version      7.2.4
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
 // @require      https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.1.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      work-wayfarer.tydtyd.workers.dev
+// @connect      worker-wayfarer-updatedata.tydtyd.workers.dev
 // @connect      kvworker-warfarer-mission.tydtyd.workers.dev
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
@@ -75,8 +76,6 @@
     let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
     //let cookie = localStorage.cfcookie;//上传权限  使用cloudflare的worker后，不再使用cookie
-    let userEmailList1 = [];//审核员列表，用于显示
-    let userEmailList2 = [];//审核员列表，用于显示
     //上传任务po的Google Apps Scripts链接
     let dURL = "https://script.google.com/macros/s/AKfycbwlUEhAm4l8kI617UcNDw2CU7xFR3GGPAMUECt6L5RV8cs4KELQsC6siB_7xwk8JTzpMg/exec";
 
@@ -1628,6 +1627,36 @@
                 //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
             },1000);
         }
+        async function saveUserMark(portaldata, userEmail, performance) {
+            console.log("正在通过 Worker 提交打卡...");
+
+            const newUserMark = {
+                useremail: userEmail || localStorage.currentUser,
+                datetime: formatDate(new Date(), "yyyy-MM-dd HH:mm:ss"),
+                performance: performance
+            };
+
+            try {
+                const response = await fetch("https://worker-wayfarer-updatedata.tydtyd.workers.dev", {
+                    method: "POST",
+                    keepalive: true, // 关键：允许请求在页面卸载后继续执行
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        portalId: portaldata.id,
+                        newUserMark: newUserMark
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    console.log("新打卡，保存成功:", result.msg);
+                } else {
+                    console.error("新打卡，保存失败:", result);
+                }
+            } catch (err) {
+                console.error("新打卡，网络请求错误:", err);
+            }
+        }
         //console.log("uploadReviewMark:portaldata",portaldata);
         //console.log("uploadReviewMark:missionGDoc",missionGDoc);
         if(!missionGDoc){
@@ -1642,7 +1671,7 @@
             console.log("uploadReviewMark:missionGDoc",missionGDoc);
         }
         let pname = null; let preview=null;
-        missionGDoc.forEach(item => {
+        for (const item of missionGDoc) {
             let isFirstReview = false ;
             //显示一个log是否有人审过，没有真正的作用
             console.log("判断是否有人审过");
@@ -1704,7 +1733,13 @@
                     //无论是否有人审过，增多读取文件进行判断
                     if(portaldata.id)
                     {
+
+                        // 调用示例
                         console.log("任务po，保存用户审核打卡...");
+                        await saveUserMark(portaldata, userEmail, performance);
+
+                        return;
+
                         //let resp1 = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+portaldata.id+".useremail.json")
                         let resp1 = readR2File("portal/portaluseremail/portal."+portaldata.id+".useremail.json")
                         .then(async (res)=>{
@@ -1741,6 +1776,7 @@
                             console.log("读取用户打卡错误err:",err);
                             saveNewUserMark();
                         });
+
                     } else
                     {
                         console.warn("无法保存用户打卡：",portaldata);
@@ -1749,9 +1785,9 @@
                 }
             } catch(e) {
                 console.log("读取用户打卡错误try:",e);
-                saveNewUserMark();
+                //saveNewUserMark();
             }
-        });
+        };
     }
 
     //保存审po记录到本地：review1,review2 ; 新6.1.0以后：reviewLista reviewListb
@@ -2698,273 +2734,6 @@
         }
     }
 
-    function findUserEmail(userreview,UEmailList){
-        try{
-            //console.log(userreview);
-            if(UEmailList.indexOf(",")>=0){
-                let sss=UEmailList+",";
-                while(sss.indexOf(",")>=0){
-                    let sss1 = sss.substring(0,sss.indexOf(","));
-                    if(userreview.indexOf(sss1)>=0) {
-                        if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss1",sss1);console.log("sss",sss);}
-                        return 1;
-                    }
-                    sss=sss.substring(sss.indexOf(",")+1,sss.length-1);
-                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss12",sss1);console.log("sss2",sss);}
-                }
-                if(userreview.indexOf(sss)>=0) {
-                    if(UEmailList=="pkpkqq02@outlook.com,pkpkqq02@gmail.com") {console.log("sss3",sss);}
-                    return 1;
-                }
-                return -1;
-            } else {
-                return userreview.indexOf(UEmailList);
-            }
-        }
-        catch(e){
-            console.log(e);
-            return -1;
-        }
-    }
-/*
-    switchUserReviewDiv = function() {
-        //console.log("switchUserReviewDiv",id);
-        try{
-            let id = event.srcElement.attributes['tagname'].textContent;
-            let us = event.srcElement.attributes['us'].textContent;
-            let owner = event.srcElement.attributes['owner'].textContent;
-            let powner = event.srcElement.attributes['powner'].textContent;
-            let userEmailList = [];
-            let idUserEmail = document.getElementById("idUserEmail");
-            let stmp="";
-            let sss = event.srcElement;
-            //console.log(idUserEmail.textContent);
-            if(sss.textContent.indexOf("↓")>0){
-                sss.textContent = sss.textContent.replace(/↓/g,"");
-                stmp+="<div id='idUserEmail' style='display: none;'></div>";
-                $("#idUserEmail").replaceWith(stmp);
-            } else {
-                let eus1 = document.querySelectorAll('[us="us1"');
-                eus1.forEach(item=>{
-                    if(item.textContent.indexOf("↓")>0) item.textContent = item.textContent.replace("↓","");
-                });
-                let eus2 = document.querySelectorAll('[us="us2"');
-                eus2.forEach(item=>{
-                    if(item.textContent.indexOf("↓")>0) item.textContent = item.textContent.replace("↓","");
-                });
-                sss.textContent = sss.textContent + "↓";
-                idUserEmail.style.display = "block";
-                if(us=="us1") {
-                    userEmailList = JSON.parse(JSON.stringify(userEmailList1));
-                } else if(us=="us2") {
-                    userEmailList = JSON.parse(JSON.stringify(userEmailList2));
-                }
-                //let resp = U_XMLHttpRequest("GET","https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev/portal/portaluseremail/portal."+id+".useremail.json")
-                let resp = readR2File("portal/portaluseremail/portal."+id+".useremail.json")
-                .then(res=>{
-                    let userreview = [];
-                    let userReviewJson = [];
-                    if(!res) {
-                        setTimeout(function(){
-                            console.log("switchUserReviewDiv:未找到审核文件",res);
-                        },1000);
-                        //return;
-                    } else {
-                        //userreview = res;
-                        userReviewJson = res.content;
-                        userreview = JSON.stringify(res.content);
-                    }
-                    //console.log('res',res);
-                    //console.log(idUserEmail.style.display);
-                    stmp+="<div id='idUserEmail' style='display:block;'><div style='display: flex;'>";
-                    //console.log("userEmailList",userEmailList);
-                    //console.log("userreview",userreview);
-                    if(userreview.length>0) console.log('userReviewJson',userReviewJson);
-
-                    //如果用户打卡里userreview没有当前用户，但是missionGDoc里的ownerstatus是ture，则补一个打卡
-                    //////补打卡的过程，从本地reviewLista及reviewListb里读取用户审核的情况(通过id匹配)
-                    //////在userreview里增加一个当前用户的审核，并上传到cloudflare
-                    //////通过id判断当前用户是否审过-20251007改
-                    //如果云有，本地没有(有时程序问题/或者换浏览器登录)，则在本地补一个记录
-                    const matchingMission = missionGDoc.find(mission => mission.portalID === id);
-                    //console.log(`matchingMission:${id}`,matchingMission);
-                    if (matchingMission) {
-                        //补网络打卡
-                        let iHaveReview = false;
-                        //console.log("matchingMission-ownerstatus",matchingMission.ownerstatus);
-                        if(matchingMission.ownerstatus){
-                            const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
-                            if(!userReviewed){
-                                //无用户打卡，但是本地审核中有 => 上传补打卡
-                                //业务逻辑 - 补打卡
-                                iHaveReview = true;
-                                console.log("无用户打卡，但是本地审核中有");
-                            } else {
-                                console.log("有用户打卡，本地审核也有");
-                            }
-                        } else {
-                            // 1. 先从 userReviewJson 数组中，找到当前用户（userEmail）的审核记录
-                            const userReviewed = userReviewJson.find(item => item.useremail === userEmail);
-                            // 2. 只有当用户确实有审核记录时，才继续处理本地存储
-                            if (userReviewed) {
-                                console.log("云有，本地没有",userReviewed);
-                                try {
-                                    // 3. 从本地存储获取 reviewLista：
-                                    // - 若本地没有这个key，默认用 "[]"（空数组的JSON字符串），避免后续解析报错
-                                    let reviewListStr = localStorage.getItem('reviewLista') || '[]';
-                                    // 4. 把获取到的字符串解析成 JS 数组
-                                    let reviewList = JSON.parse(reviewListStr);
-                                    // 5. 防错处理：若解析后不是数组（比如存储的数据格式损坏），强制设为空数组
-                                    if (!Array.isArray(reviewList)) { reviewList = []; }
-                                    // 6. 检查本地存储的数组中，是否已有当前用户的记录
-                                    // - 用 some() 遍历数组：只要有一个 item 的 user 等于 userEmail，就返回 true
-                                    const iHaveLocal = reviewList.some(item => item?.id === matchingMission.portalID && item?.user === userEmail);
-                                    // 7. 若本地没有该用户的记录，就新增一条
-                                    if (!iHaveLocal) {
-                                        console.log("没找到，本地补一条",iHaveLocal);
-                                        // 组装要新增的记录（注意字段名和原数据保持一致）
-                                        const reviewStr = {
-                                            user: userReviewed.useremail,
-                                            datetime: userReviewed.datetime,
-                                            id: matchingMission.portalID, // 从匹配的任务中取ID
-                                            title: matchingMission.title,
-                                            lat: matchingMission.lat, // 任务的纬度
-                                            lng: matchingMission.lng, // 任务的经度
-                                            score: "云补，未知",
-                                            type: matchingMission.types, // 任务的类型
-                                            imageUrl: matchingMission.imageUrl
-                                        };
-                                        // 把新记录加入数组，再存回本地存储
-                                        reviewList.push(reviewStr);
-                                        localStorage.setItem("reviewLista", JSON.stringify(reviewList));
-                                    }
-                                } catch (error) {
-                                    console.error('处理 reviewLista 时出错:', error);
-                                    localStorage.setItem("reviewLista", '[]');
-                                }
-                            }
-                        }
-                        if(iHaveReview) {
-                            let susermark={useremail : userEmail,
-                                           datetime : formatDate(new Date(),"yyyy-MM-dd HH:mm:ss"),
-                                           performance:performance,
-                                           status:"补打卡"};
-                            let reviewData = [];
-                            try {
-                                const storedData = localStorage.getItem('reviewLista');
-                                if (storedData) {
-                                    reviewData = JSON.parse(storedData);
-                                    if (!Array.isArray(reviewData)) {
-                                        console.warn(`reviewLista 数据格式错误`);
-                                    } else {
-                                        console.log("补打卡中...");
-//                                         console.log('userEmail',userEmail);
-//                                         console.log('matchingMission.portalID',matchingMission.portalID);
-//                                         console.log('reviewData',reviewData);
-                                        const haveReview = reviewData.find(it => it.user === userEmail && it.id === matchingMission.portalID);
-                                        //console.log("haveReviewa",haveReview);
-                                        if(haveReview) {
-                                            susermark.datetime = haveReview.datetime || '';
-                                        } else {
-                                            const storedData1 = localStorage.getItem('reviewListb');
-                                            if (storedData1) {
-                                                reviewData = JSON.parse(storedData1);
-                                                if (!Array.isArray(reviewData)) {
-                                                    console.warn(`reviewListb 数据格式错误`);
-                                                } else {
-                                                    const haveReview = reviewData.find(it => it.user === userEmail && it.id === matchingMission.portalID);
-                                                    //console.log("haveReviewb",haveReview);
-                                                    if(haveReview) {
-                                                        susermark.datetime = haveReview.datetime || '';
-                                                    } else {
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            } catch (error) {
-                                console.error(`数据失败：`, error);
-                            }
-                            userReviewJson.push(susermark);
-                            //console.log("susermark",susermark);
-                            userreview = JSON.stringify(userReviewJson);
-                            setTimeout(function(){
-                                console.log("补用户打卡：portal/portaluseremail/","portal."+id+".useremail.json",susermark);
-                                //保存任务id :
-                                //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
-                                uploadDataToR2("portal/portaluseremail/","portal."+id+".useremail.json",userReviewJson);
-                            },500);
-                        }
-                    }
-
-                    for(let i=0;i<userEmailList.length;i++){
-                        let sname=null;let semail=null;let slink=null; let po = "";
-                        sname=userEmailList[i].substring(0,userEmailList[i].indexOf(';'));
-                        semail=userEmailList[i].substring(userEmailList[i].indexOf(';')+1,userEmailList[i].indexOf(';',userEmailList[i].indexOf(';')+1));
-                        slink=userEmailList[i].substring(userEmailList[i].lastIndexOf(';')+1);
-                        if(sname == "pkpkqq02") {
-                            //console.log(sname);console.log(semail);console.log(slink);console.log(userEmail);console.log(powner);
-                            //console.log(userreview);console.log(semail);
-                        }
-                        if(powner){
-                            if(semail.indexOf(powner)>=0){
-                                po = "<span style='color:red'>O:</span>";
-                            }
-                        } else {
-                            po = "<span></span>";
-                        }
-                        //审核过的用户
-                        if(findUserEmail(userreview,semail)>0){
-                            //console.log('userreview',userreview);
-                            //console.log('semail yes',semail);
-                            //if(sname === "pkpkqq02" || sname === "O:pkpkqq02") { console.log("find OK");}
-                        //if(userreview.indexOf(userEmailList[i])>=0) {
-                            //console.log('userEmail',userEmail);
-                            //console.log('userEmailList[i]',userEmailList[i]);
-                            //console.log('userEmailList[i].indexOf(userEmail)>=0',userEmailList[i].indexOf(userEmail)>=0);
-                            if(userEmailList[i].indexOf(userEmail)>=0){
-                                stmp+="<div class='sqselfok'>" + po + sname + "</div>";
-                            } else {
-                                stmp+="<div class='sqok'>" + po +sname+"</div>";
-                            }
-                        } else { //未审到的用户
-                            //if(sname == "pkpkqq02") { console.log("find NO");}
-                            //console.log('semail no',semail);
-                            if(semail.indexOf(userEmail)>=0){
-                                if(owner=="true"){
-                                    stmp+="<div class='sqselfowner'>" + po + sname+"</div>";
-                                } else {
-                                    stmp+="<div class='sqselfno'>" + po + sname+"</div>";
-                                }
-                            } else {
-                                //console.log('semail',semail);
-                                stmp+="<div class='sqno'>" + po + sname+"</div>";
-                            }
-                        }
-
-                        if((i+1)%5==0) {
-                            stmp+="</div><p><div style='padding-top:1em;display: flex;'>";
-                        }
-                    }
-                    stmp+="</div></div>";
-                    //console.log("stmp",stmp);
-                    $("#idUserEmail").replaceWith(stmp);
-                },err=>{
-                    console.log("err, not found", err);
-                });
-            }
-            setTimeout(function(){
-                //console.log("stmp",stmp);
-                //$("#idUserEmail").replaceWith(stmp);
-            },500);
-            //console.log(id);
-
-        } catch(e) {
-            console.log("switchUserReviewDiv",e);
-        }
-    };
-*/
     // 滚动到页面顶部
     function scrollToTop() {
         window.scrollBy({
@@ -3100,21 +2869,6 @@
             });
         }
         return fmt;
-    }
-
-    initUserEmailList();
-    function initUserEmailList(){
-        userEmailList1=["snpsl;snp66666@gmail.com;1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;9","tydtyd;tydtyd@gmail.com;default",
-                        "kingsnan;zhangnan107107@gmail.com;2","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;",
-                       "pkpkqq01;pkpkqq01@gmail.com;4","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;5","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;6","poketydf02;poketydf02@gmail.com;7","poketydf03;poketydf03@gmail.com;8",
-                       "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;13","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;12","pokepokem01;pokepokem01@outlook.com;11",
-                       "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
-                       ];
-        userEmailList2=["shixz1;w4b4uh134@gmail.com;2","shixz7;1806424832mjn@gmail.com;1","FishDragonKing;269999205@qq.com;4","shixz3;15998804246dyh@gmail.com;83","hch463734529;hch463734529@gmail.com;5",
-                        "masterxiaoli666;masterxiaoli666@gmail.com;11","shizx1twk-wcy;shizx1twk@gmail.com;21","470274941;470274941@qq.com;19","wczmw;wczmw@sina.com;50","jbhluciuscoke;jbhluciuscoke@gmail.com;10",
-                        "1272970170qq;1272970170qq@gmail.com;101","Sjn/3301502859qq;3301502859qq@gmail.com;38","lykillua13;lykillua13@gmail.com;98","jiaotianxing940111;jiaotianxing940111@gmail.com;99",";;"
-                       ];
-
     }
 
     // -------------------------- 核心：创建左下角状态面板 --------------------------
