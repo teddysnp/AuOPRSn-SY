@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.13
+// @version      2.0.14
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1317,7 +1317,6 @@
                     for (let i = 0; i < userEmailList.length; i++) {
                         let sname = null;
                         let semail = null;
-                        let slink = null;
                         let po = "";
                         sname = userEmailList[i].substring(0, userEmailList[i].indexOf(';'));
                         semail = userEmailList[i].substring(
@@ -1325,7 +1324,8 @@
                             userEmailList[i].indexOf(';', userEmailList[i].indexOf(';') + 1)
                         );
                         const slinkid = userEmailList[i].substring(userEmailList[i].lastIndexOf(';') + 1);
-                        slink = slinkid;
+
+                        let slink = slinkid;
                         if (slink === "default") {
                             slink = "Default";
                         } else
@@ -1339,6 +1339,7 @@
                         }
 
                         const sFinallink = `${slink}TARGETURLwayfarer.nianticlabs.com/new/review`;
+                        const shtmllink =`${slinkid ? `<a id="${slinkid}" href="${sFinallink}">${sname}</a>` : sname}`
                         if (powner) {
                             po = semail.includes(powner) ? "<span style='color:red'>O:</span>" : "<span></span>";
                         } else {
@@ -1348,19 +1349,19 @@
                         // 审核状态判断
                         if (findUserEmail(userreview, semail) > 0) {
                             if (userEmailList[i].includes(userEmail)) {
-                                stmp += `<div class='wayfarer-sqselfok wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
+                                stmp += `<div class='wayfarer-sqselfok wayfarer-useremail'>${po}${shtmllink}</div>`;
                             } else {
-                                stmp += `<div class='wayfarer-sqok wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
+                                stmp += `<div class='wayfarer-sqok wayfarer-useremail'>${po}${shtmllink}</div>`;
                             }
                         } else {
                             if (semail.includes(userEmail)) {
                                 if (owner === "true") {
-                                    stmp += `<div class='wayfarer-sqselfowner wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
+                                    stmp += `<div class='wayfarer-sqselfowner wayfarer-useremail'>${po}${shtmllink}</div>`;
                                 } else {
-                                    stmp += `<div class='wayfarer-sqselfno wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
+                                    stmp += `<div class='wayfarer-sqselfno wayfarer-useremail'>${po}${shtmllink}</div>`;
                                 }
                             } else {
-                                stmp += `<div class='wayfarer-sqno wayfarer-useremail'>${po}<a id="${slinkid}" href="${sFinallink}">${sname}</a></div>`;
+                                stmp += `<div class='wayfarer-sqno wayfarer-useremail'>${po}${shtmllink}</div>`;
                             }
                         }
 
@@ -2476,7 +2477,7 @@
                         "kingsnan;zhangnan107107@gmail.com;2","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;",
                        "pkpkqq01;pkpkqq01@gmail.com;4","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;5","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;6","poketydf02;poketydf02@gmail.com;7","poketydf03;poketydf03@gmail.com;8",
                        "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;13","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;12","pokepokem01;pokepokem01@outlook.com;11",
-                       "pokecntv08;pokecntv08@outlook.com;","pokecntv09;pokecntv09@outlook.com;","pokecntv10;pokecntv10@outlook.com;",";;",";;"
+                       "pokecntv08;pokecntv08@outlook.com;14","pokecntv09;pokecntv09@outlook.com;15","pokecntv10;pokecntv10@outlook.com;",";;",";;"
                        ];
         userEmailList2=["shixz1;w4b4uh134@gmail.com;2","shixz7;1806424832mjn@gmail.com;1","FishDragonKing;269999205@qq.com;4","shixz3;15998804246dyh@gmail.com;83","hch463734529;hch463734529@gmail.com;5",
                         "masterxiaoli666;masterxiaoli666@gmail.com;11","shizx1twk-wcy;shizx1twk@gmail.com;21","470274941;470274941@qq.com;19","wczmw;wczmw@sina.com;50","jbhluciuscoke;jbhluciuscoke@gmail.com;10",
