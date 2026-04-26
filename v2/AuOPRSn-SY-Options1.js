@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.14
+// @version      2.0.15
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1158,6 +1158,36 @@
     //核心函数：切换用户审核弹窗（重写版） @param {number} iowner - 传入的owner标识
     switchUserReviewDiv = function(iowner) {
         console.log("switchUserReviewDiv", iowner);
+        function saveUserMark(id, userEmail, performance) {
+            //通过worker提交打卡，避免同时更新的冲突(由worker解决冲突问题)
+            console.log("正在通过 Worker 提交打卡...");
+            const newUserMark = {
+                useremail: userEmail || localStorage.currentUser,
+                datetime: formatDate(new Date(), "yyyy-MM-dd HH:mm:ss"),
+                performance: performance
+            };
+
+            try {
+                const response = fetch("https://worker-wayfarer-updatedata.tydtyd.workers.dev", {
+                    method: "POST",
+                    keepalive: true, // 关键：允许请求在页面卸载后继续执行
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        portalId: id,
+                        newUserMark: newUserMark
+                    })
+                });
+
+                const result = response.json();
+                if (response.ok) {
+                    console.log("新打卡，保存成功:", result.msg);
+                } else {
+                    console.error("新打卡，保存失败:", result);
+                }
+            } catch (err) {
+                console.error("新打卡，网络请求错误:", err);
+            }
+        }
         try {
             // 兼容event.srcElement（改为标准的event.target）
             const targetElement = event.target;
@@ -1304,7 +1334,8 @@
                             userReviewJson.push(susermark);
                             setTimeout(() => {
                                 console.log("补用户打卡：portal/portaluseremail/", "portal." + id + ".useremail.json", susermark);
-                                uploadDataToR2("portal/portaluseremail/", "portal." + id + ".useremail.json", userReviewJson);
+                                saveUserMark(id,userEmail,performance);
+                                //uploadDataToR2("portal/portaluseremail/", "portal." + id + ".useremail.json", userReviewJson);
                             }, 500);
                         }
                     }
@@ -2473,8 +2504,8 @@
 
     initUserEmailList();
     function initUserEmailList(){
-        userEmailList1=["snpsl;snp66666@gmail.com;1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;9","tydtyd;tydtyd@gmail.com;default",
-                        "kingsnan;zhangnan107107@gmail.com;2","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;",
+        userEmailList1=["snpsl;snp66666@gmail.com;1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;9","tydtyd;tydtyd@gmail.com;",
+                        "kingsnan;zhangnan107107@gmail.com;16","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;",
                        "pkpkqq01;pkpkqq01@gmail.com;4","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;5","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;6","poketydf02;poketydf02@gmail.com;7","poketydf03;poketydf03@gmail.com;8",
                        "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;13","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;12","pokepokem01;pokepokem01@outlook.com;11",
                        "pokecntv08;pokecntv08@outlook.com;14","pokecntv09;pokecntv09@outlook.com;15","pokecntv10;pokecntv10@outlook.com;",";;",";;"
