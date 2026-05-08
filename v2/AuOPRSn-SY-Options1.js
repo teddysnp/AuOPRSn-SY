@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.0.15
+// @version      2.0.16
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2505,7 +2505,7 @@
     initUserEmailList();
     function initUserEmailList(){
         userEmailList1=["snpsl;snp66666@gmail.com;1","zhangnan;kobebrynan007@gmail.com;","dongtong;xiaohouzi0503@gmail.com;","bigmiaowa;pokemonmiaowa@gmail.com;9","tydtyd;tydtyd@gmail.com;",
-                        "kingsnan;zhangnan107107@gmail.com;16","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;",
+                        "kingsnan;zhangnan107107@gmail.com;16","18kpt;sunkpty@gmail.com;3","zhangnan007;zhangnan_007@outlook.com;2","zhangnan008;unicode@163.com;","tongliang;tongliang12345@outlook.com,xiuaoao@gmail.com;",
                        "pkpkqq01;pkpkqq01@gmail.com;4","pkpkqq02;pkpkqq02@outlook.com,pkpkqq02@gmail.com;5","poketydf01;tydingress@outlook.com,poketydf01@gmail.com;6","poketydf02;poketydf02@gmail.com;7","poketydf03;poketydf03@gmail.com;8",
                        "poketyd;poketyd@outlook.com;","pokecntv01;pokecntv01@outlook.com;13","pokecntv22;pokecntv22@outlook.com;","pokepokem001;whathowyou@gmail.com;12","pokepokem01;pokepokem01@outlook.com;11",
                        "pokecntv08;pokecntv08@outlook.com;14","pokecntv09;pokecntv09@outlook.com;15","pokecntv10;pokecntv10@outlook.com;",";;",";;"
