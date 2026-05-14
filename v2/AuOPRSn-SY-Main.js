@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.4
+// @version      7.2.5
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1004,11 +1004,25 @@
                 //console.log("ttm:",ttm);
                     ttm = mywin.setInterval(() => {
                         //console.log("ttm",autoReview);
-                        if(autoReview=="true"){
+                        let doctitle = document.title;
+                        if (autoReview === "true") {
                             dvautolabel.textContent = '自动';
+                            // 如果以 "-未审核" 结尾，替换为 "-审核中"；如果没有任何相关结尾，且不以 "-审核中" 结尾，则直接加上
+                            if (doctitle.endsWith("-未审核")) {
+                                doctitle = doctitle.replace(/-未审核$/, "-审核中");
+                            } else if (!doctitle.endsWith("-审核中")) {
+                                doctitle += "-审核中";
+                            }
                         } else {
                             dvautolabel.textContent = '手动';
+                            // 逻辑同上，反向操作
+                            if (doctitle.endsWith("-审核中")) {
+                                doctitle = doctitle.replace(/-审核中$/, "-未审核");
+                            } else if (!doctitle.endsWith("-未审核")) {
+                                doctitle += "-未审核";
+                            }
                         }
+                        document.title = doctitle;
                     },1000);
                //}
                 let iexp = false ;
@@ -1628,8 +1642,8 @@
             },1000);
         }
         async function saveUserMark(portaldata, userEmail, performance) {
+            //通过worker提交打卡，避免同时更新的冲突(由worker解决冲突问题)
             console.log("正在通过 Worker 提交打卡...");
-
             const newUserMark = {
                 useremail: userEmail || localStorage.currentUser,
                 datetime: formatDate(new Date(), "yyyy-MM-dd HH:mm:ss"),
