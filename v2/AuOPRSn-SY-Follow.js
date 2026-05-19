@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.1.2
+// @version      4.1.3
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -44,6 +44,102 @@
         getLocalMissionList();
     }
 
+    function getLocalMissionList(){
+        let miss = localStorage.missionGDoc;
+        if (miss) {
+            missionGDoc = JSON.parse(miss);
+            //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
+            console.log("follow-missionGDoc",missionGDoc);
+        }
+    }
+    function getLocalMissionListBak(){
+        /*
+        let miss = localStorage.currentmission;
+        if (miss) {
+            missionGDoc = JSON.parse(miss);
+            //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
+            console.log("follow-missionGDoc",missionGDoc);
+        }*/
+    }
+
+    //更新任务数据至Google Doc , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
+    function saveToGDoc(sdata){
+
+        $.ajax({
+            url: dURL, // 确保是最新部署的 GAS 链接
+            type: "POST",
+            // 核心：将对象转为 URL 编码字符串（适配 x-www-form-urlencoded 格式）
+            data: $.param(sdata),
+            // 核心：指定正确的 Content-Type（GAS 能自动解析该格式）
+            contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+            // 不需要禁用 processData（默认 true，$.param 已处理数据，无需额外处理）
+            processData: true,
+            success: function (data, status) {
+                console.log("请求成功，响应数据：", data);
+                // 此处可添加业务逻辑（如提示成功）
+            },
+            error: function (xhr, status, error) {
+                console.error("请求失败：", status, "错误信息：", xhr.responseText);
+                    createNotify("更新任务错误", {
+                        body: "更新任务文档失败！" +xhr.responseText,
+                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
+                        requireInteraction: false
+                    });
+            }
+        });
+    };
+    listenLinkClick();
+    //监听页面点击，获取是否人工点击
+    function listenLinkClick(){
+        document.body.addEventListener("click",function(event){
+            //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
+            //console.log("isTrusted",event.isTrusted);
+            isUserClick = event.isTrusted;
+            if(event.isTrusted) {
+                //console.log(event.srcElement);
+                let iauto = document.getElementById("idautolabel");
+                //if(iauto) console.log(iauto.textContent);
+                if(event.srcElement.innerText == "thumb_down" || event.srcElement.innerText == "標記為重複") {
+                    if (iauto.textContent == "自动") {
+                        iautoman = "自动";
+                        let ibtn = document.getElementById("btnauto");
+                        if (ibtn) {
+                            ibtn.click();
+                        }
+                    }
+                }
+                if(event.srcElement.innerText == "檢舉") {
+                    if (iauto.textContent == "自动") {
+                        iautoman = "自动";
+                        let ibtn = document.getElementById("btnauto");
+                        if (ibtn) {
+                            ibtn.click();
+                        }
+                    }
+                }
+                if(event.srcElement.innerText == "取消" || event.srcElement.innerText == "關閉") {
+                    if (iauto.textContent == "手动" ) {
+                        if(iautoman == "自动") {
+                            let ibtn = document.getElementById("btnauto");
+                            if (ibtn) {
+                                ibtn.click();
+                            }
+                        } else {
+                            iautoman = null;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    //*********************  CloudFlare操作 *********************//
+    // 配置 - CloudFlare
+    const CONFIG = {
+        WORKER_URL: 'https://work-wayfarer.tydtyd.workers.dev',
+        SECRET_KEY: 'warfarer-review', // 与Worker中相同的密钥
+        DEFAULT_FOLDER: 'defaultpath/' // 本地指定的存储路径，可随时修改
+    };
     const BASE_URL = "https://kvworker-warfarer-mission.tydtyd.workers.dev";
     const cfClass = {
         // 1. 按id查询单条数据
@@ -154,101 +250,6 @@
         }
     }
 
-    function getLocalMissionList(){
-        let miss = localStorage.missionGDoc;
-        if (miss) {
-            missionGDoc = JSON.parse(miss);
-            //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
-            console.log("follow-missionGDoc",missionGDoc);
-        }
-    }
-    function getLocalMissionListBak(){
-        /*
-        let miss = localStorage.currentmission;
-        if (miss) {
-            missionGDoc = JSON.parse(miss);
-            //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
-            console.log("follow-missionGDoc",missionGDoc);
-        }*/
-    }
-
-    //更新任务数据至Google Doc , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
-    function saveToGDoc(sdata){
-
-        $.ajax({
-            url: dURL, // 确保是最新部署的 GAS 链接
-            type: "POST",
-            // 核心：将对象转为 URL 编码字符串（适配 x-www-form-urlencoded 格式）
-            data: $.param(sdata),
-            // 核心：指定正确的 Content-Type（GAS 能自动解析该格式）
-            contentType: "application/x-www-form-urlencoded; charset=UTF-8",
-            // 不需要禁用 processData（默认 true，$.param 已处理数据，无需额外处理）
-            processData: true,
-            success: function (data, status) {
-                console.log("请求成功，响应数据：", data);
-                // 此处可添加业务逻辑（如提示成功）
-            },
-            error: function (xhr, status, error) {
-                console.error("请求失败：", status, "错误信息：", xhr.responseText);
-                    createNotify("更新任务错误", {
-                        body: "更新任务文档失败！" +xhr.responseText,
-                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
-                        requireInteraction: false
-                    });
-            }
-        });
-    };
-    listenLinkClick();
-    //监听页面点击，获取是否人工点击
-    function listenLinkClick(){
-        document.body.addEventListener("click",function(event){
-            //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
-            //console.log("isTrusted",event.isTrusted);
-            isUserClick = event.isTrusted;
-            if(event.isTrusted) {
-                //console.log(event.srcElement);
-                let iauto = document.getElementById("idautolabel");
-                //if(iauto) console.log(iauto.textContent);
-                if(event.srcElement.innerText == "thumb_down" || event.srcElement.innerText == "標記為重複") {
-                    if (iauto.textContent == "自动") {
-                        iautoman = "自动";
-                        let ibtn = document.getElementById("btnauto");
-                        if (ibtn) {
-                            ibtn.click();
-                        }
-                    }
-                }
-                if(event.srcElement.innerText == "檢舉") {
-                    if (iauto.textContent == "自动") {
-                        iautoman = "自动";
-                        let ibtn = document.getElementById("btnauto");
-                        if (ibtn) {
-                            ibtn.click();
-                        }
-                    }
-                }
-                if(event.srcElement.innerText == "取消" || event.srcElement.innerText == "關閉") {
-                    if (iauto.textContent == "手动" ) {
-                        if(iautoman == "自动") {
-                            let ibtn = document.getElementById("btnauto");
-                            if (ibtn) {
-                                ibtn.click();
-                            }
-                        } else {
-                            iautoman = null;
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // 配置 - CloudFlare
-    const CONFIG = {
-        WORKER_URL: 'https://work-wayfarer.tydtyd.workers.dev',
-        SECRET_KEY: 'warfarer-review', // 与Worker中相同的密钥
-        DEFAULT_FOLDER: 'defaultpath/' // 本地指定的存储路径，可随时修改
-    };
     // 上传数据到R2   uploadDataToR2(folderPath:路径 , fileName:文件名 , data:json数据)
     function uploadDataToR2(folderPath,fileName,data) {
         try {
@@ -354,20 +355,7 @@
         });
     }
 
-    function setUpLabel(obj,color){
-        console.log('setUpLabel',obj);console.log('setUpLabel',color);
-        setTimeout(function(){
-            let iup = document.getElementById("iduplabel");
-            if(iup) iup.style=`font-weight:bold;color:${color}`;
-        },2000);
-    }
-
-    function setDownLabel(obj,color){
-        //console.log('setDownLabel',obj);console.log('setDownLabel',color);
-        const idown = document.getElementById("idcountdownlabel");
-        if(idown) idown.style=`font-weight:bold;color:${color}`;
-    }
-
+    //*********************  Http监听 *********************//
     function U_XMLHttpRequest(method, url) {
 //        console.log(method);
 //        console.log(url);
@@ -533,6 +521,7 @@
         };
     })(XMLHttpRequest.prototype.send);
 
+    //*********************  通用函数 *********************//
     const awaitElement = get => new Promise((resolve, reject) => {
         let triesLeft = 10;
         const queryLoop = () => {
@@ -546,6 +535,190 @@
     }).catch(e => {
         console.log('Promise', e)});
 
+    function scrollToBottom (){
+        console.log('scrollToBottom');
+        (function smoothscroll() {
+            const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
+            const clientHeight = document.documentElement.clientHeight; // 浏览器高度
+            const scrollHeight = document.documentElement.scrollHeight; // 总高度
+            if (scrollHeight - 10 > currentScroll + clientHeight) {
+                window.requestAnimationFrame(smoothscroll);
+                window.scrollTo(0, currentScroll + (scrollHeight - currentScroll - clientHeight) / 2);
+            }
+        })();
+    };
+    //EDIT位置编辑用的函数
+    function findArrayTwo(arr,title){
+        for(let i=0;i<arr.length;i++){
+            //            console.log("arr["+i+"]",arr[i]);
+            if(arr[i].indexOf(title)>=0){
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    //比较两个对象是否相同(json的顺序可以不同)
+    function areObjectsEqual(obj1, obj2) {
+        // 如果是同一引用，直接返回true
+        if (obj1 === obj2) return true;
+
+        // 检查是否都是对象且不为null
+        if (typeof obj1 !== 'object' || obj1 === null ||
+            typeof obj2 !== 'object' || obj2 === null) {
+            return false;
+        }
+
+        // 获取两个对象的属性键数组
+        const keys1 = Object.keys(obj1);
+        const keys2 = Object.keys(obj2);
+
+        // 如果属性数量不同，返回false
+        if (keys1.length !== keys2.length) return false;
+
+        // 逐个比较属性
+        for (const key of keys1) {
+            // 检查obj2是否有相同的属性
+            if (!keys2.includes(key)) return false;
+
+            // 递归比较属性值
+            if (!areObjectsEqual(obj1[key], obj2[key])) return false;
+        }
+
+        return true;
+    }
+
+    // 自定义日志函数：替代console.log，将内容显示在面板 不是太好用，没使用，但函数接口在，不要删
+    function showLog(message, isError = false) {
+        // 创建单条日志元素
+        const logItem = document.createElement('div');
+        // 错误信息标红，普通信息白色
+        logItem.style.color = isError ? '#ff4444' : '#ffffff';
+        // 添加时间戳（可选，便于追溯）
+        const time = new Date().toLocaleTimeString();
+        logItem.textContent = `[${time}] ${message}`;
+
+        // 添加到面板（最新日志在最下面）
+        //statusContent.appendChild(logItem);
+
+        // 滚动到底部，确保能看到最新日志
+        //statusContent.scrollTop = statusContent.scrollHeight;
+
+        // 可选：保留最近20条日志，避免面板过长
+        //if (statusContent.children.length > 20) {
+        //statusContent.removeChild(statusContent.firstChild);
+        //}
+    }
+
+    //格式化日期函数
+    function formatDate(date, fmt){
+        date = date == undefined ? new Date() : date;
+        date = typeof date == 'number' ? new Date(date) : date;
+        fmt = fmt || 'yyyy-MM-dd HH:mm:ss';
+        var obj =
+            {
+                'y': date.getFullYear(), // 年份，注意必须用getFullYear
+                'M': date.getMonth() + 1, // 月份，注意是从0-11
+                'd': date.getDate(), // 日期
+                'q': Math.floor((date.getMonth() + 3) / 3), // 季度
+                'w': date.getDay(), // 星期，注意是0-6
+                'H': date.getHours(), // 24小时制
+                'h': date.getHours() % 12 == 0 ? 12 : date.getHours() % 12, // 12小时制
+                'm': date.getMinutes(), // 分钟
+                's': date.getSeconds(), // 秒
+                'S': date.getMilliseconds() // 毫秒
+            };
+        var week = ['天', '一', '二', '三', '四', '五', '六'];
+        for(var i in obj)
+        {
+            fmt = fmt.replace(new RegExp(i+'+', 'g'), function(m)
+                              {
+                var val = obj[i] + '';
+                if(i == 'w') return (m.length > 2 ? '星期' : '周') + week[val];
+                for(var j = 0, len = val.length; j < m.length - len; j++) val = '0' + val;
+                return m.length == 1 ? val : val.substring(val.length - m.length);
+            });
+        }
+        return fmt;
+    }
+
+    //用户消息
+    function createNotify(title, options) {
+        var PERMISSON_GRANTED = "granted";
+        var PERMISSON_DENIED = "denied";
+        var PERMISSON_DEFAULT = "default";
+
+        // 如果用户已经允许，直接显示消息，如果不允许则提示用户授权
+        if (Notification.permission === PERMISSON_GRANTED) {
+            notify(title, options);
+        } else {
+            Notification.requestPermission(function (res) {
+                if (res === PERMISSON_GRANTED) {
+                    notify(title, options);
+                }
+            });
+        }
+
+        //显示消息
+        function notify($title, $options) {
+            var notification = new Notification($title, $options);
+            notification.onshow = function (event) {
+            };
+            notification.onclose = function (event) {
+            };
+            notification.onclick = function (event) {
+                notification.close();
+                mywin.focus();
+            };
+        }
+    }
+
+    //智能匹配：长度差在一个字符以内;1-2个字符时完全匹配;3-6个字符时允许错1个;7个以上时允许错2个
+    function approximateMatch(strData1, strData2) {
+        // 检查输入有效性
+        if (!strData1 || !strData2) return false;
+
+        const len1 = strData1.length;
+        const len2 = strData2.length;
+
+        // 统计字符出现次数
+        const countChars = (str) => {
+            const counts = {};
+            for (const char of str) {
+                counts[char] = (counts[char] || 0) + 1;
+            }
+            return counts;
+        };
+
+        const counts1 = countChars(strData1);
+        const counts2 = countChars(strData2);
+
+        // 计算共同字符总数
+        let commonChars = 0;
+        for (const char in counts1) {
+            if (counts2[char]) {
+                commonChars += Math.min(counts1[char], counts2[char]);
+            }
+        }
+
+        // 情况1：第一个字符串长度在2及以下
+        if (len1 <= 2) {
+            // 要求长度相同且完全匹配
+            return len1 === len2 && commonChars === len1;
+        }
+        // 情况2：第一个字符串长度在3-6之间
+        else if (len1 >= 3 && len1 <= 6) {
+            // 第二个字符串长度需在3-7之间，且相同字符数为len1-1
+            return len2 >= 3 && len2 <= 7 && commonChars === len1 - 1;
+        }
+        // 情况3：第一个字符串长度在7以上
+        else {
+            // 第二个字符串与第一个长度差1，且相同字符数为len1-2
+            return Math.abs(len1 - len2) === 1 && commonChars === len1 - 2;
+        }
+    }
+
+    //*********************  User操作 *********************//
     function getUser(){
         const resp = U_XMLHttpRequest("GET","https://wayfarer.nianticlabs.com/api/v1/vault/properties")
         resp.then
@@ -586,6 +759,7 @@
         });
     }
 
+    //*********************  Inject操作 *********************//
     function injectLoadData() {
         awaitElement(() => document.querySelector('wf-logo'))
             .then((ref) => {
@@ -816,6 +990,7 @@
         });
     }
 
+    //*********************  review操作 *********************//
     //NEW:根据标题名有重合，给提示是否重复，并加20秒倒计时
     function isDuplicate(pData){
         if(pData.nearbyPortals.find(p=>{return p.title==pData.title})){
@@ -1506,7 +1681,23 @@
         return null;
     }
 
+    //*********************   *********************//
+    function setUpLabel(obj,color){
+        console.log('setUpLabel',obj);console.log('setUpLabel',color);
+        setTimeout(function(){
+            let iup = document.getElementById("iduplabel");
+            if(iup) iup.style=`font-weight:bold;color:${color}`;
+        },2000);
+    }
 
+    function setDownLabel(obj,color){
+        //console.log('setDownLabel',obj);console.log('setDownLabel',color);
+        const idown = document.getElementById("idcountdownlabel");
+        if(idown) idown.style=`font-weight:bold;color:${color}`;
+    }
+
+
+    //*********************  save *********************//
     //保存审核数据到本地，并判断是否需要上传
     async function savePostData(tmpfollow,data){
         let rd1=cloudReviewData;
@@ -1733,28 +1924,7 @@
         }
     }
 
-    function scrollToBottom (){
-        console.log('scrollToBottom');
-        (function smoothscroll() {
-            const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
-            const clientHeight = document.documentElement.clientHeight; // 浏览器高度
-            const scrollHeight = document.documentElement.scrollHeight; // 总高度
-            if (scrollHeight - 10 > currentScroll + clientHeight) {
-                window.requestAnimationFrame(smoothscroll);
-                window.scrollTo(0, currentScroll + (scrollHeight - currentScroll - clientHeight) / 2);
-            }
-        })();
-    };
-    //EDIT位置编辑用的函数
-    function findArrayTwo(arr,title){
-        for(let i=0;i<arr.length;i++){
-            //            console.log("arr["+i+"]",arr[i]);
-            if(arr[i].indexOf(title)>=0){
-                return i;
-            }
-        }
-        return -1;
-    }
+    //*********************  挪po排序操作 *********************//
     //返回排好序的挪po点集合
     function getclickedbtn(ptstruct,iplan){
         let ilen=ptstruct.length;
@@ -1814,177 +1984,5 @@
         return ptall;
     }
 
-    //智能匹配：长度差在一个字符以内;1-2个字符时完全匹配;3-6个字符时允许错1个;7个以上时允许错2个
-    function approximateMatch(strData1, strData2) {
-        // 检查输入有效性
-        if (!strData1 || !strData2) return false;
-
-        const len1 = strData1.length;
-        const len2 = strData2.length;
-
-        // 统计字符出现次数
-        const countChars = (str) => {
-            const counts = {};
-            for (const char of str) {
-                counts[char] = (counts[char] || 0) + 1;
-            }
-            return counts;
-        };
-
-        const counts1 = countChars(strData1);
-        const counts2 = countChars(strData2);
-
-        // 计算共同字符总数
-        let commonChars = 0;
-        for (const char in counts1) {
-            if (counts2[char]) {
-                commonChars += Math.min(counts1[char], counts2[char]);
-            }
-        }
-
-        // 情况1：第一个字符串长度在2及以下
-        if (len1 <= 2) {
-            // 要求长度相同且完全匹配
-            return len1 === len2 && commonChars === len1;
-        }
-        // 情况2：第一个字符串长度在3-6之间
-        else if (len1 >= 3 && len1 <= 6) {
-            // 第二个字符串长度需在3-7之间，且相同字符数为len1-1
-            return len2 >= 3 && len2 <= 7 && commonChars === len1 - 1;
-        }
-        // 情况3：第一个字符串长度在7以上
-        else {
-            // 第二个字符串与第一个长度差1，且相同字符数为len1-2
-            return Math.abs(len1 - len2) === 1 && commonChars === len1 - 2;
-        }
-    }
-
-    // 测试案例
-    /*
-    console.log(approximateMatch("万达", "万达")); // true（长度2，完全相同）
-    console.log(approximateMatch("万达", "万"));   // false（长度不同）
-    console.log(approximateMatch("苹果汁", "苹果水")); // true（长度3，相同字符2=3-1）
-    console.log(approximateMatch("计算机", "计算几")); // true（长度3，相同字符2=3-1）
-    console.log(approximateMatch("abcdef", "abcdeg")); // true（长度6，相同字符5=6-1）
-    console.log(approximateMatch("abcdefg", "abcdefxy")); // true（长度7，差1，相同5=7-2）
-    console.log(approximateMatch("万达木馬", "万达木马")); // true（长度4，相同3=4-1）
-    */
-
-    //比较两个对象是否相同(json的顺序可以不同)
-    function areObjectsEqual(obj1, obj2) {
-        // 如果是同一引用，直接返回true
-        if (obj1 === obj2) return true;
-
-        // 检查是否都是对象且不为null
-        if (typeof obj1 !== 'object' || obj1 === null ||
-            typeof obj2 !== 'object' || obj2 === null) {
-            return false;
-        }
-
-        // 获取两个对象的属性键数组
-        const keys1 = Object.keys(obj1);
-        const keys2 = Object.keys(obj2);
-
-        // 如果属性数量不同，返回false
-        if (keys1.length !== keys2.length) return false;
-
-        // 逐个比较属性
-        for (const key of keys1) {
-            // 检查obj2是否有相同的属性
-            if (!keys2.includes(key)) return false;
-
-            // 递归比较属性值
-            if (!areObjectsEqual(obj1[key], obj2[key])) return false;
-        }
-
-        return true;
-    }
-
-
-    // 自定义日志函数：替代console.log，将内容显示在面板 不是太好用，没使用，但函数接口在，不要删
-    function showLog(message, isError = false) {
-        // 创建单条日志元素
-        const logItem = document.createElement('div');
-        // 错误信息标红，普通信息白色
-        logItem.style.color = isError ? '#ff4444' : '#ffffff';
-        // 添加时间戳（可选，便于追溯）
-        const time = new Date().toLocaleTimeString();
-        logItem.textContent = `[${time}] ${message}`;
-
-        // 添加到面板（最新日志在最下面）
-        //statusContent.appendChild(logItem);
-
-        // 滚动到底部，确保能看到最新日志
-        //statusContent.scrollTop = statusContent.scrollHeight;
-
-        // 可选：保留最近20条日志，避免面板过长
-        //if (statusContent.children.length > 20) {
-        //statusContent.removeChild(statusContent.firstChild);
-        //}
-    }
-
-    //格式化日期函数
-    function formatDate(date, fmt)
-    {
-        date = date == undefined ? new Date() : date;
-        date = typeof date == 'number' ? new Date(date) : date;
-        fmt = fmt || 'yyyy-MM-dd HH:mm:ss';
-        var obj =
-            {
-                'y': date.getFullYear(), // 年份，注意必须用getFullYear
-                'M': date.getMonth() + 1, // 月份，注意是从0-11
-                'd': date.getDate(), // 日期
-                'q': Math.floor((date.getMonth() + 3) / 3), // 季度
-                'w': date.getDay(), // 星期，注意是0-6
-                'H': date.getHours(), // 24小时制
-                'h': date.getHours() % 12 == 0 ? 12 : date.getHours() % 12, // 12小时制
-                'm': date.getMinutes(), // 分钟
-                's': date.getSeconds(), // 秒
-                'S': date.getMilliseconds() // 毫秒
-            };
-        var week = ['天', '一', '二', '三', '四', '五', '六'];
-        for(var i in obj)
-        {
-            fmt = fmt.replace(new RegExp(i+'+', 'g'), function(m)
-                              {
-                var val = obj[i] + '';
-                if(i == 'w') return (m.length > 2 ? '星期' : '周') + week[val];
-                for(var j = 0, len = val.length; j < m.length - len; j++) val = '0' + val;
-                return m.length == 1 ? val : val.substring(val.length - m.length);
-            });
-        }
-        return fmt;
-    }
-
-    //用户消息
-    function createNotify(title, options) {
-        var PERMISSON_GRANTED = "granted";
-        var PERMISSON_DENIED = "denied";
-        var PERMISSON_DEFAULT = "default";
-
-        // 如果用户已经允许，直接显示消息，如果不允许则提示用户授权
-        if (Notification.permission === PERMISSON_GRANTED) {
-            notify(title, options);
-        } else {
-            Notification.requestPermission(function (res) {
-                if (res === PERMISSON_GRANTED) {
-                    notify(title, options);
-                }
-            });
-        }
-
-        //显示消息
-        function notify($title, $options) {
-            var notification = new Notification($title, $options);
-            notification.onshow = function (event) {
-            };
-            notification.onclose = function (event) {
-            };
-            notification.onclick = function (event) {
-                notification.close();
-                mywin.focus();
-            };
-        }
-    }
 
 })();
