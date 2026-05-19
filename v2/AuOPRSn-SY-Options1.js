@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.1.0
+// @version      2.1.1
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2285,11 +2285,98 @@
         return fmt;
     }
 
+    //***************** 路由 *****************//
+    const SUBMIT_ROUTE = "/new/review";
+    const MAPVIEW_ROUTE = "/new/mapview";
+    let mapPanelObserver = null;
+    let mapPanelMutationScheduled = false;
+
+    function isOnMapCapableRoute() {
+        const p = window.location.pathname;
+        console.log(p);
+        return p.startsWith(SUBMIT_ROUTE);
+    }
+
+    //路径变化的操作，写在这里
+    function onMapRouteChange() {
+        if (isOnMapCapableRoute()) {
+            //startMapPanelWatcher();
+        } else {
+            //stopMapPanelWatcher();
+            //teardownMap();
+
+            // 👇 在这里添加你的操作
+            const p = window.location.pathname;
+            let doctitle = document.title;
+            console.log("路由变化：",p);
+            doctitle = doctitle.replace(/-审核中$/, "-未审核");
+            document.title = doctitle;
+        }
+    }
+
+    function setupMapRouteWatcher() {
+        const origPushState = history.pushState;
+        const origReplaceState = history.replaceState;
+
+        function wrappedRouteChange() {
+            onMapRouteChange();
+        }
+
+        history.pushState = function (...args) {
+            const ret = origPushState.apply(this, args);
+            wrappedRouteChange();
+            return ret;
+        };
+
+        history.replaceState = function (...args) {
+            const ret = origReplaceState.apply(this, args);
+            wrappedRouteChange();
+            return ret;
+        };
+
+        window.addEventListener("popstate", wrappedRouteChange);
+
+        // Initial load
+        wrappedRouteChange();
+    }
+
+    //其它地方拷贝过来，应该没用这个
+    function startMapPanelWatcher() {
+        // Don’t double-start
+        if (mapPanelObserver) return;
+
+        mapPanelObserver = new MutationObserver(() => {
+            // Debounce: collapse many mutations into one handler call
+            if (mapPanelMutationScheduled) return;
+
+            mapPanelMutationScheduled = true;
+            requestAnimationFrame(() => {
+                mapPanelMutationScheduled = false;
+            });
+        });
+
+        mapPanelObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    //其它地方拷贝过来，应该没用这个
+    function stopMapPanelWatcher() {
+        if (mapPanelObserver) {
+            mapPanelObserver.disconnect();
+            mapPanelObserver = null;
+        }
+        mapPanelMutationScheduled = false;
+    }
+
+
     // 初始化
     // 页面加载后执行（延时确保DOM渲染完成）
     window.addEventListener('load', () => setTimeout( function() {
         addPanelToMapView();
         observeMapViewLoading();
+        setupMapRouteWatcher();
         initNodes();
     }, 300));
 
