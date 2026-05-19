@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.5
+// @version      7.2.6
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -586,6 +586,14 @@
                 // 仅在请求完全完成时处理（readyState=4）
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
+
+                        if(!url.includes("/api/v1/vault/review"))
+                        {
+                            let doctitle = document.title;
+                            doctitle = doctitle.replace(/-审核中$/, "-未审核");
+                            document.title = doctitle;
+                        }
+
                         res(xhr.responseText); // 成功：返回响应文本
                     } else {
                         const errorMsg = `${method}:${url} 失败（状态码：${xhr.status}）`;
@@ -1021,6 +1029,10 @@
                             } else if (!doctitle.endsWith("-未审核")) {
                                 doctitle += "-未审核";
                             }
+                        }
+                        if(document.URL != "https://wayfarer.nianticlabs.com/new/review")
+                        {
+                            doctitle = doctitle.replace(/-审核中$/, "");
                         }
                         document.title = doctitle;
                     },1000);
