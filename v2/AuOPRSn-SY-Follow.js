@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.1.3
+// @version      4.1.4
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1540,45 +1540,46 @@
                     }
                 } else if (rdata.spam)
                 {
-                    let btncontainer = document.querySelector('.action-button-container');
-                    if(btncontainer) {
-                        let btn = document.querySelectorAll('.wf-button');
-                        if(btn[0]){
-                            btn[0].click();
-                            //click "检举"
-                            //选择检举的项目
-                            //document.querySelectorAll('mat-checkbox.mat-checkbox')[3].childNodes[0].click();
-                            setTimeout(function(){
-                                let chxbtn = document.querySelectorAll('mat-checkbox.mat-checkbox');
-                                for(let i=0;i<rdata.rejectReasons.length;i++)
-                                {
-                                    if(rdata.rejectReasons[i] === "ABUSE")
-                                    {
-                                        if(chxbtn[0]) chxbtn[0].childNodes[0].click();
-                                    } else if(rdata.rejectReasons[i] === "FAKE")
-                                    {
-                                        if(chxbtn[1]) chxbtn[1].childNodes[0].click();
-                                    } else if(rdata.rejectReasons[i] === "PERSONAL")
-                                    {
-                                        if(chxbtn[2]) chxbtn[2].childNodes[0].click();
-                                    } else if(rdata.rejectReasons[i] === "EXPLICIT")
-                                    {
-                                        if(chxbtn[3]) chxbtn[3].childNodes[0].click();
-                                    } else if(rdata.rejectReasons[i] === "OFFENSIVE")
-                                    {
-                                        if(chxbtn[4]) chxbtn[4].childNodes[0].click();
-                                    }
-                                }
-                            },500);
-                        }
-                    }
                 } else if (rdata.rejectReasons){
                     tmptext = "照抄网络审核：否决";
                     tmpfollow.review="否决:"+rdata.rejectReasons;
                     console.log("审核记录拒",rdata.rejectReasons);
                     for(let i=0;i<rdata.rejectReasons.length;i++){
-                        if(rdata.rejectReasons[i]=="PRIVATE" || rdata.rejectReasons[i]=="INAPPROPRIATE" || rdata.rejectReasons[i]=="SCHOOL" ||
-                           rdata.rejectReasons[i]=="SENSITIVE" || rdata.rejectReasons[i]=="EMERGENCY" || rdata.rejectReasons[i]=="GENERIC")
+                        if(["ABUSE", "FAKE", "PERSONAL","EXPLICIT","OFFENSIVE"].includes(rdata.rejectReasons[i])){
+                            let btncontainer = document.querySelector('.action-button-container');
+                            if(btncontainer) {
+                                let btn = document.querySelectorAll('.wf-button');
+                                if(btn[0]){
+                                    btn[0].click();
+                                    //click "检举"
+                                    //选择检举的项目
+                                    //document.querySelectorAll('mat-checkbox.mat-checkbox')[3].childNodes[0].click();
+                                    setTimeout(function(){
+                                        let chxbtn = document.querySelectorAll('mat-checkbox.mat-checkbox');
+                                        for(let i=0;i<rdata.rejectReasons.length;i++)
+                                        {
+                                            if(rdata.rejectReasons[i] === "ABUSE")
+                                            {
+                                                if(chxbtn[0]) chxbtn[0].childNodes[0].click();
+                                            } else if(rdata.rejectReasons[i] === "FAKE")
+                                            {
+                                                if(chxbtn[1]) chxbtn[1].childNodes[0].click();
+                                            } else if(rdata.rejectReasons[i] === "PERSONAL")
+                                            {
+                                                if(chxbtn[2]) chxbtn[2].childNodes[0].click();
+                                            } else if(rdata.rejectReasons[i] === "EXPLICIT")
+                                            {
+                                                if(chxbtn[3]) chxbtn[3].childNodes[0].click();
+                                            } else if(rdata.rejectReasons[i] === "OFFENSIVE")
+                                            {
+                                                if(chxbtn[4]) chxbtn[4].childNodes[0].click();
+                                            }
+                                        }
+                                    },500);
+                                }
+                            }
+                        }
+                        if(["PRIVATE", "INAPPROPRIATE", "SCHOOL","SENSITIVE","EMERGENCY","GENERIC"].includes(rdata.rejectReasons[i]))
                         {
                             console.log("适当拒");
                             setTimeout(function(){
@@ -1601,7 +1602,7 @@
                                 }
                             },500);
                         }
-                        else if (rdata.rejectReasons[0] == "UNSAFE")
+                        else if (rdata.rejectReasons[i] === "UNSAFE")
                         {
                             //setTimeout(function(){
                             if(document.querySelector('#safe-card').querySelectorAll('button')[2])
@@ -1612,7 +1613,7 @@
                             }
                             //},1000);
                         }
-                        else if (rdata.rejectReasons[0] == "TEMPORARY")
+                        else if (rdata.rejectReasons[i] === "TEMPORARY")
                         {
                             setTimeout(function(){
                                 if(document.querySelector('#permanent-location-card').querySelectorAll('button')[2])
