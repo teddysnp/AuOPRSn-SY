@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.1.4
+// @version      4.1.5
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1538,8 +1538,6 @@
                         tmptext = "照抄网络审核：非重复";
                         tmpfollow.review="正常非重复";
                     }
-                } else if (rdata.spam)
-                {
                 } else if (rdata.rejectReasons){
                     tmptext = "照抄网络审核：否决";
                     tmpfollow.review="否决:"+rdata.rejectReasons;
