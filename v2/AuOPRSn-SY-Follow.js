@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.1.6
+// @version      4.1.7
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -819,7 +819,8 @@
                             //只有经纬度小于ilatdis,ilngdis的，才判断
                             if(Math.abs(item.lat-pData.submissions[i].lat)<=ilatdis & Math.abs(item.lng-pData.submissions[i].lng)<=ilngdis){
                                 console.log("Manager:有位置接近的");
-                                if((!item?.nominateID || item.nominatedID === pData.submissions[i].id)
+                                //当前用户与任务中申请者一致，并且nominatedID为空，或者有nominatedID与pData.submissions[i].id相同，并且名称一致
+                                if(((!item?.nominateID && useremail === item.submitter)|| item.nominatedID === pData.submissions[i].id)
                                      && (item.title === pData.submissions[i].title || item.title === pData.submissions[i].poiData?.title))
                                 //if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
                                 {
