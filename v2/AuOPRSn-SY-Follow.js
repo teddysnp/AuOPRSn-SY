@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.1.5
+// @version      4.1.6
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -37,19 +37,20 @@
     let missionGDoc = []; //从google doc读取的任务列表
     let dURL = "https://script.google.com/macros/s/AKfycbwlUEhAm4l8kI617UcNDw2CU7xFR3GGPAMUECt6L5RV8cs4KELQsC6siB_7xwk8JTzpMg/exec";
 
+    let logMission = false;
     mywin.onload = function() {
         //console.log("onload","getMission");
         missionGDoc = JSON.parse(localStorage.missionGDoc);
-        getLocalMissionList();
-        getLocalMissionList();
+        getLocalMissionList(logMission);
+        //getLocalMissionList();
     }
 
-    function getLocalMissionList(){
+    function getLocalMissionList(ilog){
         let miss = localStorage.missionGDoc;
         if (miss) {
             missionGDoc = JSON.parse(miss);
             //let missstr = miss.replace(/\[/g,"{").replace(/\]/g,"}");//.replace("{{","[{").replace("}}","]");
-            console.log("follow-missionGDoc",missionGDoc);
+            if (ilog) console.log("follow-missionGDoc",missionGDoc);
         }
     }
     function getLocalMissionListBak(){
@@ -417,7 +418,7 @@
                 this.send = function (...data) {
                     try{
                         let tmpdata = JSON.parse(data[0]);
-                        console.log("原版审核数据",data);
+                        //console.log("原版审核数据",data);
                         console.log("原版审核数据",JSON.parse(data[0]));
                         //console.log("cloudReviewData",cloudReviewData);
                         //NEW+挪po,直接用网络审核结果覆盖data
@@ -439,7 +440,7 @@
                         //跟po，保存记录至本地：用户名+follow
                         //console.log("查看是否跟po，保存至本地",tmpfollow);
                         savePostData(tmpfollow,data);
-                        console.log("提交的审核数据",data);
+                        //console.log("提交的审核数据",data);
                         console.log("提交的审核数据",JSON.parse(data[0]));
                         return send.apply(_this,data);
                     } catch(e) {
@@ -817,8 +818,17 @@
                             //1分钟的时间戳值:60000 20分钟是1200000
                             //只有经纬度小于ilatdis,ilngdis的，才判断
                             if(Math.abs(item.lat-pData.submissions[i].lat)<=ilatdis & Math.abs(item.lng-pData.submissions[i].lng)<=ilngdis){
-                                if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
+                                console.log("Manager:有位置接近的");
+                                if((!item?.nominateID || item.nominatedID === pData.submissions[i].id)
+                                     && (item.title === pData.submissions[i].title || item.title === pData.submissions[i].poiData?.title))
+                                //if( (item.title === pData.submissions[i].title) || ( ( item.title === pData.submissions[i].poiData.title) ) )
                                 {
+                                    if(!item?.nominateID) {
+                                        item.nominateID = pData.submissions[i].id;
+                                        isave=1;
+                                        console.log("isave5:更新提交id,nominateID");
+                                    }
+                                    console.log("Manager:找到任务中的po");
                                     if(item.title === "茫然" || pData.submissions[i].title === "茫然")
                                     {
                                         console.log("injectManage-item",item);
@@ -872,7 +882,7 @@
                                                 console.log("isave2：审核");
                                             }
                                         }
-                                        //审核人写错
+                                        //审核人写错 :
                                         if((pData.submissions[i].status === "VOTING" || pData.submissions[i].status === "NOMINATED" ||
                                             pData.submissions[i].type === "NOMINATION" || pData.submissions[i].type === "EDIT_LOCATION") & item.submitter != useremail)
                                         {
@@ -971,7 +981,7 @@
                             setTimeout(function(){
                                 localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
                                 //saveToGDoc(item);
-                                let updateField={status:item.status,title:item.title,lat:item.lat,lng:item.lng,submitter:item.submitter};
+                                let updateField={status:item.status,title:item.title,lat:item.lat,lng:item.lng,submitter:item.submitter,nominateID:item.nominateID};
                                 cfClass.updateData(
                                     item.id, updateField,
                                     (res) => {
@@ -1701,7 +1711,7 @@
     async function savePostData(tmpfollow,data){
         let rd1=cloudReviewData;
         let rd2=JSON.parse(data);
-        console.log("传入的审核数据",data);
+        //console.log("传入的审核数据",data);
         //云端非空：跟审
         //console.log("rd1",rd1);console.log("rd2",rd2);console.log("jsondata0",JSON.parse(data[0]));
         if(cloudReviewData !== null ) {
