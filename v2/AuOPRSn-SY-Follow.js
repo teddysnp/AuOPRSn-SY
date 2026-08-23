@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.2.1
+// @version      4.2.2
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -99,7 +99,12 @@
         // 逻辑一：处理 踩/举报/取消 状态切换 (普通的冒泡监听)
         // ==========================================
         document.body.addEventListener("click", function (event) {
+            console.log( "click", event.target, "isTrusted=", event.isTrusted );
+            isUserClick = event.isTrusted;
+            console.log( "isUserClick更新为", isUserClick );
+
             if (!event.isTrusted) return;
+
 
             // 兼容处理：获取最近的按钮元素，防止点到按钮内的文字/图标导致失效
             const btnElement = event.target.closest("button, .wf-button");
@@ -274,7 +279,12 @@
         document.body.addEventListener("click",function(event){
             //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
             //console.log("isTrusted",event.isTrusted);
+            console.log( "click", event.target, "isTrusted=", event.isTrusted );
+
             isUserClick = event.isTrusted;
+
+            console.log( "isUserClick更新为", isUserClick );
+
             if(event.isTrusted) {
                 //console.log(event.srcElement);
                 let iauto = document.getElementById("idautolabel");
