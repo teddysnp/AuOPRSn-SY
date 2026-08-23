@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.1.8
+// @version      4.2.0
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -14,6 +14,7 @@
 
 (function() {
 
+    //工作：1.跟审时，忽略的未显示跟审，2.忽略时，如果在池中，给出提示
     let autoreview = null;
     let portalData = null;
     let rejcbxchnstr = ["照片模糊不清","臉部或身體","照片中出現車牌號碼","照片畫質低劣或並非屬實","標題命名不佳或並不準確","方向","不準確的位置","不存在的假位置","不雅的內容","涉嫌影響審查結果","令人反感","涉及攻擊性內容或言論","標題含有顏文字或表情符號"];
@@ -90,8 +91,186 @@
         });
     };
     listenLinkClick();
-    //监听页面点击，获取是否人工点击
-    function listenLinkClick(){
+
+    let isConfirmed = false;
+
+    function listenLinkClick() {
+        // ==========================================
+        // 逻辑一：处理 踩/举报/取消 状态切换 (普通的冒泡监听)
+        // ==========================================
+        document.body.addEventListener("click", function (event) {
+            if (!event.isTrusted) return;
+
+            // 兼容处理：获取最近的按钮元素，防止点到按钮内的文字/图标导致失效
+            const btnElement = event.target.closest("button, .wf-button");
+            const buttonText = btnElement ? btnElement.innerText.trim() : (event.target.innerText ? event.target.innerText.trim() : "");
+
+            const iauto = document.getElementById("idautolabel");
+            const ibtn = document.getElementById("btnauto");
+            if (!iauto || !ibtn) return;
+
+            const currentStatus = iauto.textContent.trim();
+
+            // 当用户点击 踩/重复/举报 时
+            if (["thumb_down", "標記為重複", "檢舉", "举报"].includes(buttonText)) {
+                if (currentStatus === "自动") {
+                    window.iautoman = "自动";
+                    ibtn.click();
+                }
+            }
+
+            // 当用户点击 取消/关闭 时
+            if (["取消", "關閉", "关闭"].includes(buttonText)) {
+                if (currentStatus === "手动") {
+                    if (window.iautoman === "自动") {
+                        ibtn.click();
+                    } else {
+                        window.iautoman = null;
+                    }
+                }
+            }
+        }, false); // 正常的冒泡阶段执行
+
+        // ==========================================
+        // 逻辑二：精准拦截“略过”按钮 (捕获阶段监听 + 缺省取消的弹窗)
+        // ==========================================
+        document.body.addEventListener("click", function (event) {
+            // 如果是脚本代码触发的放行点击，直接跳过拦截
+            if (isConfirmed) return;
+            if (!event.isTrusted) return;
+
+            const targetButton = event.target.closest(".wf-button");
+            if (!targetButton) return;
+            const buttonText = targetButton.innerText ? targetButton.innerText.trim() : "";
+
+            const iauto = document.getElementById("idautolabel");
+            const ibtn = document.getElementById("btnauto");
+            if (!iauto || !ibtn) return;
+            const currentStatus = iauto.textContent.trim();
+
+            if (buttonText === "略過") {
+                console.log("用户点击了略过按钮");
+
+                // 1. 【核心前置判断】先判断是否为任务 PO
+                const isMissionPortal = isPortalInMission(portalData, missionGDoc);
+                console.log("是否为任务po:", isMissionPortal);
+
+                if (isMissionPortal) {
+                    // ==========================================
+                    // 场景 A：是任务 PO -> 启动拦截与暂停逻辑
+                    // ==========================================
+
+                    // 只有是任务时，我们才需要把自动化暂停（切到手动）
+                    if (currentStatus === "自动") {
+                        window.iautoman = "自动";
+                        ibtn.click();
+                    }
+
+                    // 只有是任务时，我们才去拦截网页原生的 Angular 响应
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+
+                    console.log("portalData", portalData);
+                    console.log("missionGDoc", missionGDoc);
+
+                    showCustomConfirm("这是池中任务po！！！确定要略过吗？", function(userConfirmed) {
+                        if (userConfirmed) {
+                            isConfirmed = true;
+                            targetButton.click(); // 用户确认，放行并触发真正的点击
+                            setTimeout(() => { isConfirmed = false; }, 50);
+                        } else {
+                            // 用户取消，且刚才切过手动，则帮忙切回自动
+                            if (currentStatus === "自动") { // 这里的判断基于最开始抓到的原始状态
+                                if (window.iautoman === "自动") {
+                                    ibtn.click();
+                                } else {
+                                    window.iautoman = null;
+                                }
+                            }
+                            console.log("用户取消了略过操作");
+                        }
+                    });
+
+                } else {
+                    // ==========================================
+                    // 场景 B：非任务 PO -> 顺其自然，直接放行
+                    // ==========================================
+                    // 这里不需要写 event.preventDefault()，也不需要写 targetButton.click()。
+                    // 因为我们没有拦截事件，浏览器会自然顺着点击流触发网页原本的 Angular 点击响应！
+                    console.log("非任务Po，不作任何拦截，直接执行网页原生略过。");
+                }
+            }
+
+        }, true); // 关键：捕获阶段拦截
+    }
+
+    /** 创建一个符合需求的自定义确认弹窗：完美解决原生 confirm 无法让“取消”按钮作为默认焦点的问题 */
+    function showCustomConfirm(message, callback) {
+        // 1. 如果已经有弹窗了，直接置顶并聚焦，不重复创建
+        const existModal = document.getElementById("custom-confirm-modal");
+        if (existModal) {
+            const cancelBtn = document.getElementById("modal-cancel-btn");
+            if (cancelBtn) cancelBtn.focus();
+            return;
+        }
+
+        // 2. 创建弹窗 HTML 结构
+        const modal = document.createElement("div");
+        modal.id = "custom-confirm-modal";
+        modal.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6); /* 稍微加深遮罩颜色，提示用户当前处于模态 */
+        display: flex; align-items: center; justify-content: center;
+        z-index: 9999999; /* 极其绝对的置顶 */
+        font-family: sans-serif;
+    `;
+
+        modal.innerHTML = `
+        <div style="background: white; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; min-width: 280px;">
+            <p style="margin: 0 0 20px 0; font-size: 16px; color: #333; font-weight: 500;">${message}</p>
+            <div style="display: flex; justify-content: space-around;">
+                <button id="modal-confirm-btn" style="padding: 8px 20px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 4px; font-size: 14px;">确认</button>
+                <button id="modal-cancel-btn" style="padding: 8px 20px; border: none; background: #007bff; color: white; cursor: pointer; border-radius: 4px; font-size: 14px; font-weight: bold;">取消</button>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const confirmBtn = document.getElementById("modal-confirm-btn");
+        const cancelBtn = document.getElementById("modal-cancel-btn");
+
+        // 强制把焦点锁定在“取消”按钮上
+        cancelBtn.focus();
+
+        // 关闭弹窗的内联函数
+        const closeModal = (result) => {
+            modal.remove();
+            callback(result); // 确保一定会执行你的回调，去恢复自动化状态
+        };
+
+        // 事件绑定
+        confirmBtn.onclick = (e) => {
+            e.stopPropagation();
+            closeModal(true);
+        };
+
+        cancelBtn.onclick = (e) => {
+            e.stopPropagation();
+            closeModal(false);
+        };
+
+        // 【修改核心】：点击弹窗背景（外部区域）时，不消失，而是让取消按钮重新获得焦点！
+        // 这样用户乱点页面其他地方，弹窗也不会隐形，必须点两个按钮之一
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                cancelBtn.focus(); // 重新抓回焦点，防止焦点流失
+                // 如果你希望“点外部=点取消”，就把下面这行注释取消掉：
+                closeModal(false);
+            }
+        };
+    }
+    function listenLinkClick1(){
         document.body.addEventListener("click",function(event){
             //if(event.srcElement.innerText.indexOf("送出")>=0 || event.srcElement.innerText.indexOf("即可结束")>=0) console.log("listenLinkClick",event);
             //console.log("isTrusted",event.isTrusted);
@@ -252,6 +431,9 @@
     }
 
     // 上传数据到R2   uploadDataToR2(folderPath:路径 , fileName:文件名 , data:json数据)
+    //WORKER_URL为通用型，参数有文件、数据
+    //本脚本更新审核数据
+    //"portal/portalreview/","portal."+data.id+".json"
     function uploadDataToR2(folderPath,fileName,data) {
         try {
             console.log(`正在上传数据:${folderPath}`);
@@ -717,6 +899,76 @@
             // 第二个字符串与第一个长度差1，且相同字符数为len1-2
             return Math.abs(len1 - len2) === 1 && commonChars === len1 - 2;
         }
+    }
+
+    //计算两个经纬度之间的距离（单位：米）
+    function getDistance(lat1, lng1, lat2, lng2) {
+        const R = 6371000; // 地球半径，单位：米
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; // 返回距离（米）
+    }
+
+    //判断 portalData 是否在 missionGDoc 数组中存在
+    /*
+     * @param {Object} portalData - 包含当前Portal信息的JSON对象
+     * @param {Array} missionGDoc - 包含任务列表的数组
+     * @returns {Boolean} 是否匹配成功
+    */
+    function isPortalInMission(portalData, missionGDoc) {
+        // 安全检查
+        if (!portalData || !Array.isArray(missionGDoc)) return false;
+
+        // 预先建立 type 和 types 的映射关系，方便做不区分中英文的匹配
+        const typeMapping = {
+            'NEW': '新增',
+            'EDIT': '编辑',
+            'PHOTO': '图片'
+        };
+
+        // 遍历任务数组进行比对
+        return missionGDoc.some(mission => {
+            // --- 原则 1：ID 匹配 ---
+            // 兼容处理：防呆检查，确保两个字段都有值再对比
+            if (portalData.id && mission.portalID && portalData.id === mission.portalID) {
+                console.log(`[匹配成功] 触发原则1：ID一致 (${portalData.id})`);
+                return true;
+            }
+
+            // --- 原则 2：复合条件匹配 (ID不匹配时触发) ---
+            // 2.1 检查 title 相同 (去除首尾空格)
+            const isTitleMatch = portalData.title && mission.title &&
+                  portalData.title.trim() === mission.title.trim();
+
+            // 2.2 检查业务类型匹配 (NEW->新增, EDIT->编辑, PHOTO->图片)
+            const pType = portalData.type;
+            const mType = mission.types;
+            const isTypeMatch = (pType === mType) || (typeMapping[pType] === mType);
+
+            // 2.3 检查地理位置是否在 50 米以内
+            let isDistanceMatch = false;
+            if (portalData.lat && portalData.lng && mission.lat && mission.lng) {
+                const distance = getDistance(portalData.lat, portalData.lng, mission.lat, mission.lng);
+                if (distance <= 50) {
+                    isDistanceMatch = true;
+                }
+            }
+
+            // 三个子条件同时满足，则认为原则 2 匹配成功
+            if (isTitleMatch && isTypeMatch && isDistanceMatch) {
+                console.log(`[匹配成功] 触发原则2：标题相同(${portalData.title})、类型匹配、且距离在50米内`);
+                return true;
+            }
+
+            // 当前这条 mission 不匹配，继续循环下一条
+            return false;
+        });
     }
 
     //*********************  User操作 *********************//
@@ -1891,6 +2143,9 @@
         }
         //console.log("isave",isave);
         if(isave==1){
+            //用于保存用户审核结果
+            data.UserReview = tmpupload.review ;
+            data.UserEmail = useremail;
             try{
                 //console.log("上传审核结果...");
                 if(icloud==0 || icloud==2){
