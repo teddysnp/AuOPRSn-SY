@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.1.1
+// @version      2.1.2
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -715,6 +715,8 @@
         }
     }
     // 上传数据到R2   uploadDataToR2(folderPath:路径 , fileName:文件名 , data:json数据)
+    //WORKER_URL为通用型，参数有文件、数据
+    //本脚本暂未用到上传函数uploadDataToR2
     function uploadDataToR2(folderPath,fileName,data) {
         try {
             console.log(`正在上传数据:${folderPath}`);
@@ -753,6 +755,7 @@
     // 读取指定的JSON文件
     function readR2File(fileName) {
         return new Promise((res, err) => {
+
             console.log(`正在读取文件: ${fileName.split('/').pop()}`);
 
             GM_xmlhttpRequest({
@@ -1706,7 +1709,7 @@
         }
     }
 
-    //所有任务HTML
+    //所有任务HTML(首页地图页，第二个标签：所有任务)
     async function getMissionHTMLAccepted(iowner) {
         function getHTML() {
             // 更新页面DOM
@@ -1738,10 +1741,12 @@
                 if(icnt > MISSION_ACCEPT_DISPLAY) return;
                 let stitle = item.portalID ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>` : `"<td>${item.title}</td>"`;
                 let sstatus = "<td>"+item.status+"</td>";
-                let slatlng = '<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter +
-                  '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.lat+','+item.lng+"</a></td>";
-                let stypes = '<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter
-                + '" tagName="' + item.portalID + `" onclick="switchUserReviewDiv(${iowner})";>`+item.types+"</a></td>";
+                // 如果有值，就生成整个属性字符串，注意末尾带一个空格；没值就彻底留空
+                let pownerAttr = item.submitter ? `powner="${item.submitter}" ` : '';
+                let isOwner = item.submitter === userEmail;
+                // 拼接时直接放入 pownerAttr
+                let stypes = `<td><a href="javascript:void(0);" us="us1" owner="${isOwner}" tagName="${item.portalID}" ${pownerAttr}onclick="switchUserReviewDiv(${iowner});">${item.types}</a></td>`;
+                let slatlng = `<td><a href="javascript:void(0);" us="us2" owner="${isOwner}" tagName="${item.portalID}" ${pownerAttr}onclick="switchUserReviewDiv(${iowner});">${item.lat},${item.lng}</a></td>`;
                 let sbegin = "<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td>";
                 //所有任务中：已审只针对用户，所以不需要
                 //let sownerstatus = "<td>" + (item.ownerstatus === true ? '✓' : '') +"</td>";
@@ -1832,14 +1837,17 @@
 
                 missionGDoc.forEach(item => {
                     let powner = (item.submitter && item.submitter !== null) ? String(item.submitter).trim() : "";
-                    let isOwner = item.submitter === userEmail;
                     let stitle = item.portalID
                     ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>`
                     : `<td>${item.title}</td>`;
-                    let ssubmitter_latlng = `<td><a href="javascript:void(0);" us="us2" owner="${isOwner}" powner="${powner}"
-                        tagName="${item.portalID}" onclick="switchUserReviewDiv(${iowner})">${item.lat},${item.lng}</a> </td>`;
-                    let stypes = `<td> <a href="javascript:void(0);" us="us1" owner="${isOwner}" powner="${powner}"
-                        tagName="${item.portalID}" onclick="switchUserReviewDiv(${iowner})">${item.types}</a></td>`;
+                    //let ssubmitter_latlng = `<td><a href="javascript:void(0);" us="us2" owner="${isOwner}" powner="${powner}" tagName="${item.portalID}" onclick="switchUserReviewDiv(${iowner})">${item.lat},${item.lng}</a> </td>`;
+                    // stypes = `<td> <a href="javascript:void(0);" us="us1" owner="${isOwner}" powner="${powner}" tagName="${item.portalID}" onclick="switchUserReviewDiv(${iowner})">${item.types}</a></td>`;
+                let pownerAttr = item.submitter ? `powner="${item.submitter}" ` : '';
+                let isOwner = item.submitter === userEmail;
+                // 拼接时直接放入 pownerAttr
+                let stypes = `<td><a href="javascript:void(0);" us="us1" owner="${isOwner}" tagName="${item.portalID}" ${pownerAttr}onclick="switchUserReviewDiv(${iowner});">${item.types}</a></td>`;
+                let slatlng = `<td><a href="javascript:void(0);" us="us2" owner="${isOwner}" tagName="${item.portalID}" ${pownerAttr}onclick="switchUserReviewDiv(${iowner});">${item.lat},${item.lng}</a></td>`;
+
                     let sbegin = `<td>${(item.status === "审核" || item.status === "通过" ? "✓" : "")}</td>`;
                     let sownerstatus = `<td>${(item.ownerstatus === true ? '✓' : '')}</td>`;
                     let ssubmitteddate = item.portalID ? `<td><a href='${durl}/portal/portaluseremail/portal.${item.portalID}.useremail.json'
@@ -1849,7 +1857,7 @@
                     let moveText = item.moveoptions === "右" ? "最右" : (item.moveoptions === "下" ? "最下" : (item.moveoptions + item.moveplace));
                     let smove = `<td>${moveText}</td>`;
 
-                    smistmp += `<tr>${stitle}${ssubmitter_latlng}${stypes}${sbegin}${sownerstatus}${ssubmitteddate}${slat}${slng}${smove}</tr>`;
+                    smistmp += `<tr>${stitle}${slatlng}${stypes}${sbegin}${sownerstatus}${ssubmitteddate}${slat}${slng}${smove}</tr>`;
                 });
 
                 smistmp += "</tbody></table>";
@@ -2293,7 +2301,7 @@
 
     function isOnMapCapableRoute() {
         const p = window.location.pathname;
-        console.log(p);
+        //console.log(p);
         return p.startsWith(SUBMIT_ROUTE);
     }
 
@@ -2308,7 +2316,7 @@
             // 👇 在这里添加你的操作
             const p = window.location.pathname;
             let doctitle = document.title;
-            console.log("路由变化：",p);
+            //console.log("路由变化：",p);
             doctitle = doctitle.replace(/-审核中$/, "-未审核");
             document.title = doctitle;
         }
