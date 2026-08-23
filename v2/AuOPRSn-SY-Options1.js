@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.1.2
+// @version      2.1.3
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1380,22 +1380,32 @@
                             po = "<span></span>";
                         }
 
+                        const item = userReviewJson.find(item => item.useremail === semail);
+                        let userReview = "";
+                        if (item) {
+                            console.log('item',item);
+                            if(item.userreview){
+                                userReview = item.userreview === "skip" ? "忽略" : item.userreview;
+                                console.log("找到用户评价：", userReview);
+                            }
+                        }
+
                         // 审核状态判断
                         if (findUserEmail(userreview, semail) > 0) {
                             if (userEmailList[i].includes(userEmail)) {
-                                stmp += `<div class='wayfarer-sqselfok wayfarer-useremail'>${po}${shtmllink}</div>`;
+                                stmp += `<div><div class='wayfarer-sqselfok wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
                             } else {
-                                stmp += `<div class='wayfarer-sqok wayfarer-useremail'>${po}${shtmllink}</div>`;
+                                stmp += `<div><div class='wayfarer-sqok wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
                             }
                         } else {
                             if (semail.includes(userEmail)) {
                                 if (owner === "true") {
-                                    stmp += `<div class='wayfarer-sqselfowner wayfarer-useremail'>${po}${shtmllink}</div>`;
+                                    stmp += `<div><div class='wayfarer-sqselfowner wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
                                 } else {
-                                    stmp += `<div class='wayfarer-sqselfno wayfarer-useremail'>${po}${shtmllink}</div>`;
+                                    stmp += `<div><div class='wayfarer-sqselfno wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
                                 }
                             } else {
-                                stmp += `<div class='wayfarer-sqno wayfarer-useremail'>${po}${shtmllink}</div>`;
+                                stmp += `<div><div class='wayfarer-sqno wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
                             }
                         }
 
@@ -2253,6 +2263,13 @@
               font-size:18px;
               color: #faa755;
               background-color: #007947;
+          }
+          .wayfarer-sqreview {
+              margin-left: 2.4em;
+              width: 250px;
+              height: 10px;
+              font-size:14px;
+              color: #333333;
           }
         `;
         const style = document.createElement('style');
