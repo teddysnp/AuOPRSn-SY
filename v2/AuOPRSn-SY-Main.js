@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.6
+// @version      7.2.7
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -72,12 +72,8 @@
     if(localStorage.captchasetting){
         needCaptcha = localStorage.captchasetting;
     }
-    //在cloudflare中上传的链接
-    let surl='https://dash.cloudflare.com/api/v4/accounts/6e2aa83d91b76aa15bf2d14bc16a3879/r2/buckets/warfarer/objects/';
+    //此链接用于点击任务，显示已审核用户的json文件
     let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
-    //let cookie = localStorage.cfcookie;//上传权限  使用cloudflare的worker后，不再使用cookie
-    //上传任务po的Google Apps Scripts链接
-    let dURL = "https://script.google.com/macros/s/AKfycbwlUEhAm4l8kI617UcNDw2CU7xFR3GGPAMUECt6L5RV8cs4KELQsC6siB_7xwk8JTzpMg/exec";
 
     const loginNotice = null;
 
@@ -95,13 +91,15 @@
         localStorage.setItem("Warning",1);
     }
 
+    let logMission = false;
+    let logUser = false;
+    let logReviewMark = false;
     console.log("mywin",mywin.location);
     mywin.onload = async function() {
-        //createStatusPanel();
         //console.log("onload","getMission");
         // 先获取用户信息并等待完成
         const restext = await getUser();
-        console.log('restext',restext);
+        if(logUser) console.log('restext',restext);
 
         // 处理用户信息
           if(restext.result.socialProfile){
@@ -112,16 +110,17 @@
 
         if (userEmail) {
             localStorage.setItem("currentUser", userEmail);
+            localStorage.setItem("currentUserPerformance", performance);
             document.title = userEmail;
         }
 
-        console.log("最终获取到的用户邮箱：", userEmail);
+        if(logUser) console.log("最终获取到的用户邮箱：", userEmail);
         missionGDoc = JSON.parse(localStorage.missionGDoc);
         //console.log(mywin.location.href);
         //如果是在展示页，那么获取用户的动作在XMLHttpRequest-showReviewedHome中完成
         if(mywin.location.href != "https://wayfarer.nianticlabs.com/new/mapview")
         {
-            console.log("getmissionload");
+            if(logMission) console.log("getmissionload");
             await getMissionFromCloudFlare();
         }
     }
@@ -243,6 +242,10 @@
     }
 
     // 上传数据到R2   uploadDataToR2(folderPath:路径 , fileName:文件名 , data:json数据)
+    //WORKER_URL为通用型，参数有文件、数据
+    //本脚本上传审核数据及打卡数据
+    //"portal/portaldata/","portal."+portaldata.id+".json"
+    //"portal/portaluseremail/","portal."+portaldata.id+".useremail.json"
     function uploadDataToR2(folderPath, fileName, data) {
         // 返回 Promise
         return new Promise((resolve, reject) => {
@@ -288,43 +291,6 @@
             }
         });
     }
-
- /*   function uploadDataToR2(folderPath,fileName,data) {
-        try {
-            console.log(`正在上传数据:${folderPath}`);
-            GM_xmlhttpRequest({
-                method: 'POST',
-                url: CONFIG.WORKER_URL,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Secret-Key': CONFIG.SECRET_KEY
-                },
-                data: JSON.stringify({
-                    folderPath: folderPath,
-                    fileName: fileName,
-                    data: data
-                }),
-                onload: function(response) {
-                    try {
-                        const result = JSON.parse(response.responseText);
-                        if (result.success) {
-                            console.log(`数据上传成功: ${result.fullPath}`);
-                        } else {
-                            console.log(`上传失败: ${result.error || result.details}`);
-                        }
-                    } catch (e) {
-                        console.log(`解析响应失败: ${e.message}`);
-                    }
-                },
-                onerror: function(error) {
-                    console.log(`解析响应失败: ${error.message}`);
-                }
-            });
-        } catch (e) {
-            console.log(`解析响应失败: ${e.message}`);
-        }
-    }
-*/
     // 列出R2中的文件
     function listR2Files(folderPath) {
         const listContainer = document.getElementById('fileList');
@@ -452,32 +418,7 @@
             console.log('Promise', e)});
     }
 
-    //更新任务数据至Google DOC , sdata为单条(或多条？)的JSON数据(如：{id:11w,title:aaa})
-    function saveToGDoc(sdata){
-        $.ajax({
-            url: dURL,
-            type: "POST",
-            // 核心：将对象转为 URL 编码字符串（适配 x-www-form-urlencoded 格式）
-            data: $.param(sdata),
-            // 核心：指定正确的 Content-Type（GAS 能自动解析该格式）
-            contentType: "application/x-www-form-urlencoded; charset=UTF-8",
-            // 不需要禁用 processData（默认 true，$.param 已处理数据，无需额外处理）
-            processData: true,
-            success: function (data, status) {
-                console.log("请求成功，响应数据：", data);
-                // 此处可添加业务逻辑（如提示成功）
-            },
-            error: function (xhr, status, error) {
-                console.error("请求失败：", status, "错误信息：", xhr.responseText);
-                createNotify("错误", {
-                    body: "更新任务失败！错误：" + xhr.responseText,
-                    icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
-                    requireInteraction: false
-                });
-            }
-        });
-    };
-    //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
+    //读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
     function getMissionFromCloudFlare() {
         // 返回 Promise 对象，包裹异步请求逻辑
         return new Promise((resolve, reject) => {
@@ -491,7 +432,7 @@
                         let markercollection = res;
                         // 筛选状态为'提交'或'审核'的元素
                         let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
-                        console.log('Main-getCloudFlare', filteredMarkers);
+                        if(logMission) console.log('Main-getCloudFlare', filteredMarkers);
                         missionGDoc = filteredMarkers;
                         localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
 
@@ -518,63 +459,6 @@
             );
         });
     }
-    //从Google Doc读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
-    function getMissionFromGoogleDoc() {
-        // 返回 Promise 对象，包裹异步请求逻辑
-        return new Promise((resolve, reject) => {
-            const url = dURL + '?status=mission';
-            if (!url) {
-                reject(new Error("请求地址为空")); // 地址无效时触发失败
-                return;
-            }
-
-            $.ajax({
-                url, type: 'GET', dataType: 'text',
-                success: function (data, status, header) {
-                    try {
-                        let markercollection = JSON.parse(data);
-                        // 筛选状态为'提交'或'审核'的元素
-                        let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
-                        console.log('Main-getGDoc', filteredMarkers);
-                        missionGDoc = filteredMarkers;
-                        localStorage.setItem("missionGDoc", JSON.stringify(missionGDoc));
-
-                        // 初始化 ownerstatus 字段
-                        missionGDoc.forEach(item => {
-                            item.ownerstatus = "";
-                        });
-                        //console.log("missionGDoc", missionGDoc);
-
-                        // 测试数据修改（保留原逻辑）
-                        let testdata = filteredMarkers.filter(item => item.id === "6bf81533-aefa-471b-8eb4-54b3525e129b" );
-                        if (testdata.length === 1) {
-                            testdata[0].status = "通过";
-                            // testSaveToDoc(testdata[0]); // 如需执行，可在这里调用
-                        }
-
-                        // 数据处理完成，触发 Promise 成功，返回处理后的数据
-                        resolve(missionGDoc);
-
-                    } catch (e) {
-                        console.log(e);
-                        alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
-                        reject(e); // 解析/处理失败时触发 Promise 失败
-                    }
-                },
-                error: function (x, y, z) {
-                    const errorMsg = `请求失败: ${x.status} - ${y}`;
-                    console.log('Err:', errorMsg, x, z);
-                    //alert("读取任务列表错误，请刷新页面，否则将无法按计划审核！");
-                    createNotify("错误", {
-                        body: "读取任务列表错误，请刷新页面，否则将无法按计划审核！",
-                        icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
-                        requireInteraction: true
-                    });
-                    reject(new Error(errorMsg)); // AJAX 请求失败时触发 Promise 失败
-                }
-            });
-        });
-    }
 
     // 修复XMLHttpRequest封装，仅在请求完成（readyState=4）时处理响应
     function U_XMLHttpRequest(method, url) {
@@ -586,14 +470,6 @@
                 // 仅在请求完全完成时处理（readyState=4）
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
-
-                        if(!url.includes("/api/v1/vault/review"))
-                        {
-                            let doctitle = document.title;
-                            doctitle = doctitle.replace(/-审核中$/, "-未审核");
-                            document.title = doctitle;
-                        }
-
                         res(xhr.responseText); // 成功：返回响应文本
                     } else {
                         const errorMsg = `${method}:${url} 失败（状态码：${xhr.status}）`;
@@ -648,9 +524,9 @@
             if (url === '/api/v1/vault/review' && method == 'GET') {
                 scoreAlready = false ;
                 let seditGYM = localStorage.editGYMAuto;
-                if(seditGYM) {editGYMAuto=seditGYM};
+                if(seditGYM) { editGYMAuto = seditGYM };
                 let sreviewPortalAuto = localStorage.reviewPortalAuto;
-                if(sreviewPortalAuto) {reviewPortalAuto=localStorage.reviewPortalAuto};
+                if(sreviewPortalAuto) {reviewPortalAuto = localStorage.reviewPortalAuto};
                 //mywin.clearInterval(ttm);
                 //ttm = null;
                 //mywin.clearInterval(timer);
@@ -684,6 +560,7 @@
                     mywin.clearInterval(timer);
                     timer = null;
                     //console.log("skip",portalData);
+                    saveReviewtoLocal(portalData,data);
                     return send.apply(_this,data);
                 }
             }
@@ -1204,7 +1081,7 @@
                                         //重复
                                         setTimeout(function(){
                                             if(!isub){
-                                  //检举
+                                                //检举
                                                 let sabusebtn = document.querySelector("app-report-modal") || document.querySelector("app-review-rejection-abuse-modal");
                                                 if (sabusebtn) {
                                                     let p1 = sabusebtn.querySelector('button[class="wf-button wf-button--primary"]');
@@ -1219,9 +1096,9 @@
                                                         }
                                                     }
                                                 } else {
-                                    //重复
                                                     let supcommit = document.querySelector("app-confirm-duplicate-modal");
                                                     let supcommitbtn = null;
+                                                    //重复
                                                     if(supcommit){
                                                         //console.log(supcommit);
                                                         supcommitbtn = supcommit.querySelector('button[class="wf-button wf-split-button__main wf-button--primary"]');
@@ -1238,6 +1115,7 @@
                                                                 submitButtonClicked = true;
                                                                 console.log("timer","submit!");
                                                                 submitCountDown=null;
+                                                                //提交
                                                                 p1.click();
                                                             }
                                                         }
@@ -1271,18 +1149,18 @@
         let diff = Math.ceil((expiry - new Date().getTime()) / 1000);
         let timegoing = Math.ceil((new Date().getTime() - expiry + reviewTime*60000) / 1000);
         //    console.log(timegoing);
-        if (diff < 0) {
-            counter.textContent = "Expired";
-            return;
-        }
         let minutes = Math.floor(timegoing / 60);
         let seconds = Math.abs(timegoing % 60);
         if (minutes < 10) minutes = `0${minutes}`;
         if (seconds < 10) seconds = `0${seconds}`;
         counter.textContent = `${minutes}:${seconds}`;
+        if (diff < 0) {
+            counter.textContent = "Expired";
+            return;
+        }
     }
 
-    // 核心逻辑：移动节点
+    // 移动节点
     function moveReviewCardBeforePhoto() {
         // 获取目标节点
         const photoNode = document.querySelector('app-photo-b');
@@ -1410,65 +1288,6 @@
         fetchAddress(maxAttempts);
     }
 
-    /*
-    function updateAddress(divaddr){
-        setTimeout(function(){
-                let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
-                if(addr ){
-                    if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
-                        let address=addr.childNodes[1].innerText.split(":")[1];
-                        address=address.replace(" 邮政编码","");
-                        divaddr.textContent = "地址:"+address;
-                        return;
-                    }
-                    setTimeout(function(){
-                        let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
-                        if(addr ){
-                            if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
-                                let address=addr.childNodes[1].innerText.split(":")[1];
-                                address=address.replace(" 邮政编码","");
-                                divaddr.textContent = "地址:"+address;
-                                console.log("第二次取地址");
-                                return;
-                            }
-                            setTimeout(function(){
-                                let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
-                                if(addr ){
-                                    if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
-                                        let address=addr.childNodes[1].innerText.split(":")[1];
-                                        address=address.replace(" 邮政编码","");
-                                        divaddr.textContent = "地址:"+address;
-                                        console.log("第三次取地址");
-                                        return;
-                                    }
-                                }
-                            },1000);
-                        }
-                    },1000);
-                }
-        },500);
-    }
-    function updateAddress1(divaddr){
-        setTimeout(function(){
-            let itry = 3;
-            const queryloop = () => {
-                let addr = document.querySelector(".wf-review-card__body .flex.flex-col.ng-star-inserted");
-                if(addr ){
-                    if( addr.childNodes[1].innerText.indexOf("載入中")==-1){
-                        let address=addr.childNodes[1].innerText.split(":")[1];
-                        address=address.replace(" 邮政编码","");
-                        divaddr.textContent = "地址:"+address;
-                    };
-                    itry--;
-                    if(itry<=1){
-                        return;
-                    }
-                }
-            };
-            queryloop();
-        },500);
-    }
-    */
 
     saveUserNameList = function (){
         let cbsuser = document.querySelectorAll("input[class='cbxusername']");
@@ -1543,10 +1362,10 @@
                     } else {
                         bnext = "<p>-----------------------------------------</p><div><span>下一个自动：</span><input type='checkbox' class='cbxnextauto' id='idnextauto' onclick='saveNextAutoSetting()'>下一个审核是否自动</input></div>";
                     }
-                    let cbxcaptcha=localStorage.captchasetting;
+                    let cbxcaptcha = localStorage.captchasetting;
                     //console.log(cbxcaptcha);
                     let cap ="";
-                    if(cbxcaptcha=="true") {
+                    if(cbxcaptcha == "true") {
                         cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' checked onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
                     } else {
                         cap = "<p>-----------------------------------------</p><div><span>验证设置：</span><input type='checkbox' class='cbxcaptcha' id='idcaptcha' onclick='saveCaptchaSetting()'>机器验证一直显示</input></div>";
@@ -1597,7 +1416,7 @@
             }
 
             const restext = JSON.parse(res);
-            console.log("getUser 解析结果：", restext);
+            if(logUser) console.log("getUser 解析结果：", restext);
 
             // 仅验证响应结构，不处理数据
             if (!restext.result?.socialProfile) {
@@ -1612,7 +1431,6 @@
             throw e;
         });
     }
-
 
     //上传原始po数据至cloudflare (仅上传：池中及本地)
     function uploadPortalData(portaldata,loc){
@@ -1638,7 +1456,7 @@
 
     //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
     async function uploadReviewMark(portaldata){
-        console.log("uploadReviewMark loaded");
+        //console.log("uploadReviewMark loaded");
         function saveNewUserMark()
         {
             //保存任务id :
@@ -1686,7 +1504,7 @@
         //console.log("uploadReviewMark:portaldata",portaldata);
         //console.log("uploadReviewMark:missionGDoc",missionGDoc);
         if(!missionGDoc){
-            console.log("uploadReviewMark:missionGDoc not found",missionGDoc);
+            //console.log("uploadReviewMark:missionGDoc not found",missionGDoc);
             return;
         } else
         {
@@ -1694,19 +1512,19 @@
                 console.log("missionGDoc.length",missionGDoc.length);
                 await getMissionFromCloudFlare();
             }
-            console.log("uploadReviewMark:missionGDoc",missionGDoc);
+            //console.log("uploadReviewMark:missionGDoc",missionGDoc);
         }
         let pname = null; let preview=null;
         for (const item of missionGDoc) {
             let isFirstReview = false ;
             //显示一个log是否有人审过，没有真正的作用
-            console.log("判断是否有人审过");
+            //console.log("判断是否有人审过");
             if(item.portalID != null) {
                 if(item.portalID === portaldata.id) {
                     console.log("任务po有人审过",portaldata.id+","+portaldata.title);
                 } else
                 {
-                    console.log("判断是否任务po：",portaldata.id+","+portaldata.title);
+                    //console.log("判断是否任务po：",portaldata.id+","+portaldata.title);
                 }
             } else {
                 if (item.title === portaldata.title) {
@@ -1720,13 +1538,13 @@
                     }
                 } else
                 {
-                    console.log("item.title,portaldata.title",item.title,portaldata.title);
+                    if(logReviewMark) console.log("item.title,portaldata.title",item.title,portaldata.title);
                 }
             }
             try{
                 if (item.title === portaldata.title) {
                     if(Math.abs(item.lat-portaldata.lat)<=ilatdis & Math.abs(item.lng-portaldata.lng)<=ilngdis) {
-                        console.log("任务po确认");
+                        if(logReviewMark) console.log("任务po确认");
                         pname = portaldata.title;preview=item.status;
                     } else
                     {
@@ -1744,7 +1562,6 @@
                             item.imageUrl = portaldata.imageUrl;
                             item.supportingImageUrls = portaldata.supportingImageUrls;
                         }
-                        //saveToGDoc(item);
                         let updateField={portalID:portaldata.id,status:item.status,responsedate:formatDate(new Date(),"yyyy-MM-dd"),imageUrl:item.imageUrl,supportingImageUrls:item.supportingImageUrls};
                         cfClass.updateData(
                             item.id, updateField,
@@ -2374,8 +2191,9 @@
         }
     }
 
-    //首页home显示用户审过的po
+    //首页home显示用户审过的po (似乎不再使用，代码现放在options中，连带generateReviewTable也不再使用)
     async function showReviewedHome() {
+        return; //测试下面是否已经不再使用
         try {
             if(userEmail === null) {
                 // 先获取用户信息并等待完成
@@ -2446,6 +2264,7 @@
 
     function showReviewedHome1()
     {
+        return; //测试下面是否已经不再使用
         try{
             if(!userEmail)
             {
@@ -2541,15 +2360,35 @@
                 +"</tr></thead>";
                 let smistmp="";let sstmp="";let ssok="";
                 smistmp=smis+"<tbody>";
+                //首页地图页，第一个标签：在审任务
                 missionGDoc.forEach(item => {
+                    let stitle = item.portalID ? `<td><a href='${item.imageUrl}' target='_blank'>${item.title}</a></td>` : `"<td>${item.title}</td>"`;
+                    let sstatus = "<td>"+item.status+"</td>";
+                    // 如果有值，就生成整个属性字符串，注意末尾带一个空格；没值就彻底留空
+                    let pownerAttr = item.submitter ? `powner="${item.submitter}" ` : '';
+                    let isOwner = item.submitter === userEmail;
+                    // 拼接时直接放入 pownerAttr
+                    let stypes = `<td><a href="javascript:void(0);" us="us1" owner="${isOwner}" tagName="${item.portalID}" ${pownerAttr}onclick="switchUserReviewDiv(${iowner});">${item.types}</a></td>`;
+                    let slatlng = `<td><a href="javascript:void(0);" us="us2" owner="${isOwner}" tagName="${item.portalID}" ${pownerAttr}onclick="switchUserReviewDiv(${iowner});">${item.types}</a></td>`;
+                    let sbegin = "<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td>";
+                    //所有任务中：已审只针对用户，所以不需要
+                    //let sownerstatus = "<td>" + (item.ownerstatus === true ? '✓' : '') +"</td>";
+                    let ssubmitteddate = item.portalID ? `<td><a href='${durl}/portal/portaluseremail/portal.${item.portalID}.useremail.json' target='_blank'>${item.submitteddate}</a></td>` : `<td>${item.submitteddate}</td>` ;
+                    let slat = `<td><a href="javascript:void(0);" onclick="openPortalOnMap(${item.lat},${item.lng},'${item.portalID}')";>` + item.lat+"</a></td>";
+                    let slng = "<td>"+item.lng+"</td>";
+                    let smove = "<td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>";
+                    let ssubmitter = "<td>"+item.submitter+"</td>";
+                    smistmp += "<tr>" + stitle + sstatus + slatlng + stypes + sbegin + ssubmitteddate + slat + slng + smove + ssubmitter + "</tr>";
+
+                    /*
                     smistmp+="<tr><td><a href='"+item.imageUrl+"' target='_blank'>"+item.title+"</a></td>"
                         +"<td>"+(item.status === "通过" ? "✓" : "" )+"</td>"
-                        +'<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.lat+','+item.lng+"</a></td>"
-                        +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" powner="' + item.submitter + '" tagName="' + item.portalID + '" onclick="switchUserReviewDiv()";>'+item.types+"</a></td>"
+                        +'<td><a href="javascript:void(0);" us="us2" owner="' + (item.submitter === userEmail ? true : false) + '" tagName="' + item.portalID + '" powner="' + （item.submitter ? item.submitter : ""） + '" onclick="switchUserReviewDiv()";>'+item.lat+','+item.lng+"</a></td>"
+                        +'<td><a href="javascript:void(0);" us="us1" owner="' + (item.submitter === userEmail ? true : false) + '" tagName="' + item.portalID + '" powner="' + （item.submitter ? item.submitter : ""）  + '" onclick="switchUserReviewDiv()";>'+item.types+"</a></td>"
                         +"<td>"+ (item.status === "审核" || item.status === "通过" ? "✓" : "" ) +"</td><td>"+ (item.ownerstatus === true ? '✓' : '') +"</td>"+
                         "<td><a href='"+durl+"/portal/portaluseremail/portal."+item.portalID+".useremail.json'  target='_blank'>"+item.submitteddate+"</a></td>"
                         +"<td><a href='https://www.google.com/maps/search/?api=1&query="+item.lat+','+item.lng+"&zoom=16' target='_blank'>"+item.lat+"</a></td><td>"+item.lng+"</td><td>"+(item.moveoptions === "右" ? "最右" :( item.moveoptions === "下" ? "最下" : (item.moveoptions+item.moveplace)))+"</td>"
-                        +"</tr>";
+                        +"</tr>";*/
                 });
                 //console.log('homepage',missionGDoc);
                 let sultmp = "<div id='idUserEmail' style='display:none'><div><table><thead><tr><th>标题1</th><th>标题2</th><tr></thead><tbody><tr><td>数据1</td><td>数据2</td></tr></tbody></table></div></div>";
@@ -2897,59 +2736,6 @@
         return fmt;
     }
 
-    // -------------------------- 核心：创建左下角状态面板 --------------------------
-    function createStatusPanel() {
-        // 状态面板容器
-        const panel = document.createElement('div');
-        panel.id = 'cf-upload-status-panel';
-        // 样式：固定在左下角，半透明背景，不遮挡操作
-        panel.style.cssText = `
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      max-width: 400px;
-      max-height: 150px;
-      padding: 8px 12px;
-      background: rgba(0, 0, 0, 0.8);
-      color: #fff;
-      font-size: 12px;
-      font-family: Arial, sans-serif;
-      border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      overflow-y: auto;
-      z-index: 99999; /* 确保在最上层，不被其他元素遮挡 */
-      opacity: 0.9;
-    `;
-
-        // 面板标题（可选，用于区分状态类型）
-        const title = document.createElement('div');
-        title.style.cssText = `
-      margin-bottom: 4px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid rgba(255,255,255,0.3);
-      font-weight: bold;
-      color: #4CAF50;
-    `;
-        title.textContent = 'R2上传状态';
-        panel.appendChild(title);
-
-        // 状态内容容器（用于动态添加日志）
-        const content = document.createElement('div');
-        content.id = 'cf-status-content';
-        content.style.lineHeight = '1.4';
-        panel.appendChild(content);
-
-        // 添加到页面
-        document.body.appendChild(panel);
-
-        // 返回内容容器，方便后续添加日志
-        return content;
-    }
-
-    // -------------------------- 工具：向面板添加日志 --------------------------
-    // 先创建面板，获取内容容器
-    //const statusContent = createStatusPanel();
-
     // 自定义日志函数：替代console.log，将内容显示在面板
     function showLog(message, isError = false) {
         // 创建单条日志元素
@@ -3053,6 +2839,9 @@
         document.querySelector('head').appendChild(style);
     })()
 
+    //******************************** 从经纬度点和区域多边形，判断点所在地 **********************************//
+    //用于无法从审核数据获取地址的情况
+
     function getPriCityName(longitude,latitude){
         const pri = getCityByCoordinate(longitude , latitude , chinaGeoJSON);
         //console.log("pri",pri);
@@ -3070,11 +2859,11 @@
     }
 
     /**
- * 判断点是否在多边形内部（射线法）
- * @param {Array} point 点坐标 [经度, 纬度]
- * @param {Array} polygon 多边形坐标数组，每个元素为[经度, 纬度]
- * @return {Boolean} 是否在内部
- */
+     * 判断点是否在多边形内部（射线法）
+     * @param {Array} point 点坐标 [经度, 纬度]
+     * @param {Array} polygon 多边形坐标数组，每个元素为[经度, 纬度]
+     * @return {Boolean} 是否在内部
+   */
     function pointInPolygon(point, polygon) {
         const [x, y] = point;
         const n = polygon.length;
