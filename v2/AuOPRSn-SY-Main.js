@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.7
+// @version      7.2.8
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -667,7 +667,7 @@
             document.getElementById('appropriate-card') ||
             document.querySelector('app-review-edit') ||
             document.querySelector('app-review-photo')
-        )).then(ref => {
+        )).then(async ref => {
             //在顶部增加计时标签
             if(portalData1.type=="NEW") {
                 document.getElementById("title-description-card").setAttribute("class","card");
@@ -714,7 +714,7 @@
                 const divblank = document.createElement('span');
                 const divscore = document.createElement('span');
                 {
-                    loc =getLocation(portalData1);
+                    loc = await getLocation(portalData1);
                     //3秒后，上传原始po数据至cloudflare，仅上传：池中及本地
                     setTimeout(function(){
                         uploadPortalData(portalData1,loc);
@@ -1635,12 +1635,12 @@
 
     //保存审po记录到本地：review1,review2 ; 新6.1.0以后：reviewLista reviewListb
     //reviewa: user,title,type,lat,lng,score,dt,id,follow
-    function saveReviewtoLocal(pageData,data) {
+    async function saveReviewtoLocal(pageData,data) {
         let localreview = [];
         let tmpstorage = null ;
         let sdt = formatDate(new Date(),"yyyy-MM-dd HH:mm:ss");
         let i;
-        let sloc=getLocation(portalData);
+        let sloc= await getLocation(portalData);
         let ssc=document.querySelector("span[id='idscore']");
         let sscore="";
         let pdata = JSON.parse(data);
@@ -2018,7 +2018,7 @@
     }
 
     //池中、本地、外地判断 返回1：池中；2：本地；3：外地；0：无
-    function getLocation(portal){
+    async function getLocation(portal){
         let ibaserate=null;
         //池中池外地址判断
         //console.log(portal);
@@ -2062,7 +2062,7 @@
         //任务列表判断
         //console.log(`判断池中`,portal);
         missionGDoc.forEach(item => {
-            //console.log(`判断池中$item`,item);
+            console.log(`判断池中$item`,item);
             if((item.title === portal.title || item.id === portal.id) & (Math.abs(portal.lat-item.lat)<=ilatdis) & (Math.abs(portal.lng-item.lng)<=ilngdis)){
                 console.log("位置判断missionGDoc：池中");
                 ibaserate = "池中";
