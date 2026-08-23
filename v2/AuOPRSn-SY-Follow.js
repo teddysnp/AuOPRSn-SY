@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.2.0
+// @version      4.2.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2060,10 +2060,10 @@
         let rs1=JSON.stringify(rd1);let rs2=JSON.stringify(rd2);
         let rsstr = "";
         if(areObjectsEqual(rd1,rd2)) rsstr = "一致"; else rsstr = "不一致";
-        //console.log("本地与云对比",rsstr);
+        console.log("本地与云对比 : rsstr",rsstr);
+        console.log("调用上传接口",isUserClick);
         setTimeout(function(){
-            if(isUserClick & rsstr === "不一致") {
-                //console.log("调用上传接口",isUserClick);
+            if(isUserClick && rsstr === "不一致") {
                 uploadPostData(portalData,JSON.parse(data),0,false);
             } else {
                 console.log("不上传",rd2.id+":"+portalData.title);
