@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.2.2
+// @version      4.2.3
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -99,9 +99,9 @@
         // 逻辑一：处理 踩/举报/取消 状态切换 (普通的冒泡监听)
         // ==========================================
         document.body.addEventListener("click", function (event) {
-            console.log( "click", event.target, "isTrusted=", event.isTrusted );
+            //console.log( "click", event.target, "isTrusted=", event.isTrusted );
             isUserClick = event.isTrusted;
-            console.log( "isUserClick更新为", isUserClick );
+            //console.log( "isUserClick更新为", isUserClick );
 
             if (!event.isTrusted) return;
 
@@ -2076,6 +2076,11 @@
             if(isUserClick && rsstr === "不一致") {
                 uploadPostData(portalData,JSON.parse(data),0,false);
             } else {
+                const item = missionGDoc.find(item => item.title === portalData.title);
+                if(item){
+                    console.log("被迫上传",rd2.id+":"+portalData.title);
+                    uploadPostData(portalData,JSON.parse(data),0,false);
+                }
                 console.log("不上传",rd2.id+":"+portalData.title);
                 console.log("⏸审核结束:",rd2.id+":"+portalData.title);
             }
@@ -2152,10 +2157,11 @@
             isave=1;
         }
         //console.log("isave",isave);
+        //用于保存用户审核结果
+        data.UserReview = tmpupload.review ;
+        data.UserEmail = useremail;
         if(isave==1){
-            //用于保存用户审核结果
-            data.UserReview = tmpupload.review ;
-            data.UserEmail = useremail;
+            data.reviewFlag = "更新";
             try{
                 //console.log("上传审核结果...");
                 if(icloud==0 || icloud==2){
@@ -2193,7 +2199,11 @@
                 console.log(e);
             }
         } else {
-            console.log("不需上传,审核结束:",data.id);
+            data.reviewFlag = "跟审";
+            console.log("用户审核记录上传...",data.id);
+            //gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
+            uploadDataToR2("portal/portalreview/","portal."+data.id+".json",data);
+            console.log("审核结束:",data.id);
             //let iup = document.getElementById("iduplabel");
             //if(iup) iup.style="font-weight:bold;color:#f6f5ec";
         }
