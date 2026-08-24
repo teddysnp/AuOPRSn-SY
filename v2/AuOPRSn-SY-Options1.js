@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.1.3
+// @version      2.1.4
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1080,19 +1080,22 @@
         reviewPopup = document.createElement('div');
         reviewPopup.id = 'reviewUserEmailPopup';
         reviewPopup.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 9999;
-        max-width: 80vw;
-        max-height: 80vh;
-        overflow-y: auto;
-        display: none;
+        position:fixed;
+        top:50%;
+        left:50%;
+        transform:translate(-50%,-50%);
+        background:#fff;
+        padding:20px;
+        border-radius:8px;
+        box-shadow:rgba(0,0,0,0.15) 0 4px 12px;
+        z-index:9999;
+        width:calc(100vw - 40px);
+        max-width:1450px;
+        max-height:80vh;
+        overflow-y:auto;
+        overflow-x:auto;
+        display:block;
+        box-sizing:border-box;
     `;
         document.body.appendChild(reviewPopup);
 
@@ -1391,27 +1394,35 @@
                         }
 
                         // 审核状态判断
+                        stmp += `<div class='wayfarer-useritem'>`;
+
                         if (findUserEmail(userreview, semail) > 0) {
                             if (userEmailList[i].includes(userEmail)) {
-                                stmp += `<div><div class='wayfarer-sqselfok wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
+                                stmp += `<div class='wayfarer-sqselfok wayfarer-useremail'>${po}${shtmllink}</div>`;
                             } else {
-                                stmp += `<div><div class='wayfarer-sqok wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
+                                stmp += `<div class='wayfarer-sqok wayfarer-useremail'>${po}${shtmllink}</div>`;
                             }
                         } else {
                             if (semail.includes(userEmail)) {
                                 if (owner === "true") {
-                                    stmp += `<div><div class='wayfarer-sqselfowner wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
+                                    stmp += `<div class='wayfarer-sqselfowner wayfarer-useremail'>${po}${shtmllink}</div>`;
                                 } else {
-                                    stmp += `<div><div class='wayfarer-sqselfno wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
+                                    stmp += `<div class='wayfarer-sqselfno wayfarer-useremail'>${po}${shtmllink}</div>`;
                                 }
                             } else {
-                                stmp += `<div><div class='wayfarer-sqno wayfarer-useremail'>${po}${shtmllink}</div><div class='wayfarer-sqreview'>${userReview}</div></div>`;
+                                stmp += `<div class='wayfarer-sqno wayfarer-useremail'>${po}${shtmllink}</div>`;
                             }
                         }
 
-                        // 每5个元素换行
+                        // 用户评价
+                        stmp += `<div class='wayfarer-sqreview'>${userReview || ''}</div>`;
+
+                        stmp += `</div>`;
+
+
+                        // 每5个用户换行
                         if ((i + 1) % 5 === 0) {
-                            stmp += `</div><p></p><div style='padding-top:1em;display: flex;'>`;
+                            stmp += `</div><p></p><div style='padding-top:1em;display:flex;'>`;
                         }
                     }
                     stmp += `</div>`;
@@ -2212,26 +2223,29 @@
               height: 100vh;
           }
           .wayfarer-sqno {
-              margin-left: 2em;
+              margin-left: 0;
               padding-top: 1em;
-              width: 250px;
+              width: 100%;
+              box-sizing: border-box;
               height: 50px;
               font-size:18px;
               background-color: #cccccc;
           }
           .wayfarer-sqok {
-              margin-left: 2em;
+              margin-left: 0;
               padding-top: 1em;
-              width: 250px;
+              width: 100%;
+              box-sizing: border-box;
               height: 50px;
               font-size:18px;
               color: #ffe600;
               background-color: #007947;
           }
           .wayfarer-sqselfowner {
-              margin-left: 2em;
+              margin-left: 0;
               padding-top: 1em;
-              width: 250px;
+              width: 100%;
+              box-sizing: border-box;
               height: 50px;
               border-style:solid;
               border-width:2px;
@@ -2241,9 +2255,10 @@
               background-color: #7bbfea;
           }
           .wayfarer-sqselfno {
-              margin-left: 2em;
+              margin-left: 0;
               padding-top: 1em;
-              width: 250px;
+              width: 100%;
+              box-sizing: border-box;
               height: 50px;
               border-style:solid;
               border-width:2px;
@@ -2253,9 +2268,10 @@
               background-color: #cccccc;
           }
           .wayfarer-sqselfok {
-              margin-left: 2em;
+              margin-left: 0;
               padding-top: 1em;
-              width: 250px;
+              width: 100%;
+              box-sizing: border-box;
               height: 50px;
               border-style:solid;
               border-width:2px;
@@ -2264,13 +2280,21 @@
               color: #faa755;
               background-color: #007947;
           }
-          .wayfarer-sqreview {
-              margin-left: 2.4em;
-              width: 250px;
-              height: 10px;
-              font-size:14px;
-              color: #333333;
-          }
+.wayfarer-useritem {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-left: 2em;
+}
+
+.wayfarer-sqreview {
+    width: 100%;
+    min-height: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333333;
+    background-color: transparent;
+    box-sizing: border-box;
+}
         `;
         const style = document.createElement('style');
         style.type = 'text/css';
