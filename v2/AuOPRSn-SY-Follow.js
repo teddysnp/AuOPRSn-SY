@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.2.4
+// @version      4.2.5
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2135,12 +2135,21 @@
             }
             if(data.newLocation) {tmpupload.review = tmpupload.review+":挪"+data.newLocation; isave=1}
             else {
-                tmpupload.review = rdata.map(key => {
-                    if (rdata[key] === 5) return "Y";
-                    if (rdata[key] === 3) return "D";
-                    if (rdata[key] === 1) return "N";
+                function scoreToChar(score) {
+                    if (score === 5) return "Y";
+                    if (score === 3) return "D";
+                    if (score === 1) return "N";
                     return "";
-                }).join("");}
+                }
+                tmpupload.review =
+                    scoreToChar(rdata.quality) +
+                    scoreToChar(rdata.safety) +
+                    scoreToChar(rdata.location) +
+                    scoreToChar(rdata.uniqueness) +
+                    scoreToChar(rdata.socialize) +
+                    scoreToChar(rdata.exercise) +
+                    scoreToChar(rdata.cultural);
+            }
         } else if(data.type=="EDIT"){
             //pdata.locationEdits[i].hash = data.selectedhash => pdata.locationEdits[i].value
             let ilat = null;let ilng = null;
