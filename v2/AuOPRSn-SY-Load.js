@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Load
 // @namespace    AuOPR
-// @version      2.0
+// @version      2.1
 // @description  审po专用
 // @author       snpsl
 // @match        https://wayfarer.nianticlabs.com/*
+// @match        https://wayfarer.scopely.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @require      https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/refs/heads/main/v2/AuOPRSn-SY-Main.js
