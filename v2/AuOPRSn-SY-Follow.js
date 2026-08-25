@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.2.5
+// @version      4.2.6
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
+// @match        https://wayfarer.scopely.com/*
 // @require      https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.1.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      work-wayfarer.tydtyd.workers.dev
@@ -983,7 +984,7 @@
 
     //*********************  User操作 *********************//
     function getUser(){
-        const resp = U_XMLHttpRequest("GET","https://wayfarer.nianticlabs.com/api/v1/vault/properties")
+        const resp = U_XMLHttpRequest("GET","https://wayfarer.scopely.com/api/v1/vault/properties")
         resp.then
         (res=>{
             if(res){
@@ -998,7 +999,7 @@
     }
     // 简化getUser，只负责获取和解析原始数据
     function getUserPromise() {
-        return U_XMLHttpRequest("GET", "https://wayfarer.nianticlabs.com/api/v1/vault/properties")
+        return U_XMLHttpRequest("GET", "https://wayfarer.scopely.com/api/v1/vault/properties")
             .then(res => {
             //console.log("getUser 响应内容：", res);
             if (!res) {
@@ -2149,6 +2150,7 @@
                     scoreToChar(rdata.socialize) +
                     scoreToChar(rdata.exercise) +
                     scoreToChar(rdata.cultural);
+                if(tmpupload.review === "YYYYYYY") tmpupload.review = "五星" ;
             }
         } else if(data.type=="EDIT"){
             //pdata.locationEdits[i].hash = data.selectedhash => pdata.locationEdits[i].value
