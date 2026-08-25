@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-ErrCheck-AntiGhost
 // @namespace    AuOPR
-// @version      1.2.3
+// @version      1.2.4
 // @description  防幽灵定时器并发的 Wayfarer 错误检查
 // @author       SnpSL & AI
 // @match        https://nianticlabs.com*
+// @match        https://wayfarer.scopely.com/*
 // @grant        none
 // ==/UserScript==
 
