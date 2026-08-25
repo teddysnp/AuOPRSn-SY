@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options3
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  每隔 4 分钟在后台发送一次静默请求，防止 Niantic 网站超时断开登出
 // @author       YourName
 // @match        https://wayfarer.nianticlabs.com/*
+// @match        https://wayfarer.scopely.com/*
 // @grant        none
 // ==/UserScript==
 
@@ -32,7 +33,7 @@
             return;
         }
 
-        fetch('https://wayfarer.nianticlabs.com/api/v1/vault/mapview/track/access', {
+        fetch('https://wayfarer.scopely.com/api/v1/vault/mapview/track/access', {
             method: 'POST',
             headers: {
                 'accept': 'application/json, text/plain, */*',
