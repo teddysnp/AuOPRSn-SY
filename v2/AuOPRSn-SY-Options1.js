@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.1.4
+// @version      2.1.5
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
+// @match        https://wayfarer.scopely.com/*
 // @require      https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.1.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      work-wayfarer.tydtyd.workers.dev
@@ -902,7 +903,7 @@
     }
     // 简化getUser，只负责获取和解析原始数据
     function getUser() {
-        return U_XMLHttpRequest("GET", "https://wayfarer.nianticlabs.com/api/v1/vault/properties")
+        return U_XMLHttpRequest("GET", "https://wayfarer.scopely.com/api/v1/vault/properties")
             .then(res => {
             //console.log("getUser 响应内容：", res);
             if (!res) {
@@ -1375,7 +1376,7 @@
                             slink = "mywinchrome://"+slink;
                         }
 
-                        const sFinallink = `${slink}TARGETURLwayfarer.nianticlabs.com/new/review`;
+                        const sFinallink = `${slink}TARGETURLwayfarer.scopely.com/new/review`;
                         const shtmllink =`${slinkid ? `<a id="${slinkid}" href="${sFinallink}">${sname}</a>` : sname}`
                         if (powner) {
                             po = semail.includes(powner) ? "<span style='color:red'>O:</span>" : "<span></span>";
@@ -1477,11 +1478,11 @@
             let target ;
             if (selector === ".wayfarer-useremail")
             {
-                target = "wayfarer.nianticlabs.com/new";
+                target = "wayfarer.scopely.com/new";
             }
             else
             {
-                target = "wayfarer.nianticlabs.com/new/review";
+                target = "wayfarer.scopely.com/new/review";
             }
 
             // 构造一个绝对不含特殊字符的纯文本：Profile 2URLhttps...
