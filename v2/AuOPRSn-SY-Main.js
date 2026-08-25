@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      7.2.8
+// @version      7.2.9
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
+// @match        https://wayfarer.scopely.com/*
 // @require      https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.9.1.min.js
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      work-wayfarer.tydtyd.workers.dev
@@ -118,7 +119,7 @@
         missionGDoc = JSON.parse(localStorage.missionGDoc);
         //console.log(mywin.location.href);
         //如果是在展示页，那么获取用户的动作在XMLHttpRequest-showReviewedHome中完成
-        if(mywin.location.href != "https://wayfarer.nianticlabs.com/new/mapview")
+        if(mywin.location.href != "https://wayfarer.scopely.com/new/mapview")
         {
             if(logMission) console.log("getmissionload");
             await getMissionFromCloudFlare();
@@ -550,7 +551,7 @@
                     //saveReviewData(data);
                 }
             }
-            //https://wayfarer.nianticlabs.com/api/v1/vault/review/skip  //7e221f605682750b87a54d393063b9c5
+            //https://wayfarer.scopely.com/api/v1/vault/review/skip  //7e221f605682750b87a54d393063b9c5
             //略过时，重置timer
             if (url === '/api/v1/vault/review/skip' && method == 'POST'){
                 let send = this.send;
@@ -907,7 +908,7 @@
                                 doctitle += "-未审核";
                             }
                         }
-                        if(document.URL != "https://wayfarer.nianticlabs.com/new/review")
+                        if(document.URL != "https://wayfarer.scopely.com/new/review")
                         {
                             doctitle = doctitle.replace(/-审核中$/, "");
                         }
@@ -1408,7 +1409,7 @@
 
     // 简化getUser，只负责获取和解析原始数据
     function getUser() {
-        return U_XMLHttpRequest("GET", "https://wayfarer.nianticlabs.com/api/v1/vault/properties")
+        return U_XMLHttpRequest("GET", "https://wayfarer.scopely.com/api/v1/vault/properties")
             .then(res => {
             //console.log("getUser 响应内容：", res);
             if (!res) {
@@ -2062,9 +2063,9 @@
         //任务列表判断
         //console.log(`判断池中`,portal);
         missionGDoc.forEach(item => {
-            console.log(`判断池中$item`,item);
+            //console.log(`判断池中$item`,item);
             if((item.title === portal.title || item.id === portal.id) & (Math.abs(portal.lat-item.lat)<=ilatdis) & (Math.abs(portal.lng-item.lng)<=ilngdis)){
-                console.log("位置判断missionGDoc：池中");
+                //console.log("位置判断missionGDoc：池中");
                 ibaserate = "池中";
             }
         })
