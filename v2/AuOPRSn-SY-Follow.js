@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      4.2.6
+// @version      4.2.7
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2177,9 +2177,9 @@
         }
         //console.log("isave",isave);
         //用于保存用户审核结果
-        data.UserReview = tmpupload.review ;
-        data.UserEmail = useremail;
         if(isave==1){
+            data.UserReview = tmpupload.review ;
+            data.UserEmail = useremail;
             data.reviewFlag = "更新";
             try{
                 //console.log("上传审核结果...");
@@ -2218,10 +2218,11 @@
                 console.log(e);
             }
         } else {
-            data.reviewFlag = "跟审";
+            console.log('不上传tmpupload：',tmpupload);
+            //data.reviewFlag = "跟审";
             console.log("用户审核记录上传...",data.id);
             //gmrequest("PUT",surl,"portal/portalreview/portal."+data.id,JSON.stringify(data));
-            uploadDataToR2("portal/portalreview/","portal."+data.id+".json",data);
+            //uploadDataToR2("portal/portalreview/","portal."+data.id+".json",data);
             console.log("审核结束:",data.id);
             //let iup = document.getElementById("iduplabel");
             //if(iup) iup.style="font-weight:bold;color:#f6f5ec";
