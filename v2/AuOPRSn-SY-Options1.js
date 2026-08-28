@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.1.5
+// @version      2.1.6
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1384,7 +1384,7 @@
                             po = "<span></span>";
                         }
 
-                        const item = userReviewJson.find(item => item.useremail === semail);
+                        const item = userReviewJson.find(item => semail.includes(item.useremail));
                         let userReview = "";
                         if (item) {
                             console.log('item',item);
