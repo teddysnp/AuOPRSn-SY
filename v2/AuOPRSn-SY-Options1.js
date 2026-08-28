@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      2.1.6
+// @version      2.1.7
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2228,7 +2228,7 @@
               padding-top: 1em;
               width: 100%;
               box-sizing: border-box;
-              height: 50px;
+              height: 45;
               font-size:18px;
               background-color: #cccccc;
           }
@@ -2237,17 +2237,17 @@
               padding-top: 1em;
               width: 100%;
               box-sizing: border-box;
-              height: 50px;
+              height: 45px;
               font-size:18px;
               color: #ffe600;
-              background-color: #007947;
+              background-color: #12d082;
           }
           .wayfarer-sqselfowner {
               margin-left: 0;
               padding-top: 1em;
               width: 100%;
               box-sizing: border-box;
-              height: 50px;
+              height: 45px;
               border-style:solid;
               border-width:2px;
               border-color:#f58220;
@@ -2260,7 +2260,7 @@
               padding-top: 1em;
               width: 100%;
               box-sizing: border-box;
-              height: 50px;
+              height: 45px;
               border-style:solid;
               border-width:2px;
               border-color:#f58220;
@@ -2273,13 +2273,13 @@
               padding-top: 1em;
               width: 100%;
               box-sizing: border-box;
-              height: 50px;
+              height: 45px;
               border-style:solid;
               border-width:2px;
               border-color:#f58220;
               font-size:18px;
               color: #faa755;
-              background-color: #007947;
+              background-color: #12d082;
           }
 .wayfarer-useritem {
     flex: 1 1 0;
