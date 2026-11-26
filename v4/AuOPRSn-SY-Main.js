@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      8.0.11
+// @version      8.0.13
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -162,13 +162,13 @@
             document.title = userEmail;
         }
 
-        missionGDoc = JSON.parse(localStorage.missionGDoc);
+        //missionGDoc = JSON.parse(localStorage.missionGDoc);
         //console.log(mywin.location.href);
         //如果是在展示页，那么获取用户的动作在XMLHttpRequest-showReviewedHome中完成
         if(mywin.location.href != "https://wayfarer.scopely.com/mapview")
         {
             if(DIS_MISSION_LOG) console.log("getmissionload");
-            await getMissionFromCloudFlare();
+            //await getMissionFromCloudFlare();
         }
     }
 
@@ -230,8 +230,78 @@
         }
     };
 
+    //*********************  CloudFlare SDK操作 *********************//
+    const missionGDocFromSDK = {
+        get data() {
+            const SDK = unsafeWindow.AuOPRSnCloudFlareSDK;
+            return unsafeWindow.AuOPRSnCloudFlareSDK?.missionGDoc ?? [];
+        },
+        async cfClass() {
+            const SDK = await waitForSDK();
+            return SDK.cfClass;
+        },
+        async ready() {
+            const SDK = await waitForSDK();
+            await SDK.ready;
+            return SDK.missionGDoc;
+        },
+
+        async refresh() {
+            const SDK = await waitForSDK();
+            await SDK.ready;
+            return SDK.refreshMission();
+        },
+
+        async readR2File(fileName) {
+            const SDK = await waitForSDK();
+            return SDK.readR2File(fileName);
+        },
+
+        async uploadDataToR2(...args) {
+            const SDK = await waitForSDK();
+            return SDK.uploadDataToR2(...args);
+        },
+        async updateReviewMark(portalId, newUserMark) {
+            const SDK = await waitForSDK();
+            return SDK.uploadDataToR2(portalId, newUserMark);
+        }
+
+    };
+    function waitForSDK(timeout = 15000, interval = 100) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+
+            const check = () => {
+                const SDK = unsafeWindow.AuOPRSnCloudFlareSDK;
+
+                if (SDK) {
+                    resolve(SDK);
+                    return;
+                }
+
+                if (Date.now() - startTime >= timeout) {
+                    reject(new Error('等待 CloudFlare SDK 加载超时'));
+                    return;
+                }
+
+                setTimeout(check, interval);
+            };
+
+            check();
+        });
+    }
+    // 等待 SDK 和首次数据初始化完成
+
+    const missionGDocReady = (async () => {
+        missionGDocAll = await missionGDocFromSDK.ready();
+        let filteredMarkers = missionGDocAll.filter(item => item.status === '提交' || item.status === '审核' );
+        missionGDoc = filteredMarkers;
+        console.log('follow',missionGDoc);
+        return missionGDocAll;
+    })();
 
 
+  /*
     // 配置 - CloudFlare
     const CONFIG = {
         BASE_URL: 'https://wayfarer.teddysnp.ccwu.cc',
@@ -528,15 +598,18 @@
                 showLog(`连接失败: ${error.message}`, true);
             }
         });
-    }
+    } */
 
     //读取任务数据，读取的数据是通过status=mission过滤的(在GAS中过滤doGet，提交或审核)，取到数据后，再确保一次进行过滤status为提交或审核
-    function getMissionFromCloudFlare() {
+    async function getMissionFromCloudFlare() {
+        //const cfClass = await missionGDocFromSDK.ready();
+        return;
         // 返回 Promise 对象，包裹异步请求逻辑
+        /*
         return new Promise((resolve, reject) => {
             // 调用getDatasByStatus方法
             const statusList = ["提交", "审核"]; // 状态列表数组（与方法定义匹配）
-            cfClass.getDatasByStatus(
+            const res = await missionGDocFromSDK.cfClass.getDatasByStatus(
                 statusList, // 第一个参数：状态数组（与方法定义一致）
                 (res) => { // 成功回调：使用res参数（不是success变量）
                     try {
@@ -569,7 +642,7 @@
                     });
                 }
             );
-        });
+        }); */
     }
 
     // 修复XMLHttpRequest封装，仅在请求完成（readyState=4）时处理响应
@@ -1829,13 +1902,13 @@
     }
 
     //上传原始po数据至cloudflare (仅上传：池中及本地)
-    function uploadPortalData(portaldata,loc){
+    async function uploadPortalData(portaldata,loc){
         if(loc !== "池中" && loc !== "本地")
         {
             return;
         }
         try{
-            let resp1 = readR2File("portal/portaldata/portal."+portaldata.id + ".json")
+            const res = await missionGDocFromSDK.readR2File("portal/portaldata/portal."+portaldata.id + ".json")
             .then(res=>{
                 if(!res) {
                     console.log("未找到原始portal数据uploadPortalData，准备上传","portal/portaldata/","portal."+portaldata.id+".json");
@@ -1853,7 +1926,7 @@
     //上传用户审po打卡至cloudflare，第一次审到还要更新任务为已审/并加个id
     async function uploadReviewMark(portaldata){
         //console.log("uploadReviewMark loaded");
-        function saveNewUserMark()
+        async function saveNewUserMark()
         {
             //保存任务id :
             let sLocalEmail = userEmail ? userEmail : localStorage.currentUser;
@@ -1862,7 +1935,7 @@
             + '"datetime":"'+formatDate(new Date(),"yyyy-MM-dd HH:mm:ss")+'",'
             +'"performance":"' + performance +'"'
             + "}]";
-            uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",JSON.parse(susermark));
+            const res = await missionGDocFromSDK.uploadDataToR2("portal/portaluseremail/","portal."+portaldata.id+".useremail.json",JSON.parse(susermark));
             setTimeout(function(){
                 //uploadFile("PUT","portal/portaluseremail/portal."+portaldata.id+".useremail.json",susermark);
             },1000);
@@ -1877,7 +1950,7 @@
             };
 
             try {
-                const response = await fetch("https://worker-wayfarer-updatedata.tydtyd.workers.dev", {
+/*                const response = await fetch("https://worker-wayfarer-updatedata.tydtyd.workers.dev", {
                     method: "POST",
                     keepalive: true, // 关键：允许请求在页面卸载后继续执行
                     headers: { "Content-Type": "application/json" },
@@ -1885,9 +1958,8 @@
                         portalId: portaldata.id,
                         newUserMark: newUserMark
                     })
-                });
-
-                const result = await response.json();
+                });*/
+                const result = await missionGDocFromSDK.updateReviewMark(portaldata.id, newUserMark);
                 if (response.ok) {
                     console.log("新打卡，保存成功:", result.msg);
                 } else {
@@ -1902,13 +1974,6 @@
         if(!missionGDoc){
             //console.log("uploadReviewMark:missionGDoc not found",missionGDoc);
             return;
-        } else
-        {
-            if(missionGDoc.length === 0){
-                //console.log("missionGDoc.length",missionGDoc.length);
-                await getMissionFromCloudFlare();
-            }
-            //console.log("uploadReviewMark:missionGDoc",missionGDoc);
         }
         let pname = null; let preview=null;
         for (const item of missionGDoc) {
@@ -2497,6 +2562,7 @@
     //在审核页review显示审过的po
     async function showReviewedReview()
     {
+        console.log('showreview:',missionGDoc);
         if(missionGDoc.length === 0)
         {
             missionGDoc = JSON.parse(localStorage.missionGDoc);
