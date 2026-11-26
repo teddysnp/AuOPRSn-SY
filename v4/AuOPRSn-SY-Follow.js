@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      5.0.11
+// @version      5.0.13
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -27,6 +27,7 @@
     let cloudReviewData = null;
     let useremail = "";
     let missionGDoc = []; //从google doc读取的任务列表
+    let missionGDocAll = [];
 
     const rejectReasons = [
         { zh: "照片模糊不清", en: "PHOTO_BAD_BLURRY" },
@@ -98,9 +99,9 @@
     }
 
     mywin.onload = function() {
-        //console.log("onload","getMission");
-        missionGDoc = JSON.parse(localStorage.missionGDoc);
-        getLocalMissionList();
+        //console.log("onload:missionGDoc",missionGDoc);
+        //missionGDoc = JSON.parse(localStorage.missionGDoc);
+        //getLocalMissionList();
     }
     localStorage.setItem("reviewPortalAuto",reviewPortalAuto);
     listenLinkClick();
@@ -268,7 +269,10 @@
         });
     }
 
-    function getLocalMissionList(){
+    async function getLocalMissionList(){
+        const cfClass = await missionGDocFromSDK.ready();
+        console.log('follow',missionGDoc);
+        return;
         let miss = localStorage.missionGDoc;
         if (miss) {
             missionGDoc = JSON.parse(miss);
@@ -335,9 +339,74 @@
         }
     };
 
+    //*********************  CloudFlare SDK操作 *********************//
+    const missionGDocFromSDK = {
+        get data() {
+            const SDK = unsafeWindow.AuOPRSnCloudFlareSDK;
+            return unsafeWindow.AuOPRSnCloudFlareSDK?.missionGDoc ?? [];
+        },
+        async cfClass() {
+            const SDK = await waitForSDK();
+            return SDK.cfClass;
+        },
+        async ready() {
+            const SDK = await waitForSDK();
+            await SDK.ready;
+            return SDK.missionGDoc;
+        },
+
+        async refresh() {
+            const SDK = await waitForSDK();
+            await SDK.ready;
+            return SDK.refreshMission();
+        },
+
+        async readR2File(fileName) {
+            const SDK = await waitForSDK();
+            return SDK.readR2File(fileName);
+        },
+
+        async uploadDataToR2(...args) {
+            const SDK = await waitForSDK();
+            return SDK.uploadDataToR2(...args);
+        }
+    };
+    function waitForSDK(timeout = 15000, interval = 100) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+
+            const check = () => {
+                const SDK = unsafeWindow.AuOPRSnCloudFlareSDK;
+
+                if (SDK) {
+                    resolve(SDK);
+                    return;
+                }
+
+                if (Date.now() - startTime >= timeout) {
+                    reject(new Error('等待 CloudFlare SDK 加载超时'));
+                    return;
+                }
+
+                setTimeout(check, interval);
+            };
+
+            check();
+        });
+    }
+    // 等待 SDK 和首次数据初始化完成
+
+    const missionGDocReady = (async () => {
+        missionGDocAll = await missionGDocFromSDK.ready();
+        let filteredMarkers = missionGDocAll.filter(item => item.status === '提交' || item.status === '审核' );
+        missionGDoc = filteredMarkers;
+        console.log('follow',missionGDoc);
+        return missionGDocAll;
+    })();
+
     //*********************  CloudFlare操作 *********************//
     // 配置 - CloudFlare
-    const CONFIG = {
+/*    const CONFIG = {
         BASE_URL: 'https://wayfarer.teddysnp.ccwu.cc',
         SECRET_KEY: 'warfarer-review', // 与Worker中相同的密钥
         DEFAULT_FOLDER: 'defaultpath/' // 本地指定的存储路径，可随时修改
@@ -556,7 +625,7 @@
             });
         }).catch(e => {
             console.log('Promise', e)});
-    }
+    } */
 
     //*********************  Http监听 *********************//
     const DISFetchLog = false ;
@@ -570,7 +639,10 @@
                     if(DISFetchLog) console.log('followReview POST:', data);
 
                     try {
-                        // 克隆原始审核数据
+                        let titlescore = document.querySelector('#review-page-title');
+                        if(titlescore){
+                            titlescore.textContent = "审查";
+                        }
                         let tmppayload = structuredClone(payload);
 
                         Logger.log(DISLOG2, "原版审核数据", payload);
@@ -622,6 +694,10 @@
                 match: url => url.includes('/api/v1/vault/review/skip'),
 
                 handler: (payload, data) => {
+                    let titlescore = document.querySelector('#review-page-title');
+                    if(titlescore){
+                        titlescore.textContent = "审查";
+                    }
 
                     savePostData(payload);
 
@@ -1571,10 +1647,11 @@
                         //更新云中任务
                         if(isave === 1){
                             console.log("更新任务至GDoc",item.title);
-                            setTimeout(function(){
+                            setTimeout(async function(){
                                 localStorage.setItem("missionGDoc",JSON.stringify(missionGDoc));
                                 let updateField={status:item.status,title:item.title,lat:item.lat,lng:item.lng,submitter:item.submitter,nominateID:item.nominateID};
-                                cfClass.updateData(
+                                //cfClass.updateData(
+                                const res = await missionGDocFromSDK.updateData(
                                     item.id, updateField,
                                     (res) => {
                                         console.log("更新任务成功"+item.id+","+item.title,res);
@@ -1835,6 +1912,8 @@
                 icon: "https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/source/warn.ico",
                 requireInteraction: false
             });
+            let titlescore = document.querySelector('#review-page-title');
+            if (titlescore) titlescore.textContent = titlescore.textContent + " : 可能有重复po";
 
             // 查找审核缩略图按钮
             const btn = document.querySelector(
@@ -1886,7 +1965,7 @@
 
 
     //判断云端是否有审核记录，执行跟审或任务审
-    function loadReviewData(pdata){
+    async function loadReviewData(pdata){
         //console.log(id);
         //let sid="05a6bef32a01cc9e39c967677e18763f";
         //console.log("email",useremail);
@@ -1894,11 +1973,12 @@
         let id=pdata.id;
         let tmpfollow = {id:null,title:null,lat:null,lng:null,review:null,dateTime:null};
         //console.log(durl+"/portal/portalreview/portal." +id +".json");
-        //因为单用户可能有访问接口限制，故查找审核文件是否存在还用公用接口
+        //因为单用户可能有访问接口限制，故查找审核文件是否存在还用公用接口，改SDK后，试用readR2File
         //let resp = readR2File("portal/portalreview/portal." +id +".json")
         let iresp = true; //使用pub接口
-        let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
         //console.log("loadReviewData",pdata);console.log("id",id);
+        //let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
+        const res = await missionGDocFromSDK.readR2File(durl+"/portal/portalreview/portal." +id +".json")
         .then(res=>{
             //console.log("getjson",res);
             let dvnetrecorder = document.getElementById("id-myheader-netrecorder");
@@ -2978,7 +3058,7 @@
 
             Logger.log(DISLOG3, "上传审核数据:", uploadData);
 
-            await uploadDataToR2(
+            const res = await missionGDocFromSDK.uploadDataToR2(
                 "portal/portalreview/",
                 "portal." + id + ".json",
                 uploadData,
