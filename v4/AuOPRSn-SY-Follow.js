@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      5.0.13
+// @version      5.0.14
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1975,22 +1975,14 @@
         //console.log(durl+"/portal/portalreview/portal." +id +".json");
         //因为单用户可能有访问接口限制，故查找审核文件是否存在还用公用接口，改SDK后，试用readR2File
         //let resp = readR2File("portal/portalreview/portal." +id +".json")
-        let iresp = true; //使用pub接口
-        //console.log("loadReviewData",pdata);console.log("id",id);
-        //let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
-        const res = await missionGDocFromSDK.readR2File("/portal/portalreview/portal." +id +".json")
-        .then(res=>{
-            //console.log("getjson",res);
-            let dvnetrecorder = document.getElementById("id-myheader-netrecorder");
-            //getLocalMissionList();
-            //console.log("follow-loadReviewData-res",res);
-            //console.log('res',res);
-            if(!res) {
-                //修改首页下载显示
-                //console.log("getjsonerr");
+        let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
+        //await missionGDocFromSDK.readR2File("portal/portalreview/portal." +id +".json")
+        .then(res => {
+            if(!res || typeof(res) === "string") {
                 cloudReviewData = null;
                 setTimeout(function(){
-                    if(dvnetrecorder) dvnetrecorder.textContent = "未找到网络审核记录";
+                    let titlescore = document.querySelector('#review-page-title');
+                    if (titlescore) titlescore.textContent += "：未找到网络审核记录";
                     setDownLabel(this,'gold');
                 },1000);
                 //未找到网络审核时，去判断是否有重复可能
@@ -1999,59 +1991,12 @@
                 if(pdata.type === "NEW") isDuplicate(pdata);
                 return null;
             }
-            let restext = null;
-            if(iresp) {
-                restext = res;
-            } else {
-                restext = JSON.stringify(res.content);
-            }
-            //console.log('restext',restext);
-            if(restext.indexOf("Error 404")>=0) {
-                //修改首页下载显示
-                //中黄：ffe600
-                setDownLabel(this,'gold');
-                console.log("未找到网络审核-"+pdata.id);
-                cloudReviewData = null;
-                setTimeout(function(){
-                    if(dvnetrecorder) dvnetrecorder.textContent = "未找到网络审核记录";
-                },1000);
-                //未找到网络审核时，去判断是否有重复可能
-                if(pdata.type=="EDIT") editReview(pdata);
-                if(pdata.type=="PHOTO") photoReview(pdata);
-                if(pdata.type=="NEW") isDuplicate(pdata);
-                return null;
-            }
-            if(restext.indexOf("<!DOCTYPE html>")>=0){
-                cloudReviewData = null;
-                setTimeout(function(){
-                    if(dvnetrecorder) dvnetrecorder.textContent = "未找到网络审核记录";
-                },1000);
-                //未找到网络审核时，去判断是否有重复可能
-                if(pdata.type=="EDIT") editReview(pdata);
-                if(pdata.type=="PHOTO") photoReview(pdata);
-                if(pdata.type=="NEW") isDuplicate(pdata);
-                return null;
-            }
-            //20241106，将原审核记录通过脚本移动到portal/portalreview下，导致20141105以前的文件中多了：
-            //  开头"(应该没有)  结尾:"(应该没有)  中间\"(应该无\)
-            //20241106以后生成的审核记录应该无此问题
-            let res1 = null;
-            if(restext.substring(0,1)=='"')
-            {
-                res1=restext.substring(1,restext.length-1);
-                res1=res1.replace(/\\/g,"");
-            } else res1=restext;
+            console.log('res',res);
+            console.log('restype',typeof(res));
 
-            //console.log("res1",JSON.parse(res1));
             let creviewdata = null;
             let title=pdata.title;let lat=pdata.lat;let lng=pdata.lng;
-            if(res1.substring(0,1)=="[") {
-                //console.log("searching review record：",JSON.parse(JSON.parse(res1)[0]));
-                creviewdata = JSON.parse(JSON.parse(res1)[0]);   //网络审核记录
-            } else {
-                //console.log("searching review record：",JSON.parse(res));
-                creviewdata = JSON.parse(res1);   //网络审核记录
-            }
+            creviewdata = res.content;
             setDownLabel(this,'green');
             cloudReviewData = creviewdata ;
             if(creviewdata === null) { return null; }
@@ -2266,6 +2211,18 @@
                             tmpfollow.review="五星";
                         }
                         console.log("审核记录：五星");
+
+                        const buttons = [
+                            ...document.querySelectorAll('div#appropriate-card, div#safe-card, div#accurate-and-high-quality-card, div#permanent-location-card, div#socialize-card, div#exercise-card, div#explore-card')
+                        ].map(div => div.querySelector('button[aria-pressed]'))
+                        .filter(Boolean);
+                        console.log(buttons);
+                        buttons.forEach(btnitem => {
+                            if (btnitem?.getAttribute("aria-pressed") === "false") {
+                                btnitem.click();
+                            }
+                        });
+/*
                         const appcard=["appropriate-card","safe-card","accurate-and-high-quality-card","permanent-location-card","socialize-card","exercise-card","explore-card"];
                         setTimeout(function(){
                             for(let i=0;i<=appcard.length-1;i++){
@@ -2279,9 +2236,7 @@
                                     }
                                 }
                             }
-                            let idscore = document.querySelector("span[id='idscore']");
-                            idscore.textContent = "YYYYYYY";
-                        },3000);
+                        },3000); */
                     }
                     else {
                         tmptext = "照抄网络审核：非重复";
@@ -2526,10 +2481,10 @@
                 })[char]);
 
                 let titlescore = document.querySelector('#review-page-title');
-                if (titlescore) titlescore.textContent = "打分：" + score1;
+                if (titlescore) titlescore.textContent = score1;
                 //let ilabel = document.getElementById("iduserlabel");
                 //if(ilabel) ilabel.textContent = tmptext;
-                console.log("iduserlabel",tmptext);
+                console.log("iduserlabel",score1);
             },500);
             //console.log("return true");
             return true;
