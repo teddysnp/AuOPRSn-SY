@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-CloudFlareSDK
 // @namespace    AuOPR
-// @version      2.0.0
+// @version      2.1.0
 // @description  AuOPRSn CloudFlare 公共 SDK
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -303,9 +303,10 @@
     }
     // 读取指定的JSON文件
     function readR2File(fileName) {
+        let DISLOG = false;
         return new Promise((res, err) => {
 
-            //console.log(`正在读取文件: ${fileName.split('/').pop()}`);
+            if(DISLOG) console.log(`正在读取文件: ${fileName}`);
 
             GM_xmlhttpRequest({
                 method: 'GET',
@@ -315,24 +316,25 @@
                 },
                 // 新增：打印发送的请求信息
                 onsend: function() {
-                    console.log('发送请求:', {
+                    if(DISLOG) console.log('发送请求:', {
                         url: this.url,
                         headers: this.headers
                     });
                 },
                 onload: function(response) {
-                    /*
-                    console.log('收到响应:', {
+
+                    if(DISLOG) console.log('收到响应:', {
                         status: response.status,
                         responseText: response.responseText.substring(0, 200) // 只显示前200字符
-                    }); */
+                    });
                     try {
                         const result = JSON.parse(response.responseText);
+                        if(DISLOG) console.log('result',result);
                         if (result.success) {
-                            //console.log(`成功读取文件: ${result.fileName.split('/').pop()}`);
+                            if(DISLOG) console.log(`成功读取文件: ${result.fileName.split('/').pop()}`);
                             res(result);
                         } else {
-                            //console.log('result',result);
+                            if(DISLOG) console.log('result',result);
                             err(result);
                         }
                     } catch (e) {
