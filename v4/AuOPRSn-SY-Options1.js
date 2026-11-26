@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Options1
 // @namespace    AuOPR
-// @version      3.0.1
+// @version      3.0.3
 // @description  任务管理面板（双标签页+会话级折叠状态保持+SPA适配）
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -10,51 +10,20 @@
 // @require      https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js
 // @connect      wayfarer.teddysnp.ccwu.cc
 // @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
 // @run-at       document-body
 // ==/UserScript==
 
 (function() {
 
+    let mywin=window;
+
+    let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
+
     const DIS_MAP_LOG = true;
     // ======================  任务管理 ======================
     // 用于sessionStorage存储折叠状态的唯一标识（可自定义）
     const STORAGE_KEY = 'missionManagerPanelCollapsed';
-
-    const SETTINGS_KEY = "auoprsn_settings";
-    const userSettings = {
-        SECRET_KEY: null
-    };
-    loadSettings();
-    function loadSettingsToJson(target, source) {
-        for (const key in source) {
-            const srcVal = source[key];
-            const tgtVal = target[key];
-
-            if (
-                typeof srcVal === "object" &&
-                srcVal !== null &&
-                !Array.isArray(srcVal)
-            ) {
-                if (typeof tgtVal !== "object" || tgtVal === null) {
-                    target[key] = {};
-                }
-                mergeDeep(target[key], srcVal);
-            } else {
-                target[key] = srcVal;
-            }
-        }
-    }
-    function loadSettings() {
-        try {
-            const saved = localStorage.getItem(SETTINGS_KEY);
-            if (saved) {
-                loadSettingsToJson(userSettings, JSON.parse(saved));
-                console.log('userSettings',userSettings);
-            }
-        } catch (e) {
-            console.error(`${SETTINGS_KEY} - Failed to load settings:`, e);
-        }
-    }
 
     // 标记样式是否已注入（样式仅需注入一次）
     let stylesInjected = false;
@@ -630,7 +599,7 @@
     let popupContainer = null;
     let userEmail = null;
     let performance = null;
-    let missionGDoc = [];
+
     let missionGDocAll = [];
     let portalReviewed = [];
     let portalFollowed = [];
@@ -641,225 +610,117 @@
     let followPortalDisplay = 50;
     let uploadPortalDisplay = 50;
 
-    // ================== 配置 - CloudFlare =======================//
-    //在cloudflare中上传的链接
-    let durl="https://pub-e7310217ff404668a05fcf978090e8ca.r2.dev";
-    const CONFIG = {
-        BASE_URL: 'https://wayfarer.teddysnp.ccwu.cc',
-        SECRET_KEY: 'warfarer-review', // 与Worker中相同的密钥
-        DEFAULT_FOLDER: 'defaultpath/' // 本地指定的存储路径，可随时修改
-    };
-    const cfClass = {
-        // 1. 按id查询单条数据
-        getDataById: function(id, success, error) {
-            $.ajax({
-                method: "GET",
-                url: `${CONFIG.BASE_URL}/data/${id}`,
-                headers: { "Content-Type": "application/json" ,"X-API-Key": userSettings.SECRET_KEY},
-                success: (response) => {
-                    success(response);
-                },
-                error: (xhr) => {
-                    try {
-                        const errorData = JSON.parse(xhr.responseText);
-                        error(`查询失败：${errorData.error}`);
-                    } catch (e) {
-                        error(`网络错误：${xhr.statusText}`);
-                    }
-                }
-            });
+    const missionGDocFromSDK1 = {
+        // 同步读取当前数据，不等待
+        get data() {
+            const SDK = unsafeWindow.AuOPRSnCloudFlareSDK;
+            return SDK?.missionGDoc ?? [];
         },
 
-        // 2. 按status批量查询
-        getDatasByStatus: function(statusList, success, error) {
-            const params = new URLSearchParams();
-            statusList.forEach(s => params.append("status", s));
-            $.ajax({
-                method: "GET",
-                url: `${CONFIG.BASE_URL}/mission/data?${params.toString()}`,
-                headers: { "Content-Type": "application/json" ,"X-API-Key": userSettings.SECRET_KEY},
-                success: (response) => {
-                    success(response);
-                },
-                error: (xhr) => {
-                    try {
-                        const errorData = JSON.parse(xhr.responseText);
-                        console.warn(`查询失败：${errorData.error}`,errorData);
-                        error(`查询失败：${errorData.error}`);
-                    } catch (e) {
-                        console.warn(`网络错误：${xhr.statusText}`,e);
-                        error(`网络错误：${xhr.statusText}`);
-                    }
-                }
-            });
+        // 等待 SDK 加载，并等待 SDK 初始化完成
+        async ready() {
+            const SDK = await waitForSDK();
+            await SDK.ready;
+            return SDK.missionGDoc;
         },
 
-        // 3. 新增数据（自动生成id）
-        addData: function(data, success, error) {
-            // 判断数据类型是否为FormData
-            const isFormData = data instanceof FormData;
-            let url = `${CONFIG.BASE_URL}/data`;
-            // 动态决定请求方法：有id则用PUT，无id则用POST
-            let method = "POST";
-
-            // 检查是否有id
-            const hasId = isFormData ? data.has('id') : (data && data.id !== undefined && data.id !== null && data.id !== "");
-
-            if (hasId) {
-                const id = isFormData ? data.get('id') : data.id;
-                url = `${CONFIG.BASE_URL}/data/${id}`;
-                method = "PUT"; // 有id时使用PUT方法（对应服务器的更新接口）
-            }
-
-            $.ajax({
-                method: method,
-                url: url,
-                headers: {
-                    "X-API-Key": userSettings.SECRET_KEY   // 加这一行
-                },
-                // FormData不需要设置Content-Type，jQuery会自动处理
-                contentType: !isFormData ? "application/json" : false,
-                // 对于FormData需要设置processData为false，防止jQuery转换数据
-                processData: !isFormData,
-                data: isFormData ? data : JSON.stringify(data),
-                success: (response) => {
-                    success(response);
-                },
-                error: (xhr) => {
-                    try {
-                        const errorData = JSON.parse(xhr.responseText);
-                        error(`操作失败：${errorData.error || '未知错误'}`);
-                    } catch (e) {
-                        error(`解析响应失败：${e.message}`);
-                    }
-                }
-            });
-        },
-
-        // 4. 更新数据（按id）
-        updateData: function(id, updateFields, success, error) {
-            $.ajax({
-                method: "PUT",
-                url: `${CONFIG.BASE_URL}/data/${id}`,
-                headers: { "Content-Type": "application/json" ,"X-API-Key": userSettings.SECRET_KEY},
-                data: JSON.stringify(updateFields), // 只需传要更新的字段
-                success: (response) => {
-                    success(response);
-                },
-                error: (xhr) => {
-                    try {
-                        const errorData = JSON.parse(xhr.responseText);
-                        error(`更新失败：${errorData.error}`);
-                    } catch (e) {
-                        error(`网络错误：${xhr.statusText}`);
-                    }
-                }
-            });
-        },
-
-        // 5. 删除数据（按id）
-        deleteData: function(id, success, error) {
-            $.ajax({
-                method: "DELETE",
-                url: `${CONFIG.BASE_URL}/data/${id}`,
-                headers: { "Content-Type": "application/json" ,"X-API-Key": userSettings.SECRET_KEY},
-                success: (response) => {
-                    success(response.message);
-                },
-                error: (xhr) => {
-                    try {
-                        const errorData = JSON.parse(xhr.responseText);
-                        error(`删除失败：${errorData.error}`);
-                    } catch (e) {
-                        error(`网络错误：${xhr.statusText}`);
-                    }
-                }
-            });
+        // 主动刷新云端数据
+        async refresh() {
+            const SDK = await waitForSDK();
+            await SDK.ready;
+            return SDK.refreshMission();
         }
     };
-    // 上传数据到R2   uploadDataToR2(folderPath:路径 , fileName:文件名 , data:json数据)
-    //WORKER_URL为通用型，参数有文件、数据
-    //本脚本暂未用到上传函数uploadDataToR2
-    function uploadDataToR2(folderPath,fileName,data) {
-        try {
-            console.log(`正在上传数据:${folderPath}`);
-            GM_xmlhttpRequest({
-                method: 'POST',
-                url: `${CONFIG.BASE_URL}/json/`,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Secret-Key': userSettings.SECRET_KEY
-                },
-                data: JSON.stringify({
-                    folderPath: folderPath,
-                    fileName: fileName,
-                    data: data
-                }),
-                onload: function(response) {
-                    try {
-                        const result = JSON.parse(response.responseText);
-                        if (result.success) {
-                            console.log(`数据上传成功: ${result.fullPath}`);
-                        } else {
-                            console.log(`上传失败: ${result.error || result.details}`);
-                        }
-                    } catch (e) {
-                        console.log(`解析响应失败: ${e.message}`);
-                    }
-                },
-                onerror: function(error) {
-                    console.log(`解析响应失败: ${error.message}`);
+    function waitForSDK1(timeout = 15000, interval = 100) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+
+            const timer = setInterval(() => {
+                const SDK = unsafeWindow.AuOPRSnCloudFlareSDK;
+
+                if (SDK) {
+                    clearInterval(timer);
+                    resolve(SDK);
+                    return;
                 }
-            });
-        } catch (e) {
-            console.log(`解析响应失败: ${e.message}`);
+
+                if (Date.now() - startTime >= timeout) {
+                    clearInterval(timer);
+                    reject(new Error('等待 CloudFlare SDK 加载超时'));
+                }
+            }, interval);
+        });
+    }
+
+    const missionGDocFromSDK = {
+        get data() {
+            const SDK = unsafeWindow.AuOPRSnCloudFlareSDK;
+            return unsafeWindow.AuOPRSnCloudFlareSDK?.missionGDoc ?? [];
+        },
+        get version() {
+            return unsafeWindow.AuOPRSnCloudFlareSDK?.missionVersion ?? 0;
+        },
+        async cfClass() {
+            const SDK = await waitForSDK();
+            return SDK.cfClass;
+        },
+        async ready() {
+            const SDK = await waitForSDK();
+            await SDK.ready;
+            return SDK.missionGDoc;
+        },
+
+        async refresh() {
+            const SDK = await waitForSDK();
+            await SDK.ready;
+            return SDK.refreshMission();
+        },
+
+        async readR2File(fileName) {
+            const SDK = await waitForSDK();
+            return SDK.readR2File(fileName);
+        },
+
+        async uploadDataToR2(...args) {
+            const SDK = await waitForSDK();
+            return SDK.uploadDataToR2(...args);
         }
-    }
-    // 读取指定的JSON文件
-    function readR2File(fileName) {
-        return new Promise((res, err) => {
+    };
+    function waitForSDK(timeout = 15000, interval = 100) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
 
-            console.log(`正在读取文件: ${fileName.split('/').pop()}`);
+            const check = () => {
+                const SDK = unsafeWindow.AuOPRSnCloudFlareSDK;
 
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: `${CONFIG.BASE_URL}/json/read?file=${encodeURIComponent(fileName)}`,
-                headers: {
-                    'X-Secret-Key': userSettings.SECRET_KEY
-                },
-                // 新增：打印发送的请求信息
-                onsend: function() {
-                    console.log('发送请求:', {
-                        url: this.url,
-                        headers: this.headers
-                    });
-                },
-                onload: function(response) {
-                    console.log('收到响应:', {
-                        status: response.status,
-                        responseText: response.responseText.substring(0, 200) // 只显示前200字符
-                    });
-                    try {
-                        const result = JSON.parse(response.responseText);
-                        if (result.success) {
-                            console.log(`成功读取文件: ${result.fileName.split('/').pop()}`);
-                            res(result);
-                        } else {
-                            console.log('result',result);
-                            err(result);
-                        }
-                    } catch (e) {
-                        console.log('e',e);
-                        err(e);
-                    }
-                },
-                onerror: function(error) {
-                    console.log('error',error);
+                if (SDK) {
+                    resolve(SDK);
+                    return;
                 }
-            });
-        }).catch(e => {
-            console.log('Promise', e)});
+
+                if (Date.now() - startTime >= timeout) {
+                    reject(new Error('等待 CloudFlare SDK 加载超时'));
+                    return;
+                }
+
+                setTimeout(check, interval);
+            };
+
+            check();
+        });
     }
+    // 等待 SDK 和首次数据初始化完成
+    let missionGDoc = [];
+
+    const missionGDocReady = (async () => {
+        missionGDocAll = await missionGDocFromSDK.ready();
+        let filteredMarkers = missionGDocAll.filter(item => item.status === '提交' || item.status === '审核' );
+        missionGDoc = filteredMarkers;
+        console.log('option1',missionGDoc);
+        return missionGDocAll;
+    })();
+
+
     // ================== 配置 - CloudFlare 结束 ===================//
 
     // 节点等待轮询函数
@@ -910,19 +771,24 @@
 
     function getMissionFromCloudFlare() {
         // 返回 Promise 对象，包裹异步请求逻辑
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             // 调用getDatasByStatus方法
             const statusList = []; //["提交", "审核"]; // 状态列表数组（与方法定义匹配）
+            const cfClass = await missionGDocFromSDK.ready();
+            let filteredMarkers = missionGDocAll.filter(item => item.status === '提交' || item.status === '审核' );
+            missionGDoc = filteredMarkers;
+            console.log('option1',missionGDoc);
+            return;
             cfClass.getDatasByStatus(
-                statusList, // 第一个参数：状态数组（与方法定义一致）
-                (res) => { // 成功回调：使用res参数（不是success变量）
+                statusList,
+                (res) => {
                     try {
                         // 直接使用res，因为res已经是解析后的JSON对象
                         let markercollection = res;
                         // 筛选状态为'提交'或'审核'的元素
                         let filteredMarkers = markercollection.filter(item => item.status === '提交' || item.status === '审核' );
                         missionGDoc = filteredMarkers;
-                        console.log('Options1-missionGDoc', missionGDoc);
+                        //console.log('Options1-missionGDoc', missionGDoc);
 
                         let filteredMarkersAll = markercollection.filter(item => item.status !== '定位' );
                         //按日期submitteddate排序
@@ -1306,9 +1172,9 @@
     }
 
     //核心函数：切换用户审核弹窗（重写版） @param {number} iowner - 传入的owner标识
-    switchUserReviewDiv = function(iowner) {
+    switchUserReviewDiv = async function(iowner) {
         console.log("switchUserReviewDiv", iowner);
-        function saveUserMark(id, userEmail, performance) {
+        async function saveUserMark(id, userEmail, performance) {
             //通过worker提交打卡，避免同时更新的冲突(由worker解决冲突问题)
             console.log("正在通过 Worker 提交打卡...");
             const newUserMark = {
@@ -1316,20 +1182,9 @@
                 datetime: formatDate(new Date(), "yyyy-MM-dd HH:mm:ss"),
                 performance: performance
             };
-
             try {
-                const response = fetch(`${CONFIG.BASE_URL}/portal/updateportaluseremail/`, {
-                    method: "POST",
-                    keepalive: true, // 关键：允许请求在页面卸载后继续执行
-                    headers: { "Content-Type": "application/json" ,"X-API-Key": userSettings.SECRET_KEY} ,
-                    body: JSON.stringify({
-                        portalId: id,
-                        newUserMark: newUserMark
-                    })
-                });
-
-                const result = response.json();
-                if (response.ok) {
+            const result = await missionGDocFromSDK.updateReviewMark(id, newUserMark);
+                if (result.ok) {
                     console.log("新打卡，保存成功:", result.msg);
                 } else {
                     console.error("新打卡，保存失败:", result);
@@ -1381,8 +1236,10 @@
                 }
 
                 // 4. 读取R2文件并处理业务逻辑
-                readR2File("portal/portaluseremail/portal." + id + ".useremail.json")
-                    .then(res => {
+                //readR2File("portal/portaluseremail/portal." + id + ".useremail.json")
+                const res = await missionGDocFromSDK.readR2File(
+                    `portal/portaluseremail/portal.${id}.useremail.json`
+                ).then(res => {
                     let userreview = [];
                     let userReviewJson = [];
                     if (!res) {
@@ -1530,10 +1387,10 @@
                         const item = userReviewJson.find(item => semail.includes(item.useremail));
                         let userReview = "";
                         if (item) {
-                            console.log('item',item);
+                            //console.log('item',item);
                             if(item.userreview){
                                 userReview = item.userreview === "skip" ? "忽略" : item.userreview;
-                                console.log("找到用户评价：", userReview);
+                                //console.log("找到用户评价：", userReview);
                             }
                         }
 
@@ -1654,7 +1511,8 @@
     document.head.appendChild(style);
 
     // 通用函数：生成评审数据表格
-    function generateReviewTable(storageKey, displayLimit) {
+    async function generateReviewTable(storageKey, displayLimit) {
+        await missionGDocReady;
         // 1. 安全读取并解析本地存储数据
         let reviewData = [];
         try {
@@ -1923,7 +1781,7 @@
                 smistmp += "<tr>" + stitle + sstatus + slatlng + stypes + sbegin + ssubmitteddate + slat + slng + smove + ssubmitter + "</tr>";
                 icnt += 1;
             });
-            //console.log('homepage',missionGDoc);
+            console.log('homepage',missionGDoc);
             //console.log("missionPortal1",$("#missionPortal1"));
             smistmp+="</tbody></table>";
             //console.log(`smistmp`,smistmp);
@@ -1954,7 +1812,11 @@
     async function getMissionHTML(iowner) {
         // 等待获取任务数据（现在处于async函数中，可安全使用await）
         //console.log(`getMissionHTML:${iowner}`);
-        await getMissionFromCloudFlare();
+        await missionGDocReady;
+        //await getMissionFromCloudFlare();
+        //console.log('missionGDocOpt1:',missionGDoc);
+        console.log('options1',missionGDocFromSDK?.missionDirty);
+
         if(userEmail === null) {
             // 先获取用户信息并等待完成
             const restext = await getUser();
