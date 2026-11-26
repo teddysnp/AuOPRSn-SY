@@ -1978,7 +1978,7 @@
         let iresp = true; //使用pub接口
         //console.log("loadReviewData",pdata);console.log("id",id);
         //let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
-        const res = await missionGDocFromSDK.readR2File(durl+"/portal/portalreview/portal." +id +".json")
+        const res = await missionGDocFromSDK.readR2File("/portal/portalreview/portal." +id +".json")
         .then(res=>{
             //console.log("getjson",res);
             let dvnetrecorder = document.getElementById("id-myheader-netrecorder");
