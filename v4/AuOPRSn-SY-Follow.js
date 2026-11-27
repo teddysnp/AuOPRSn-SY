@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      5.0.15.1
+// @version      5.0.16.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1968,6 +1968,19 @@
 
     //判断云端是否有审核记录，执行跟审或任务审
     async function loadReviewData(pdata){
+        function jsonFileNotExist() {
+            cloudReviewData = null;
+            setTimeout(function(){
+                let titlescore = document.querySelector('#review-page-title');
+                if (titlescore) titlescore.textContent += "：未找到网络审核记录";
+                setDownLabel(this,'gold');
+            },1000);
+            //未找到网络审核时，去判断是否有重复可能
+            if(pdata.type === "EDIT") editReview(pdata);
+            if(pdata.type === "PHOTO") photoReview(pdata);
+            if(pdata.type === "NEW") isDuplicate(pdata);
+            return null;
+        };
         console.log("loadReviewData");
         //let sid="05a6bef32a01cc9e39c967677e18763f";
         //console.log("email",useremail);
@@ -1980,31 +1993,29 @@
         let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
         //await missionGDocFromSDK.readR2File("portal/portalreview/portal." +id +".json")
         .then(res => {
-            console.log("res", res);
-            if(!res || typeof(res) === "string") {
-                cloudReviewData = null;
-                setTimeout(function(){
-                    let titlescore = document.querySelector('#review-page-title');
-                    if (titlescore) titlescore.textContent += "：未找到网络审核记录";
-                    setDownLabel(this,'gold');
-                },1000);
-                //未找到网络审核时，去判断是否有重复可能
-                if(pdata.type === "EDIT") editReview(pdata);
-                if(pdata.type === "PHOTO") photoReview(pdata);
-                if(pdata.type === "NEW") isDuplicate(pdata);
+            let data;
+            try {
+                data = typeof res === 'string' ? JSON.parse(res) : res;
+            } catch (e) {
+                console.warn('返回的不是合法 JSON：', res);
+                jsonFileNotExist();
                 return null;
             }
-            console.log('res',res);
-            console.log('restype',typeof(res));
 
-            let creviewdata = null;
+            if (!data || typeof data !== 'object' || Array.isArray(data)) {
+                console.warn('JSON 格式不符合预期：', data);
+                jsonFileNotExist();
+                return null;
+            }
+
+            console.log('合法 JSON：', data);
+            console.log("res", res);
+
+            let cloudReviewData = data;
             let title=pdata.title;let lat=pdata.lat;let lng=pdata.lng;
-            creviewdata = res.content;
             setDownLabel(this,'green');
-            cloudReviewData = creviewdata ;
-            if(creviewdata === null) { return null; }
             console.log("cloudReviewData",cloudReviewData);
-            let rdata = creviewdata;
+            let rdata = cloudReviewData;
             //skip：NEW,EDIT,PHOTO都有
             if(rdata.skip){
                 if(pdata.canSkip){
