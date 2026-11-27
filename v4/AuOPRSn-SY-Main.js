@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      8.0.15.1
+// @version      8.0.16.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2616,12 +2616,12 @@
                 //console.log('showReviewedReview',missionGDoc);
                 //生成 ：三种任务po归类 ：待完成2|已完成1|未进池3|已终止4
                 //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
-                let tmmiss1="";let tmmiss2="未进池：";let tmmiss3="审核中：";let tmmiss4="";
+                let tmmiss1="已审核：";let tmmiss2="未进池：";let tmmiss3="审核中：";let tmmiss4="";
                 missionGDoc.forEach(item => {
                     //待完成
                     //console.log(item.title+':ownerstatus',item.ownerstatus);
                     if (item.status === "提交" ||item.status === "审核" ){
-                    console.log("item.status",item.status);
+                    //console.log("item.status",item.status);
                         if(item.ownerstatus){
                             tmmiss1+="[<a href='"+item.imageUrl+"' target='_blank'>"+item.title+"</a>]";
                         } else {
@@ -2644,8 +2644,10 @@
                     let reviewwait = document.querySelector("#id-reviewheader-wait");
                     //console.log('reviewwait',reviewwait);
                     if(reviewwait) reviewwait.innerHTML = tmmiss2;
+                    let reviewing = document.querySelector("#id-reviewheader-reviewing");
+                    if(reviewing) reviewing.innerHTML = tmmiss3;
                     let reviewed = document.querySelector("#id-reviewheader-reviewed");
-                    if(reviewed) reviewed.innerHTML = tmmiss3;
+                    if(reviewed) reviewed.innerHTML = tmmiss1;
                 }
             
         } catch (e) {
@@ -3587,11 +3589,15 @@
                 const dvLastReview = document.createElement('div');
                 const dvlastReviewWait = document.createElement('div');
                 const dvlastReviewWaitTxt = document.createElement('span');
+                const dvlastReviewing = document.createElement('div');
+                const dvlastReviewingTxt = document.createElement('span');
                 const dvlastReviewed = document.createElement('div');
                 const dvlastReviewedTxt = document.createElement('span');
                 dvLastReview.className ="reviewheader";
                 dvlastReviewWaitTxt.id = "id-reviewheader-wait";
                 dvlastReviewWaitTxt.className = "myheader-autolabel myheader-font";
+                dvlastReviewingTxt.id = "id-reviewheader-reviewing";
+                dvlastReviewingTxt.className = "myheader-autolabel myheader-font";
                 dvlastReviewedTxt.id = "id-reviewheader-reviewed";
                 dvlastReviewedTxt.className = "myheader-autolabel myheader-font";
 
@@ -3600,10 +3606,12 @@
                 header.style.paddingBottom = '2px';
                 header.classList.remove('py-10');
 
-                dvLastReview.appendChild(dvlastReviewed);
-                dvLastReview.appendChild(dvlastReviewWait);
                 dvlastReviewWait.appendChild(dvlastReviewWaitTxt);
+                dvlastReviewing.appendChild(dvlastReviewingTxt);
                 dvlastReviewed.appendChild(dvlastReviewedTxt);
+                dvLastReview.appendChild(dvlastReviewing);
+                dvLastReview.appendChild(dvlastReviewWait);
+                dvLastReview.appendChild(dvlastReviewed);
 
                 ref.prepend(dvLastReview);
             } catch (e) {
