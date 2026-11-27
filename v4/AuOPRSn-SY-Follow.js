@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      5.0.18.1
+// @version      5.0.19.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2232,8 +2232,11 @@
                         const divreviewcard = document.querySelectorAll('div#appropriate-card, div#safe-card, div#accurate-and-high-quality-card, div#permanent-location-card, div#socialize-card, div#exercise-card, div#explore-card');
                         divreviewcard.forEach(item => {
                             let btn = item.querySelector('button[aria-pressed]');
+                            console.log('aria-pressed',btn.getAttribute("aria-pressed"));
                             if(btn.getAttribute("aria-pressed") === "false"){
                                 btn.click();
+                                console.log('btn',btn);
+                                console.log('aria-pressed',btn.getAttribute("aria-pressed"));
                             }
                         });
                         //下面这个写法，按钮总是点错，不知道为什么
