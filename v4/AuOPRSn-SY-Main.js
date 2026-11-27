@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      8.0.14.1
+// @version      8.0.15.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2559,9 +2559,8 @@
     }
 
     //在审核页review显示审过的po
-    async function showReviewedReview()
-    {
-        console.log('showreview:',missionGDoc);
+    async function showReviewedReview() {
+      //console.log('showreview:',missionGDoc);
       if(userEmail === null) {
         // 先获取用户信息并等待完成
         const restext = await getUser();
@@ -2640,10 +2639,10 @@
                     }
                 })
                 if(missiondisplay == "true"){
-                    console.log('tmmiss2',tmmiss2);
-                    console.log('tmmiss3',tmmiss3);
+                    //console.log('tmmiss2',tmmiss2);
+                    //console.log('tmmiss3',tmmiss3);
                     let reviewwait = document.querySelector("#id-reviewheader-wait");
-                    console.log('reviewwait',reviewwait);
+                    //console.log('reviewwait',reviewwait);
                     if(reviewwait) reviewwait.innerHTML = tmmiss2;
                     let reviewed = document.querySelector("#id-reviewheader-reviewed");
                     if(reviewed) reviewed.innerHTML = tmmiss3;
@@ -3230,6 +3229,7 @@
 .reviewheader {
     height: auto !important;
     width: 50% !important;
+    margin-left: 50px;
     padding: 0 !important;
     display: flex !important;
     flex: '0 0 50%';
@@ -3574,56 +3574,51 @@
     })()
 
     async function onReviewPage() {
+        //等待SDK-missionGDoc
+        await missionGDocFromSDK.ready();
+        //初始化元素
+        awaitElement(() => ( document.querySelector("main[aria-labelledby='review-page-title']") )
+                    ).then(ref => {
+            try {
+                let reviewwait = document.querySelector("#id-reviewheader-wait");
+                if(reviewwait) return;
+                //console.log('reviewwait',reviewwait);
+                //审核页，增加未进池/已审核等
+                const dvLastReview = document.createElement('div');
+                const dvlastReviewWait = document.createElement('div');
+                const dvlastReviewWaitTxt = document.createElement('span');
+                const dvlastReviewed = document.createElement('div');
+                const dvlastReviewedTxt = document.createElement('span');
+                dvLastReview.className ="reviewheader";
+                dvlastReviewWaitTxt.id = "id-reviewheader-wait";
+                dvlastReviewWaitTxt.className = "myheader-autolabel myheader-font";
+                dvlastReviewedTxt.id = "id-reviewheader-reviewed";
+                dvlastReviewedTxt.className = "myheader-autolabel myheader-font";
+
+                header = document.querySelector("main[aria-labelledby='review-page-title'] > header") ;
+                header.style.paddingTop = '2px';
+                header.style.paddingBottom = '2px';
+                header.classList.remove('py-10');
+
+                dvLastReview.appendChild(dvlastReviewed);
+                dvLastReview.appendChild(dvlastReviewWait);
+                dvlastReviewWait.appendChild(dvlastReviewWaitTxt);
+                dvlastReviewed.appendChild(dvlastReviewedTxt);
+
+                ref.prepend(dvLastReview);
+            } catch (e) {
+            }
+        });
+        //等待上一步完成，再将任务显示在审核页面
+        awaitElement(() => ( document.querySelector("#id-reviewheader-wait") )
+                    ).then(ref => {
+            showReviewedReview();
+        });
+    }
+    function onPageChange() {
         //console.log('已进入 Review 页面', location.href);
         if (location.href === 'https://wayfarer.scopely.com/review') {
-            //等待SDK-missionGDoc
-            await missionGDocFromSDK.ready();
-            //初始化元素
-            awaitElement(() => ( document.querySelector("main[aria-labelledby='review-page-title'] > header") )
-                        ).then(ref => {
-                try {
-                    let reviewwait = document.querySelector("#id-reviewheader-wait");
-                    if(reviewwait) return;
-                    console.log('reviewwait',reviewwait);
-                    //审核页，增加未进池/已审核等
-                    const dvLastReview = document.createElement('div');
-                    const dvlastReviewWait = document.createElement('div');
-                    const dvlastReviewWaitTxt = document.createElement('span');
-                    const dvlastReviewed = document.createElement('div');
-                    const dvlastReviewedTxt = document.createElement('span');
-                    dvLastReview.className ="reviewheader";
-                    dvlastReviewWaitTxt.id = "id-reviewheader-wait";
-                    dvlastReviewWaitTxt.className = "myheader-autolabel myheader-font";
-                    dvlastReviewedTxt.id = "id-reviewheader-reviewed";
-                    dvlastReviewedTxt.className = "myheader-autolabel myheader-font";
-
-                    ref.style.display = 'flex';
-                    ref.style.flexDirection = 'column';
-                    ref.style.paddingTop = '2px';
-                    ref.style.paddingBottom = '2px';
-                    ref.classList.remove('gap-4');
-
-                    // 原来已有的第一个 div
-                    const dvOriginal = ref.querySelector(':scope > div');
-                    if (dvOriginal) {
-                        dvOriginal.style.flex = '1 1 50%';
-                        dvOriginal.style.minHeight = '0';
-                    }
-
-                    dvLastReview.appendChild(dvlastReviewed);
-                    dvLastReview.appendChild(dvlastReviewWait);
-                    dvlastReviewWait.appendChild(dvlastReviewWaitTxt);
-                    dvlastReviewed.appendChild(dvlastReviewedTxt);
-
-                    ref.prepend(dvLastReview);
-                } catch (e) {
-                }
-            });
-            //等待上一步完成，再将任务显示在审核页面
-            awaitElement(() => ( document.querySelector("#id-reviewheader-wait") )
-                        ).then(ref => {
-                showReviewedReview();
-            });
+            onReviewPage();
         };
     }
 
@@ -3633,13 +3628,13 @@
 
         history[method] = function (...args) {
             const result = original.apply(this, args);
-            onReviewPage();
+            onPageChange();
             return result;
         };
     });
 
     // 监控浏览器前进、后退
-    window.addEventListener('popstate', onReviewPage);
+    window.addEventListener('popstate', onPageChange);
 
     function initElement() {
         const DISLOG = false;
@@ -3835,7 +3830,7 @@
     async function onPageLoaded() {
         //console.log('页面加载完成');
         initElement();
-        onReviewPage();
+        onPageChange();
     }
 
     if (document.readyState === 'complete') {
