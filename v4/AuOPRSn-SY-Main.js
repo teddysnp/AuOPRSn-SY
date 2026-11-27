@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      8.0.16.1
+// @version      8.0.17.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1484,8 +1484,10 @@
                             //showReviewedReview();
                         },2000);
                         let titlescore = document.querySelector('#review-page-title');
-                        let score = commitScore(portalData1,loc);
-                        if(titlescore){
+                        //加titlescore.textContent判断是因为follow网络审核，改这个值太快，导致打分不准
+                        if(titlescore && (document.querySelector('#review-page-title').textContent.indexOf("審查") >=0 ||
+                                          document.querySelector('#review-page-title').textContent.indexOf("审查") >=0) ){
+                            let score = commitScore(portalData1,loc);
                             if(portalData1.type === "NEW") {
                                 score1 = score.replace(/[YND]/g, char => ({
                                     Y: "是",
@@ -2318,12 +2320,15 @@
             return;
         }
 
+        let titlescore = document.querySelector('#review-page-title');
         scores.forEach((score, i) => {
             const card = reps.querySelector(cardSelectors[i]);
             const btn = card?.querySelectorAll("button")[buttonIndex[score]];
-
-            if (btn?.getAttribute("aria-pressed") === "false") {
+            //加titlescore.textContent判断是因为follow网络审核，改这个值太快，导致打分不准
+            if (btn?.getAttribute("aria-pressed") === "false" && (document.querySelector('#review-page-title').textContent.indexOf("審查") >=0  ||
+                                          document.querySelector('#review-page-title').textContent.indexOf("审查") >=0) ){
                 btn.click();
+                //console.log("click:", btn);
             }
 
             iscore += score;
