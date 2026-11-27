@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      5.0.16.1
+// @version      5.0.17.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1429,7 +1429,7 @@
         awaitElement(() => (document.querySelector('[data-testid="review-new-flow"]') || document.querySelector('[data-testid="review-edit-flow"]') || document.querySelector('[data-testid="review-photo-flow"]')))
             .then((ref) => {
             try {
-                if(DISLog) console.log('response',response);
+                //if(DISLog) console.log('response',response);
                 const json = JSON.parse(response);
                 if(DISLog) console.log('json',json);
                 if (!json) return;
@@ -1997,25 +1997,25 @@
             try {
                 data = typeof res === 'string' ? JSON.parse(res) : res;
             } catch (e) {
-                console.warn('返回的不是合法 JSON：', res);
+                //console.warn('返回的不是合法 JSON：', res);
                 jsonFileNotExist();
                 return null;
             }
 
             if (!data || typeof data !== 'object' || Array.isArray(data)) {
-                console.warn('JSON 格式不符合预期：', data);
+                //console.warn('JSON 格式不符合预期：', data);
                 jsonFileNotExist();
                 return null;
             }
 
-            console.log('合法 JSON：', data);
-            console.log("res", res);
+            //console.log('合法 JSON：', data);
+            //console.log("res", res);
 
             let cloudReviewData = data;
             let title=pdata.title;let lat=pdata.lat;let lng=pdata.lng;
             setDownLabel(this,'green');
             console.log("cloudReviewData",cloudReviewData);
-            let rdata = cloudReviewData;
+            let rdata = data;
             //skip：NEW,EDIT,PHOTO都有
             if(rdata.skip){
                 if(pdata.canSkip){
@@ -2189,7 +2189,7 @@
             if(pdata.type=="NEW"){
                 if(rdata.duplicate){
                     tmptext = "照抄网络审核：重复";
-                    tmpfollow.review="重复："+creviewdata.duplicateOf;
+                    tmpfollow.review="重复："+rdata.duplicateOf;
                     let nbportal = pdata.nearbyPortals;
                     console.log("审核记录：重复！");
                     //console.log(nbportal);
@@ -2200,11 +2200,14 @@
                         let dbtitle = (nbportal.find(p=>{return p.guid==rdata.duplicateOf})).title;
                         //console.log(dbtitle);
                         setTimeout(function(){
+                            const btn = document.querySelector(`#check-duplicates-card button[aria-label="${CSS.escape(dtitle)}"]`);
+                            btn?.click();
+                            /*
                             //console.log(document.querySelector("[alt='"+dbtitle+"']"));
                             if (document.querySelector("[alt='"+dbtitle+"']")) {
                                 document.querySelector("[alt='"+dbtitle+"']").click();
 
-                            }
+                            } */
                             setTimeout(function(){
                                 let dupbut = document.querySelector(".wf-duplicate-iw-content > .bg-wf-action-primary");
                                 if(dupbut){
@@ -2234,6 +2237,7 @@
                         buttons.forEach(btnitem => {
                             if (btnitem?.getAttribute("aria-pressed") === "false") {
                                 btnitem.click();
+                                console.log("click:", btnitem);
                             }
                         });
 /*
