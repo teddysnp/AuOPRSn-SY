@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      5.0.17.1
+// @version      5.0.18.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2229,6 +2229,15 @@
                         }
                         console.log("审核记录：五星");
 
+                        const divreviewcard = document.querySelectorAll('div#appropriate-card, div#safe-card, div#accurate-and-high-quality-card, div#permanent-location-card, div#socialize-card, div#exercise-card, div#explore-card');
+                        divreviewcard.forEach(item => {
+                            let btn = item.querySelector('button[aria-pressed]');
+                            if(btn.getAttribute("aria-pressed") === "false"){
+                                btn.click();
+                            }
+                        });
+                        //下面这个写法，按钮总是点错，不知道为什么
+                        /*
                         const buttons = [
                             ...document.querySelectorAll('div#appropriate-card, div#safe-card, div#accurate-and-high-quality-card, div#permanent-location-card, div#socialize-card, div#exercise-card, div#explore-card')
                         ].map(div => div.querySelector('button[aria-pressed]'))
@@ -2239,7 +2248,7 @@
                                 btnitem.click();
                                 console.log("click:", btnitem);
                             }
-                        });
+                        }); */
 /*
                         const appcard=["appropriate-card","safe-card","accurate-and-high-quality-card","permanent-location-card","socialize-card","exercise-card","explore-card"];
                         setTimeout(function(){
