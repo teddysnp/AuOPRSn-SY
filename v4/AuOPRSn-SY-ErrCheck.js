@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-ErrCheck-AntiGhost
 // @namespace    AuOPR
-// @version      1.2.4
+// @version      2.0.1.1
 // @description  防幽灵定时器并发的 Wayfarer 错误检查
 // @author       SnpSL & AI
 // @match        https://nianticlabs.com*
@@ -88,6 +88,49 @@
                 errNumber = 10;
             }
         }
+
+        // 4. 新版错误标签
+        let err = document.querySelector("section[aria-labelledby='review-error-title']");
+        if(err) {
+            console.log("=== 检测到错误 ===");
+            let errbtn = err.querySelector('button');
+            console.log("当前按钮:", errbtn);
+            console.log("当前剩余重试次数 errNumber:", errNumber);
+
+            if(!errbtn){
+                console.log("找不到重试按钮，重载整个网页...");
+                clearInterval(window.wayfarerErrorTimer);
+                mywin.location.reload();
+                return;
+            }
+
+            // === 核心修复 3：防御性拦截 ===
+            // 如果次数已经耗尽，立刻清除当前定时器，防止死循环日志
+            if(errNumber <= 0) {
+                console.log("【拦截】重试次数已耗尽，已停止定时器。");
+                clearInterval(window.wayfarerErrorTimer);
+
+                createNotify("错误", {
+                    body: "重试 10 次仍未成功，需要人工干预",
+                    icon: "https://githubusercontent.com",
+                    requireInteraction: true
+                });
+                return;
+            }
+
+            // 还有次数，执行点击并递减
+            if(errbtn && errNumber > 0) {
+                errNumber--;
+                console.log("执行点击，更新后剩余次数:", errNumber);
+                errbtn.click();
+            }
+        } else {
+            // 如果当前页面完全没有错误提示，说明页面恢复正常，重置计数器
+            if (errNumber !== 10) {
+                errNumber = 10;
+            }
+        }
+
     }, 10000); // 10秒检查一次
 
     // 弹窗通知函数
