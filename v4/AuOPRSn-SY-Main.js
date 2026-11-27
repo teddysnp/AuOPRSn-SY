@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      8.0.13
+// @version      8.0.14.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1372,7 +1372,6 @@
                 //console.log(container);
                 container.parentNode.after(container);
             } */
-            //showReviewedReview();
             //初始化倒计时->submitCountDown：审核大于25秒直接设置为10秒，否则取postPeriod[0],postPeriod[1]间的随机数
             let submitCountDown = null;
             if(Math.ceil((new Date().getTime() - expiry + reviewTime*60000) / 1000)>postPeriod[1]){
@@ -1493,7 +1492,7 @@
                                     N: "否",
                                     D: "懵"
                                 })[char]);
-                                titlescore.textContent = "打分："+score1;
+                                titlescore.textContent = score1;
                                 Logger.log(DISLOG1,'打分:',`${score},${score1}`);
                             }
                         }
@@ -2563,10 +2562,6 @@
     async function showReviewedReview()
     {
         console.log('showreview:',missionGDoc);
-        if(missionGDoc.length === 0)
-        {
-            missionGDoc = JSON.parse(localStorage.missionGDoc);
-        }
       if(userEmail === null) {
         // 先获取用户信息并等待完成
         const restext = await getUser();
@@ -2584,9 +2579,6 @@
         //console.log("最终获取到的用户邮箱：", userEmail);
       }
         try{
-            const retitle = document.getElementById("latestpo");
-            //console.log("retitle",retitle);
-            if( !retitle){
 
                 missionGDoc.forEach(item => {
                     item.ownerstatus = false;
@@ -2625,11 +2617,12 @@
                 //console.log('showReviewedReview',missionGDoc);
                 //生成 ：三种任务po归类 ：待完成2|已完成1|未进池3|已终止4
                 //<a href='https://raw.githubusercontent.com/teddysnp/AuOPRSn-SY/main/images/"+missionlist1[k][0]+".png' target='_blank'>"+missionlist1[k][0]+"</a>
-                let tmmiss1="";let tmmiss2="";let tmmiss3="";let tmmiss4="";
+                let tmmiss1="";let tmmiss2="未进池：";let tmmiss3="审核中：";let tmmiss4="";
                 missionGDoc.forEach(item => {
                     //待完成
                     //console.log(item.title+':ownerstatus',item.ownerstatus);
                     if (item.status === "提交" ||item.status === "审核" ){
+                    console.log("item.status",item.status);
                         if(item.ownerstatus){
                             tmmiss1+="[<a href='"+item.imageUrl+"' target='_blank'>"+item.title+"</a>]";
                         } else {
@@ -2646,28 +2639,16 @@
                         //tmmiss2+="["+tmpmissionlist[j][0]+"]";
                     }
                 })
-                let appreview = document.querySelector("app-review");
-              if(appreview){
-                  const dva1=document.createElement("div");
-                  dva1.className="userclass missionpo";
-                  dva1.id="missionpo";
-                  dva1.textContent="";
-                  const dva2=document.createElement("div");
-                  dva2.className="userclass latestpo";
-                  dva2.id="latestpo";
-                  dva2.textContent="";
-                  appreview.insertBefore(dva2,appreview.firstChild);
-                  appreview.insertBefore(dva1,appreview.firstChild);
-                  if(missiondisplay == "true"){
-                      $(".userclass.missionpo").replaceWith(
-                          "<font size=3><div class='userclass missionpo' id='missionpo'>" +
-                          "【待完成】" + tmmiss2 +
-                          "<p>【未进池】" + tmmiss3 +
-                          "<p>【已完成】" + tmmiss1
-                          +"</div></font>");
-                  }
-              }
-            } ;
+                if(missiondisplay == "true"){
+                    console.log('tmmiss2',tmmiss2);
+                    console.log('tmmiss3',tmmiss3);
+                    let reviewwait = document.querySelector("#id-reviewheader-wait");
+                    console.log('reviewwait',reviewwait);
+                    if(reviewwait) reviewwait.innerHTML = tmmiss2;
+                    let reviewed = document.querySelector("#id-reviewheader-reviewed");
+                    if(reviewed) reviewed.innerHTML = tmmiss3;
+                }
+            
         } catch (e) {
             console.log("reviewShowErr",e);
         }
@@ -3246,7 +3227,16 @@
 /* ==============================
    Header 两行布局
 ============================== */
-
+.reviewheader {
+    height: auto !important;
+    width: 50% !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex: '0 0 50%';
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: 50px !important;
+}
 .myheader-container {
     height: auto !important;
     width: 100% !important;
@@ -3583,6 +3573,74 @@
         document.querySelector('head').appendChild(style);
     })()
 
+    async function onReviewPage() {
+        //console.log('已进入 Review 页面', location.href);
+        if (location.href === 'https://wayfarer.scopely.com/review') {
+            //等待SDK-missionGDoc
+            await missionGDocFromSDK.ready();
+            //初始化元素
+            awaitElement(() => ( document.querySelector("main[aria-labelledby='review-page-title'] > header") )
+                        ).then(ref => {
+                try {
+                    let reviewwait = document.querySelector("#id-reviewheader-wait");
+                    if(reviewwait) return;
+                    console.log('reviewwait',reviewwait);
+                    //审核页，增加未进池/已审核等
+                    const dvLastReview = document.createElement('div');
+                    const dvlastReviewWait = document.createElement('div');
+                    const dvlastReviewWaitTxt = document.createElement('span');
+                    const dvlastReviewed = document.createElement('div');
+                    const dvlastReviewedTxt = document.createElement('span');
+                    dvLastReview.className ="reviewheader";
+                    dvlastReviewWaitTxt.id = "id-reviewheader-wait";
+                    dvlastReviewWaitTxt.className = "myheader-autolabel myheader-font";
+                    dvlastReviewedTxt.id = "id-reviewheader-reviewed";
+                    dvlastReviewedTxt.className = "myheader-autolabel myheader-font";
+
+                    ref.style.display = 'flex';
+                    ref.style.flexDirection = 'column';
+                    ref.style.paddingTop = '2px';
+                    ref.style.paddingBottom = '2px';
+                    ref.classList.remove('gap-4');
+
+                    // 原来已有的第一个 div
+                    const dvOriginal = ref.querySelector(':scope > div');
+                    if (dvOriginal) {
+                        dvOriginal.style.flex = '1 1 50%';
+                        dvOriginal.style.minHeight = '0';
+                    }
+
+                    dvLastReview.appendChild(dvlastReviewed);
+                    dvLastReview.appendChild(dvlastReviewWait);
+                    dvlastReviewWait.appendChild(dvlastReviewWaitTxt);
+                    dvlastReviewed.appendChild(dvlastReviewedTxt);
+
+                    ref.prepend(dvLastReview);
+                } catch (e) {
+                }
+            });
+            //等待上一步完成，再将任务显示在审核页面
+            awaitElement(() => ( document.querySelector("#id-reviewheader-wait") )
+                        ).then(ref => {
+                showReviewedReview();
+            });
+        };
+    }
+
+    // 监控 pushState / replaceState
+    ['pushState', 'replaceState'].forEach(method => {
+        const original = history[method];
+
+        history[method] = function (...args) {
+            const result = original.apply(this, args);
+            onReviewPage();
+            return result;
+        };
+    });
+
+    // 监控浏览器前进、后退
+    window.addEventListener('popstate', onReviewPage);
+
     function initElement() {
         const DISLOG = false;
         if(DISLOG) console.log('initElement start');
@@ -3632,6 +3690,8 @@
                 //const dvloclabel = document.createElement('p');
                 const dvscorelabel = document.createElement('p');
                 //const dvblank = document.createElement('p');
+
+                //增加顶部：计时器等
                 {
                     // 总容器
                     divall.id = "id-myheader-dvall";
@@ -3772,9 +3832,10 @@
         });
     };
 
-    function onPageLoaded() {
+    async function onPageLoaded() {
         //console.log('页面加载完成');
         initElement();
+        onReviewPage();
     }
 
     if (document.readyState === 'complete') {
