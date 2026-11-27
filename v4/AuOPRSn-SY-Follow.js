@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      5.0.14
+// @version      5.0.15.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -1425,10 +1425,11 @@
 
     //*********************  Inject操作 *********************//
     function injectLoadData(response) {
-        const DISLog = false;
+        const DISLog = true;
         awaitElement(() => (document.querySelector('[data-testid="review-new-flow"]') || document.querySelector('[data-testid="review-edit-flow"]') || document.querySelector('[data-testid="review-photo-flow"]')))
             .then((ref) => {
             try {
+                if(DISLog) console.log('response',response);
                 const json = JSON.parse(response);
                 if(DISLog) console.log('json',json);
                 if (!json) return;
@@ -1436,8 +1437,9 @@
                     return;
                 }
                 portalData = json.result;
+                if(DISLog) console.log('portalData',portalData);
                 if(!portalData) return;
-                if (missionGDoc.length === 0) {missionGDoc = JSON.parse(localStorage.missionGDoc);}
+                //if (missionGDoc.length === 0) {missionGDoc = JSON.parse(localStorage.missionGDoc);}
 //                if(!portalData.id || portalData.id==null) return;
                 setTimeout(function(){ loadReviewData(portalData); },200);
 //                let testid = "74908645df72e5da08ebd13be138275c";
@@ -1966,18 +1968,19 @@
 
     //判断云端是否有审核记录，执行跟审或任务审
     async function loadReviewData(pdata){
-        //console.log(id);
+        console.log("loadReviewData");
         //let sid="05a6bef32a01cc9e39c967677e18763f";
         //console.log("email",useremail);
         let tmptext = '';
         let id=pdata.id;
         let tmpfollow = {id:null,title:null,lat:null,lng:null,review:null,dateTime:null};
-        //console.log(durl+"/portal/portalreview/portal." +id +".json");
+        console.log(durl+"/portal/portalreview/portal." +id +".json");
         //因为单用户可能有访问接口限制，故查找审核文件是否存在还用公用接口，改SDK后，试用readR2File
         //let resp = readR2File("portal/portalreview/portal." +id +".json")
         let resp = U_XMLHttpRequest("GET",durl+"/portal/portalreview/portal." +id +".json")
         //await missionGDocFromSDK.readR2File("portal/portalreview/portal." +id +".json")
         .then(res => {
+            console.log("res", res);
             if(!res || typeof(res) === "string") {
                 cloudReviewData = null;
                 setTimeout(function(){
