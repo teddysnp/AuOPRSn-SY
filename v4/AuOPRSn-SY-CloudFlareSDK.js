@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-CloudFlareSDK
 // @namespace    AuOPR
-// @version      2.1.0
+// @version      2.1.2.1
 // @description  AuOPRSn CloudFlare 公共 SDK
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -207,9 +207,10 @@
 
         // 4. 按 ID 更新数据
         updateData(id, updateFields, success, error) {
+            console.log('sdkupdateData',id,updateFields);
             const promise = request(
                 'PUT',
-                `/data/${encodeURIComponent(id)}`,
+                `/mission/data/${encodeURIComponent(id)}`,
                 updateFields
             );
 
@@ -352,14 +353,24 @@
     // 更新打卡
     function updateReviewMark(portalId, newUserMark){
         return new Promise((res, err) => {
+            const requestData = {
+                portalId,
+                newUserMark
+            };
+            const requestBody = JSON.stringify(requestData);
+            console.log("请求 URL:", `${CONFIG.BASE_URL}/portal/updateportaluseremail/portal.${portalId}.usermail.json`);
+            console.log("请求内容:", requestBody);
+            console.log("请求内容长度:", requestBody.length);
+
             GM_xmlhttpRequest({
-                method: 'GET',
-                url: `${CONFIG.BASE_URL}//portal/updateportaluseremail/portal.${portalId}.usermail.json`,
+                method: 'POST',
+                url: `${CONFIG.BASE_URL}/portal/updateportaluseremail/portal.${portalId}.usermail.json`,
                 headers: {
-                    'X-Secret-Key': userSettings.SECRET_KEY
+                    'Content-Type': 'application/json',
+                    'X-API-Key': userSettings.SECRET_KEY
                 },
                 keepalive: true, // 关键：允许请求在页面卸载后继续执行
-                body: JSON.stringify({
+                data: JSON.stringify({
                     portalId: portalId,
                     newUserMark: newUserMark
                 }),
@@ -378,12 +389,13 @@
                         responseText: response.responseText.substring(0, 200) // 只显示前200字符
                     }); */
                     try {
+                        console.log('response',response);
                         const result = JSON.parse(response.responseText);
+                        console.log('result',result);
                         if (result.success) {
                             console.log(`成功更新打卡: ${result}`);
                             res(result);
                         } else {
-                            console.log('result',result);
                             err(result);
                         }
                     } catch (e) {
