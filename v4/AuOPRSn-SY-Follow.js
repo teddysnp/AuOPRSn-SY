@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Follow
 // @namespace    AuOPR
-// @version      5.0.20.1
+// @version      5.0.21.1
 // @description  Following other people's review
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2234,12 +2234,10 @@
                             let btn = item.querySelector('button[aria-pressed]');
                             console.log('aria-pressed:before click',btn.getAttribute("aria-pressed"));
                             if(btn.getAttribute("aria-pressed") === "false"){
+                                //使用延迟点击，否则有时候会点击不上
                                 setTimeout(() => {
                                     if (btn.getAttribute('aria-pressed') === 'false') {
                                         btn.click();
-                                        setTimeout(() => {
-                                            console.log('点击结果:', btn.getAttribute('aria-pressed'));
-                                        }, 300);
                                     }
                                 }, 500);
                             }
