@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      8.0.18.1
+// @version      8.0.19.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -2014,7 +2014,7 @@
                         return;
                     }
                     if(pname === null) {return;}
-                    if(!item.portalID || item.portalID === null || item.portalID === "" ){
+                    if((!item.portalID || item.portalID === null || item.portalID === "" ) || (item.portalID && item.status === "提交") ){
                         //if(item.portalID === null || item.portalID === "" || item.status !== "审核"){
                         console.log("更新任务portalID",item.portalID);
                         console.log("更新任务status",item.status);
