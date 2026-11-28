@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AuOPRSn-SY-Main
 // @namespace    AuOPR
-// @version      8.0.17.1
+// @version      8.0.18.1
 // @description  try to take over the world!
 // @author       SnpSL
 // @match        https://wayfarer.nianticlabs.com/*
@@ -236,9 +236,8 @@
             const SDK = unsafeWindow.AuOPRSnCloudFlareSDK;
             return unsafeWindow.AuOPRSnCloudFlareSDK?.missionGDoc ?? [];
         },
-        async cfClass() {
-            const SDK = await waitForSDK();
-            return SDK.cfClass;
+        get cfClass() {
+            return unsafeWindow.AuOPRSnCloudFlareSDK?.cfClass;
         },
         async ready() {
             const SDK = await waitForSDK();
@@ -263,7 +262,7 @@
         },
         async updateReviewMark(portalId, newUserMark) {
             const SDK = await waitForSDK();
-            return SDK.uploadDataToR2(portalId, newUserMark);
+            return SDK.updateReviewMark(portalId, newUserMark);
         }
 
     };
@@ -1960,17 +1959,18 @@
                         newUserMark: newUserMark
                     })
                 });*/
-                const result = await missionGDocFromSDK.updateReviewMark(portaldata.id, newUserMark);
-                if (response.ok) {
-                    console.log("新打卡，保存成功:", result.msg);
-                } else {
-                    console.error("新打卡，保存失败:", result);
+                missionGDocFromSDK.updateReviewMark(portaldata.id, newUserMark)
+                    .then( (res) => {
+                    console.log("新打卡", res);
+                }, (err) => {
+                    console.log('新打卡',e);
                 }
+                         )
             } catch (err) {
                 console.error("新打卡，网络请求错误:", err);
             }
-        }
-        //console.log("uploadReviewMark:portaldata",portaldata);
+}
+ //console.log("uploadReviewMark:portaldata",portaldata);
         //console.log("uploadReviewMark:missionGDoc",missionGDoc);
         if(!missionGDoc){
             //console.log("uploadReviewMark:missionGDoc not found",missionGDoc);
@@ -2025,7 +2025,7 @@
                             item.supportingImageUrls = portaldata.supportingImageUrls;
                         }
                         let updateField={portalID:portaldata.id,status:item.status,responsedate:formatDate(new Date(),"yyyy-MM-dd"),imageUrl:item.imageUrl,supportingImageUrls:item.supportingImageUrls};
-                        cfClass.updateData(
+                        await missionGDocFromSDK.cfClass.updateData(
                             item.id, updateField,
                             (res) => {
                                 console.log("更新任务状态为开审成功"+portaldata.id,res);
